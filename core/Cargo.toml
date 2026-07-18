@@ -1,0 +1,33 @@
+[package]
+name = "cdx-theme-core"
+version.workspace = true
+edition.workspace = true
+description = "Shared theme pack/unpack/apply and CDP inject for CDXTheme"
+authors = ["CDXTheme"]
+license = "MIT"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+cdx-theme-types = { workspace = true }
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = [
+  "clock",
+  "std",
+] }
+thiserror = "2"
+tracing = { version = "0.1", features = ["log"] }
+tokio = { version = "1", features = [
+  "rt-multi-thread",
+  "macros",
+  "time",
+  "sync",
+  "net",
+  "io-util",
+] }
+tokio-tungstenite = { version = "0.26", features = ["connect"] }
+futures-util = "0.3"
+reqwest = { version = "0.13", default-features = false, features = [
+  "json",
+  "rustls",
+] }

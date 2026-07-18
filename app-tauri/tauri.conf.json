@@ -1,0 +1,83 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CDXTheme",
+  "mainBinaryName": "CDXTheme",
+  "version": "0.1.1",
+  "identifier": "com.cdxtheme.cdx",
+  "build": {
+    "beforeDevCommand": "trunk serve",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "trunk build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "CDXTheme",
+        "width": 1180,
+        "height": 760,
+        "minWidth": 900,
+        "minHeight": 600,
+        "transparent": false,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "acceptFirstMouse": true,
+        "trafficLightPosition": {
+          "x": 16,
+          "y": 20
+        }
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis",
+      "dmg",
+      "app",
+      "deb",
+      "appimage"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "createUpdaterArtifacts": true,
+    "resources": {
+    },
+    "macOS": {
+      "bundleName": "CDXTheme",
+      "minimumSystemVersion": "12.0"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "tsp": false
+    }
+  },
+  "plugins": {
+      "updater": {
+        "active": true,
+        "endpoints": [
+          "https://s3.cdxtheme.com/application/release/latest.json",
+          "https://github.com/croath/cdx-theme-app/CDX-Theme/releases/latest/download/latest.json"
+        ],
+        "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNBREU1NzhDMTAwMkVEODMKUldTRDdRSVFqRmZlT21GcE1lTDdnYzJVT1hMMGc3Zk1CQitsMUFZVlQrcnJkQnN4Sjh3eUVNWk0K",
+        "windows": {
+          "installMode": "passive"
+        }
+      }
+    }
+}

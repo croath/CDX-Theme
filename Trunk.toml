@@ -1,0 +1,16 @@
+[build]
+target = "./index.html"
+# Relative asset URLs so CSS/JS load correctly in Tauri webview
+public_url = "./"
+minify = "on_release"
+
+[watch]
+ignore = ["./app-tauri"]
+
+[tools]
+# Must match a version Trunk can download; processes style/tailwind.css via rel="tailwind-css"
+tailwindcss = "4.3.3"
+
+[serve]
+port = 1420
+open = false

@@ -1,0 +1,61 @@
+[package]
+name = "cdx-theme"
+version.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+leptos = { version = "0.8", features = ["csr"] }
+leptos_ui = "0.3.22"
+leptos_router = "0.8.0"
+leptos_meta = "0.8.0"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+  "Window",
+  "Document",
+  "Element",
+  "EventTarget",
+  "HtmlElement",
+  "HtmlInputElement",
+  "File",
+  "FileList",
+  "FileReader",
+  "Blob",
+  "DomTokenList",
+  "Storage",
+  "MediaQueryList",
+  "console",
+  "DragEvent",
+  "DataTransfer",
+  "DataTransferItemList",
+  "MouseEvent",
+] }
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1.7"
+tw_merge = { version = "0.1.21", features = ["variant"] }
+icons = { version = "0.18.3", features = ["leptos"] }
+strum = { version = "0.28.0", features = ["derive"] }
+strum_macros = "0.28"
+cdx-theme-types = { path = "./types" }
+
+[workspace]
+members = ["app-tauri", "types", "cli", "core"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.1"
+edition = "2024"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+cdx-theme-types = { path = "./types" }
+cdx-theme-core = { path = "./core" }
+anyhow = { version = "1.0.103" }
+
+
+[package.metadata.leptos]
+tailwind-input-file = "style/tailwind.css"

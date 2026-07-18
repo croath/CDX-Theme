@@ -1,0 +1,21 @@
+/dist/
+/target/
+node_modules/
+.DS_Store
+tmp/
+output/
+
+# Windows code-signing secrets (self-signed cert for Authenticode)
+.tauri/*.key
+.tauri/*.pfx
+.tauri/*.password
+.tauri/*.pfx.base64
+# thumbprint / cert public half are OK to commit if needed; keep private material out
+.tauri/windows-codesign.key
+.tauri/windows-codesign.pfx
+.tauri/windows-codesign.password
+.tauri/windows-codesign.pfx.base64
+.tauri/*.p12
+.tauri/*.p8
+.tauri/*.p12.password
+.tauri/.env

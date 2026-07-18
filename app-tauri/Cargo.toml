@@ -1,0 +1,71 @@
+[package]
+name = "cdx-theme-app"
+version.workspace = true
+edition.workspace = true
+description = "CDXTheme — themes for Codex"
+authors = ["cdxtheme"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "cdx_theme_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+# Binary name shown in macOS menu bar / process list during `tauri dev`.
+[[bin]]
+name = "CDXTheme"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# `devtools` enables Web Inspector in debug / `tauri dev` builds.
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-log = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+cdx-theme-types = { workspace = true }
+cdx-theme-core = { workspace = true }
+tokio = { version = "1", features = [
+  "rt-multi-thread",
+  "macros",
+  "time",
+  "sync",
+  "net",
+  "io-util",
+] }
+# Explicit crypto provider for rustls (reqwest / tauri-plugin-updater).
+# Must call rustls::crypto::ring::default_provider().install_default() at process start.
+rustls = { version = "0.23", default-features = false, features = [
+  "ring",
+  "std",
+  "tls12",
+] }
+regex = "1"
+thiserror = "2"
+url = "2"
+# Application logs use `tracing`; `log` is kept for tauri-plugin-log LevelFilter / Metadata.
+# tracing's `log` feature bridges events into the log facade that the plugin captures.
+log = "0.4"
+tracing = { version = "0.1", features = ["log"] }
+# Same RUST_LOG directive syntax as cargo / env_logger.
+env_filter = "0.1"
+reqwest = { version = "0.13", default-features = false, features = [
+  "json",
+  "rustls",
+] }
+
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

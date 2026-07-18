@@ -1,0 +1,18 @@
+[package]
+name = "cdx-theme-cli"
+version.workspace = true
+edition.workspace = true
+description = "CLI to pack, unpack, convert, and apply .cdxtheme / .codedrobe-theme packages"
+authors = ["CDXTheme"]
+license = "MIT"
+
+[[bin]]
+name = "cdxtheme"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+cdx-theme-core = { workspace = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

@@ -1,0 +1,347 @@
+# Build CDXTheme (macOS + Windows) and upload installers to a GitHub Release.
+#
+# Trigger: publish a GitHub Release (UI: Releases → Draft a new release → Publish).
+# Manual: Actions → Release → Run workflow (optional release tag to attach assets).
+#
+# Full secrets list: comments at the bottom of this file.
+
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing release tag to upload assets to (e.g. v0.1.0). Leave empty to only build.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.event.inputs.release_tag || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Apple Silicon (M1+)
+          # Note: notarization is NOT done by Tauri here.
+          # We only do code signing during build. Notarization is submitted
+          # asynchronously in a dedicated step after upload (see below).
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            rust_targets: aarch64-apple-darwin,wasm32-unknown-unknown
+          # Windows x64
+          - platform: windows-latest
+            args: ''
+            rust_targets: wasm32-unknown-unknown
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install Rust toolchain
+        shell: bash
+        run: |
+          # Installs channel, components, and profile from rust-toolchain.toml
+          rustup show
+          # Matrix-specific targets (not declared in rust-toolchain.toml)
+          rustup target add $(echo '${{ matrix.rust_targets }}' | tr ',' ' ')
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+          shared-key: ${{ runner.os }}-${{ matrix.args }}
+
+      # Prebuilt crates.io binaries (much faster than `cargo install --locked`).
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.21.0
+
+      - name: Install trunk + Tauri CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo binstall --no-confirm trunk
+          cargo binstall --no-confirm tauri-cli
+          trunk --version
+          cargo tauri --version
+
+      - name: Install frontend deps
+        run: bun install --frozen-lockfile
+
+      # Prepare App Store Connect API key (for manual async notarization submission).
+      # We do NOT pass APPLE_API_* to the build step so that Tauri only performs
+      # code signing. Notarization is submitted later with `xcrun notarytool ... --no-wait`.
+      - name: Prepare Apple notarization credentials (API key)
+        if: runner.os == 'macOS'
+        env:
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY_CONTENT }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${APPLE_API_KEY_CONTENT:-}" ]]; then
+            echo "APPLE_API_KEY_CONTENT not set; notarization submission will be skipped."
+            exit 0
+          fi
+
+          if [[ -z "${APPLE_API_ISSUER:-}" || -z "${APPLE_API_KEY:-}" ]]; then
+            echo "::error::Notarization requires APPLE_API_ISSUER and APPLE_API_KEY secrets when APPLE_API_KEY_CONTENT is provided."
+            exit 1
+          fi
+
+          KEY_PATH="${RUNNER_TEMP}/AuthKey_${APPLE_API_KEY}.p8"
+          # Support secrets that include literal \n sequences or real newlines.
+          printf '%s\n' "$APPLE_API_KEY_CONTENT" | sed 's/\r$//' | sed 's/\\n/\n/g' > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+
+          # Export under a non-standard name so Tauri build does not auto-trigger notarization.
+          echo "NOTARIZE_APPLE_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+          echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> "$GITHUB_ENV"
+          echo "Apple notarization credentials prepared (submission will be async)."
+
+      # Optional Windows OV cert import (requires certificateThumbprint in tauri.conf.json).
+      - name: Import Windows code signing certificate
+        if: runner.os == 'Windows'
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrEmpty($env:WINDOWS_CERTIFICATE)) {
+            Write-Host 'WINDOWS_CERTIFICATE not set; Windows build will be unsigned.'
+            exit 0
+          }
+          New-Item -ItemType Directory -Force -Path certificate | Out-Null
+          Set-Content -Path certificate/tempCert.txt -Value $env:WINDOWS_CERTIFICATE
+          certutil -decode certificate/tempCert.txt certificate/certificate.pfx
+          Remove-Item certificate/tempCert.txt
+          Import-PfxCertificate `
+            -FilePath certificate/certificate.pfx `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
+          Write-Host 'Windows certificate imported.'
+
+      - name: Resolve release id (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+        id: resolve_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          id=$(gh api "repos/${{ github.repository }}/releases/tags/${{ inputs.release_tag }}" --jq .id)
+          echo "release_id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Build and upload to GitHub Release
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # Tell Trunk to do an optimized release build (instead of debug)
+          TRUNK_BUILD_RELEASE: "true"
+
+          # Tauri updater signing (required while createUpdaterArtifacts is true)
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+          # macOS code sign (notarization is submitted asynchronously in a later step)
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+
+          # macOS minimum deployment target
+          MACOSX_DEPLOYMENT_TARGET: "12.0"
+        with:
+          projectPath: app-tauri
+          tauriScript: cargo tauri
+          # Attach bundles to the release that triggered this run, or the tag from workflow_dispatch.
+          releaseId: ${{ github.event.release.id || steps.resolve_release.outputs.release_id }}
+          # Prefer NSIS installer in updater JSON.
+          updaterJsonPreferNsis: true
+          args: ${{ matrix.args }}
+
+      # Submit notarization request to Apple asynchronously using --no-wait.
+      # This runs AFTER the release assets have been uploaded.
+      # Tauri build above only did code signing (no API keys were provided to it).
+      - name: Submit macOS notarization (async)
+        if: runner.os == 'macOS'
+        continue-on-error: true
+        env:
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY_CONTENT }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${APPLE_API_KEY_CONTENT:-}" ]]; then
+            echo "No APPLE_API_KEY_CONTENT secret. Skipping notarization submission."
+            exit 0
+          fi
+
+          if [[ -z "${APPLE_API_ISSUER:-}" || -z "${APPLE_API_KEY:-}" ]]; then
+            echo "::warning::APPLE_API_ISSUER or APPLE_API_KEY missing. Cannot submit notarization."
+            exit 0
+          fi
+
+          # Write the .p8 key (same logic as prepare step)
+          KEY_PATH="${RUNNER_TEMP}/AuthKey_${APPLE_API_KEY}.p8"
+          printf '%s\n' "$APPLE_API_KEY_CONTENT" | sed 's/\r$//' | sed 's/\\n/\n/g' > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+
+          BUNDLE_DIR="target/release/bundle/macos"
+
+          # Prefer notarizing the .dmg (common for distribution)
+          DMG_PATH=$(find "$BUNDLE_DIR" -maxdepth 1 -name '*.dmg' 2>/dev/null | head -1 || true)
+          APP_PATH=$(find "$BUNDLE_DIR" -maxdepth 1 -name '*.app' -type d 2>/dev/null | head -1 || true)
+
+          SUBMITTED=false
+
+          if [[ -n "${DMG_PATH}" ]]; then
+            echo "==> Submitting DMG for notarization (async): $DMG_PATH"
+            xcrun notarytool submit "$DMG_PATH" \
+              --keypath "$KEY_PATH" \
+              --issuer "$APPLE_API_ISSUER" \
+              --key-id "$APPLE_API_KEY" \
+              --no-wait \
+              --output-format json || echo "Submit command completed (non-blocking)"
+            SUBMITTED=true
+          fi
+
+          if [[ -n "${APP_PATH}" && "$SUBMITTED" != "true" ]]; then
+            echo "==> Submitting .app for notarization (async)"
+            # Apple recommends a zip for .app submissions
+            ZIP_PATH="${RUNNER_TEMP}/$(basename "$APP_PATH").zip"
+            ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH" 2>/dev/null || true
+            if [[ -f "$ZIP_PATH" ]]; then
+              xcrun notarytool submit "$ZIP_PATH" \
+                --keypath "$KEY_PATH" \
+                --issuer "$APPLE_API_ISSUER" \
+                --key-id "$APPLE_API_KEY" \
+                --no-wait \
+                --output-format json || echo "Submit command completed (non-blocking)"
+            fi
+          fi
+
+          echo ""
+          echo "==> Notarization request submitted asynchronously with --no-wait."
+          echo "    The GitHub Release assets were uploaded without waiting for Apple."
+          echo "    Check progress later with:"
+          echo "      xcrun notarytool history --keypath \"$KEY_PATH\" --issuer \"$APPLE_API_ISSUER\" --key-id \"$APPLE_API_KEY\""
+
+# =============================================================================
+# Repository secrets (Settings → Secrets and variables → Actions)
+# =============================================================================
+#
+# ── REQUIRED (updater) ──────────────────────────────────────────────────────
+# createUpdaterArtifacts is true in app-tauri/tauri.conf.json, so builds need:
+#
+#   TAURI_SIGNING_PRIVATE_KEY
+#     Private key from:  cargo tauri signer generate -w ~/.tauri/cdxtheme.key
+#     Paste the private key contents (or the whole file body).
+#     Public key must match plugins.updater.pubkey in tauri.conf.json.
+#
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+#     Password you set for that key. Create the secret even if empty (blank value).
+#
+# ── macOS signing (Developer ID Application) ────────────────────────────────
+# Required for Gatekeeper-friendly downloads outside the App Store.
+#
+#   APPLE_CERTIFICATE
+#     Base64 of exported .p12 (Keychain Access → My Certificates → Export):
+#       openssl base64 -A -in certificate.p12 -out certificate-base64.txt
+#     Put the single-line contents of certificate-base64.txt into this secret.
+#
+#   APPLE_CERTIFICATE_PASSWORD
+#     Password chosen when exporting the .p12.
+#
+#   APPLE_SIGNING_IDENTITY   (optional)
+#     e.g. Developer ID Application: Your Name (TEAMID)
+#     Omit to let Tauri detect identity from the imported certificate.
+#     List identities locally:  security find-identity -v -p codesigning
+#
+# ── macOS notarization (App Store Connect API key only) ─────────────────────
+# This workflow supports only Method A (API key). Apple ID / password (Method B)
+# and APPLE_TEAM_ID are not used.
+#
+#   Create key: appstoreconnect.apple.com → Users and Access → Integrations → Keys
+#
+#   APPLE_API_ISSUER          Issuer ID shown above the keys table
+#   APPLE_API_KEY             Key ID (column on the key row)
+#   APPLE_API_KEY_CONTENT     Full text of the downloaded AuthKey_XXXXXX.p8
+#
+# Code signing uses APPLE_CERTIFICATE + APPLE_CERTIFICATE_PASSWORD.
+# Notarization is submitted in a separate step *after* uploading to the release
+# (async / non-blocking). Tauri build step only performs code signing.
+#
+# ── Windows code signing (optional) ─────────────────────────────────────────
+# SmartScreen will warn on unsigned downloads. To sign:
+#
+#   WINDOWS_CERTIFICATE              Base64 of .pfx
+#                                      certutil -encode certificate.pfx base64cert.txt
+#   WINDOWS_CERTIFICATE_PASSWORD     Export password for the .pfx
+#
+#   Also set bundle.windows.certificateThumbprint (and digest/timestamp) in
+#   app-tauri/tauri.conf.json so Tauri SignTool can find the imported cert.
+#
+# ── Windows WebView2 ────────────────────────────────────────────────────────
+# We use "embedBootstrapper" (see app-tauri/tauri.conf.json).
+# - Bundles the small WebView2 bootstrapper (~1.8 MB added to installer).
+# - Installer stays small (no full ~150 MB runtime bundled).
+# - On first run (or install), if WebView2 not present, bootstrapper downloads
+#   the Evergreen runtime from Microsoft.
+# - Good compatibility with Windows 7 (better than plain "downloadBootstrapper"
+#   (NSIS embedBootstrapper is used).
+# - For completely offline installs (no internet), switch to "offlineInstaller"
+#   (makes installer much larger) or "fixedVersion".
+#
+# ── Windows NSIS ────────────────────────────────────────────────────────────
+# We use NSIS installer for Windows (see bundle.windows in app-tauri/tauri.conf.json).
+# NSIS is preferred (updaterJsonPreferNsis: true). MSI support has been removed.
+
+# ── macOS Notarization (async submit after release upload) ──────────────────
+# Notarization is **not** performed by Tauri during `cargo tauri build`.
+# Instead, after the release assets are attached, we run:
+#
+#   xcrun notarytool submit <file> --keypath ... --issuer ... --key-id ... --no-wait
+#
+# --no-wait tells notarytool to submit and return immediately (async behavior).
+# (The default is also non-waiting, but we pass --no-wait explicitly.)
+#
+# Benefits:
+# - GitHub Release is created/uploaded immediately.
+# - Notarization request is still sent to Apple.
+# - The main job never blocks on Apple's notarization queue.
+#
+# After submission you can monitor with:
+#   xcrun notarytool history --keypath ... --issuer ... --key-id ...
+#   xcrun notarytool log <submission-id> --keypath ...
+#
+# Stapling is not performed automatically. On recent macOS the online
+# notarization check is usually sufficient. You can staple manually later if needed.
+#
+# ── Repo settings ───────────────────────────────────────────────────────────
+# Settings → Actions → General → Workflow permissions → Read and write permissions
+# (needed so GITHUB_TOKEN can upload release assets).
+#
+# ── How to ship ─────────────────────────────────────────────────────────────
+# 1. Bump version in app-tauri/tauri.conf.json (and Cargo.toml if you track it).
+# 2. Push, then GitHub → Releases → Draft a new release → create tag (e.g. v0.1.0)
+#    → Publish release.
+# 3. This workflow:
+#    - Builds + signs macOS + Windows
+#    - Uploads .dmg / .app.tar.gz + NSIS .exe + updater files to the release
+#    - Then submits macOS notarization request with `xcrun notarytool ... --no-wait` (async)
+#
