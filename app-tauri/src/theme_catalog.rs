@@ -524,7 +524,10 @@ pub async fn fetch_remote_theme_catalog(
   }
   let sig = remote_catalog_sig(SystemTime::now());
   let entries = fetch_remote_index_entries(app, &sig).await?;
-  Ok(map_remote_entries_to_metadata(app, entries))
+  let mut list = map_remote_entries_to_metadata(app, entries);
+  // Download / reuse on-disk hero images so the UI never loads remote <img> srcs.
+  crate::image_cache::localize_preview_images(app, &mut list).await;
+  Ok(list)
 }
 
 /// Download a remote `.cdxtheme` package into the user themes library.

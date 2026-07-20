@@ -162,6 +162,35 @@ pub async fn download_theme(theme_url: impl Into<String>) -> Result<ThemeMetadat
   invoke_cmd_with_args::<ThemeMetadata>("download_theme", args).await
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+struct ResolveCachedImageArgs {
+  url: String,
+}
+
+/// Resolve an image URL to a local `data:` URL (HTTP(S) images are disk-cached).
+/// `data:` and other non-remote values are returned unchanged by the backend.
+pub async fn resolve_cached_image(url: impl Into<String>) -> Result<String, String> {
+  let url = url.into();
+  let trimmed = url.trim();
+  if trimmed.is_empty() {
+    return Err("empty image url".into());
+  }
+  // Already local — skip the IPC round-trip.
+  if trimmed.starts_with("data:") {
+    return Ok(trimmed.to_string());
+  }
+  let args = to_value(&ResolveCachedImageArgs {
+    url: trimmed.to_string(),
+  })
+  .map_err(|e| e.to_string())?;
+  match invoke_cmd_with_args::<String>("resolve_cached_image", args).await {
+    Ok(local) => Ok(local),
+    Err(e) if e.contains("__TAURI__") || e.contains("undefined") => Ok(url),
+    Err(e) => Err(e),
+  }
+}
+
 pub async fn restore_theme() -> Result<(), String> {
   match invoke_unit_with_args("restore_theme", empty_args()).await {
     Ok(()) => Ok(()),

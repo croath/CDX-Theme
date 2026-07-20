@@ -22,7 +22,7 @@ pub struct ThemeMetadata {
   /// Absolute path to the local package file (empty for remote-only entries).
   #[serde(default)]
   pub location: String,
-  /// Preview image (data URL or remote HTTPS URL).
+  /// Preview image: local `data:` URL preferred (remote HTTP(S) is disk-cached by the app).
   pub preview_img: Option<String>,
   /// Colors derived from target `baseTheme` (accent, surface, ink) for gradient fallback.
   #[serde(default)]

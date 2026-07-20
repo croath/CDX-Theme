@@ -1,5 +1,6 @@
 use crate::app_state::{AppState, CdpServerStatus};
 use crate::codex_launch;
+use crate::image_cache;
 use crate::injector::{self, InjectOptions, load_theme_package};
 use crate::settings_store;
 use crate::theme_catalog;
@@ -26,6 +27,7 @@ pub async fn retrieve_local_theme_list(
 
 /// Remote recommend catalog from `https://s3.cdxtheme.com/themes/index.json`.
 /// Pass `force = true` to bypass the in-memory 2-minute cache.
+/// Preview images are resolved through the local disk cache (`data:` URLs).
 #[tauri::command(rename_all = "snake_case")]
 pub async fn fetch_remote_theme_catalog(
   force: Option<bool>,
@@ -33,6 +35,13 @@ pub async fn fetch_remote_theme_catalog(
   _state: State<'_, AppState>,
 ) -> Result<Vec<ThemeMetadata>, String> {
   theme_catalog::fetch_remote_theme_catalog(&app, force.unwrap_or(false)).await
+}
+
+/// Resolve any image URL to a local `data:` URL (disk-cached for HTTP(S)).
+/// Use when a UI surface still has a remote preview URL (e.g. before catalog localization).
+#[tauri::command(rename_all = "snake_case")]
+pub async fn resolve_cached_image(url: String, app: AppHandle) -> Result<String, String> {
+  image_cache::resolve_to_data_url(&app, &url).await
 }
 
 /// Current CDP server status (updated by background monitor).

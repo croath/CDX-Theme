@@ -29,13 +29,33 @@ pub fn ThemeCard(
   let this_id = StoredValue::new(theme.id.clone());
   let theme_name = StoredValue::new(theme.name.clone());
   let theme_url = StoredValue::new(theme.theme_url.clone());
-  let preview_img = theme.preview_img.clone();
   let display_name = theme.name.clone();
   let source = theme.source;
   let update_available = theme.update_available;
   let local_version = theme.version;
   let remote_version = theme.remote_version;
   let can_delete = allow_delete && source == ThemeSource::Installed;
+
+  // Preview: prefer already-local data URLs; resolve remote HTTP(S) through disk cache.
+  let preview_src = RwSignal::new(Option::<String>::None);
+  {
+    let initial = theme.preview_img.clone();
+    if let Some(src) = initial.clone().filter(|s| !s.trim().is_empty()) {
+      let is_remote = src.starts_with("https://") || src.starts_with("http://");
+      if is_remote {
+        spawn_local(async move {
+          match api::resolve_cached_image(src).await {
+            Ok(local) if !local.is_empty() => preview_src.set(Some(local)),
+            Ok(_) | Err(_) => {
+              // Keep gradient fallback when cache/network fails.
+            }
+          }
+        });
+      } else {
+        preview_src.set(Some(src));
+      }
+    }
+  }
   // Download for not-yet-installed remotes, or when a newer remote version is available.
   let can_download = theme
     .theme_url
@@ -235,31 +255,37 @@ pub fn ThemeCard(
       }
     }>
       <div class="relative h-36 w-full overflow-hidden" style=gradient>
-        {match preview_img {
-          Some(src) if !src.is_empty() => view! {
-            <img
-              src=src
-              alt=""
-              class="absolute inset-0 size-full object-cover"
-            />
-            <div class="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
-          }.into_any(),
-          _ => view! {
-            <div class="absolute inset-0 opacity-30 mix-blend-overlay bg-[radial-gradient(circle_at_20%_20%,white,transparent_45%),radial-gradient(circle_at_80%_70%,white,transparent_40%)]" />
-            <div class="absolute bottom-3 left-3 flex gap-1.5">
-              {color_swatches
-                .into_iter()
-                .map(|c| {
-                  view! {
-                    <span
-                      class="size-4 rounded-full border border-white/50 shadow-sm ring-1 ring-black/10"
-                      style=format!("background-color: {c}")
-                    />
-                  }
-                })
-                .collect_view()}
-            </div>
-          }.into_any(),
+        {move || {
+          match preview_src.get() {
+            Some(src) if !src.is_empty() => view! {
+              <img
+                src=src
+                alt=""
+                class="absolute inset-0 size-full object-cover"
+                // Hint browser not to revalidate; bytes are already local data URLs.
+                loading="lazy"
+                decoding="async"
+              />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
+            }.into_any(),
+            _ => view! {
+              <div class="absolute inset-0 opacity-30 mix-blend-overlay bg-[radial-gradient(circle_at_20%_20%,white,transparent_45%),radial-gradient(circle_at_80%_70%,white,transparent_40%)]" />
+              <div class="absolute bottom-3 left-3 flex gap-1.5">
+                {color_swatches
+                  .clone()
+                  .into_iter()
+                  .map(|c| {
+                    view! {
+                      <span
+                        class="size-4 rounded-full border border-white/50 shadow-sm ring-1 ring-black/10"
+                        style=format!("background-color: {c}")
+                      />
+                    }
+                  })
+                  .collect_view()}
+              </div>
+            }.into_any(),
+          }
         }}
 
         <div class="absolute right-3 top-3 flex flex-wrap items-center justify-end gap-1.5">

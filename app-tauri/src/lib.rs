@@ -2,6 +2,7 @@ pub mod app_state;
 pub mod cdp_monitor;
 pub mod codex_launch;
 pub mod commands;
+pub mod image_cache;
 pub mod injector;
 pub mod paths;
 pub mod settings_store;
@@ -104,6 +105,7 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       commands::retrieve_local_theme_list,
       commands::fetch_remote_theme_catalog,
+      commands::resolve_cached_image,
       commands::cdp_status,
       commands::set_window_appearance,
       commands::get_cdp_port,

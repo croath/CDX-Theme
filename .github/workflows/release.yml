@@ -1,31 +1,48 @@
 # Build CDXTheme (macOS + Windows) and upload installers to a GitHub Release.
 #
-# Trigger: publish a GitHub Release (UI: Releases → Draft a new release → Publish).
-# Manual: Actions → Release → Run workflow (optional release tag to attach assets).
+# Trigger: Git tag push (e.g., 0.1.3 or v0.1.3).
 #
 # Full secrets list: comments at the bottom of this file.
 
 name: Release
 
 on:
-  release:
-    types: [published]
-  workflow_dispatch:
-    inputs:
-      release_tag:
-        description: 'Existing release tag to upload assets to (e.g. v0.1.0). Leave empty to only build.'
-        required: false
-        type: string
+  push:
+    tags:
+      - '*'
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.event.release.tag_name || github.event.inputs.release_tag || github.run_id }}
+  group: release-${{ github.ref_name || github.run_id }}
   cancel-in-progress: true
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create_release.outputs.release_id }}
+    steps:
+      - name: Create or Find Release
+        id: create_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_id=$(gh api "repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" --jq .id 2>/dev/null || true)
+          if [ -z "$release_id" ]; then
+            echo "Release does not exist. Creating..."
+            gh release create "${{ github.ref_name }}" \
+              --title "${{ github.ref_name }}" \
+              --notes "Release for tag ${{ github.ref_name }}" \
+              --generate-notes
+            
+            release_id=$(gh api "repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" --jq .id)
+          fi
+          echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
@@ -134,16 +151,6 @@ jobs:
             -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
           Write-Host 'Windows certificate imported.'
 
-      - name: Resolve release id (workflow_dispatch)
-        if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
-        id: resolve_release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          id=$(gh api "repos/${{ github.repository }}/releases/tags/${{ inputs.release_tag }}" --jq .id)
-          echo "release_id=$id" >> "$GITHUB_OUTPUT"
-
       - name: Build and upload to GitHub Release
         uses: tauri-apps/tauri-action@v1
         env:
@@ -166,8 +173,8 @@ jobs:
         with:
           projectPath: app-tauri
           tauriScript: cargo tauri
-          # Attach bundles to the release that triggered this run, or the tag from workflow_dispatch.
-          releaseId: ${{ github.event.release.id || steps.resolve_release.outputs.release_id }}
+          # Attach bundles to the release created by create-release job.
+          releaseId: ${{ needs.create-release.outputs.release_id }}
           # Prefer NSIS installer in updater JSON.
           updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
@@ -338,9 +345,9 @@ jobs:
 #
 # ── How to ship ─────────────────────────────────────────────────────────────
 # 1. Bump version in app-tauri/tauri.conf.json (and Cargo.toml if you track it).
-# 2. Push, then GitHub → Releases → Draft a new release → create tag (e.g. v0.1.0)
-#    → Publish release.
+# 2. Create and push a git tag (e.g. 0.1.3 or v0.1.3).
 # 3. This workflow:
+#    - Automatically creates a GitHub Release based on the tag
 #    - Builds + signs macOS + Windows
 #    - Uploads .dmg / .app.tar.gz + NSIS .exe + updater files to the release
 #    - Then submits macOS notarization request with `xcrun notarytool ... --no-wait` (async)

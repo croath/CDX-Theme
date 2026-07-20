@@ -576,7 +576,7 @@ dependencies = [
 
 [[package]]
 name = "cdx-theme"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cdx-theme-types",
  "console_error_panic_hook",
@@ -598,8 +598,9 @@ dependencies = [
 
 [[package]]
 name = "cdx-theme-app"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
+ "base64 0.22.1",
  "cdx-theme-core",
  "cdx-theme-types",
  "env_filter",
@@ -609,6 +610,7 @@ dependencies = [
  "rustls",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-log",
@@ -622,7 +624,7 @@ dependencies = [
 
 [[package]]
 name = "cdx-theme-cli"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cdx-theme-core",
  "clap",
@@ -633,7 +635,7 @@ dependencies = [
 
 [[package]]
 name = "cdx-theme-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "cdx-theme-types",
@@ -650,7 +652,7 @@ dependencies = [
 
 [[package]]
 name = "cdx-theme-types"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
 ]
