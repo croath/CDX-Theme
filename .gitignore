@@ -4,6 +4,7 @@ node_modules/
 .DS_Store
 tmp/
 output/
+.scripts/
 
 # Windows code-signing secrets (self-signed cert for Authenticode)
 .tauri/*.key
