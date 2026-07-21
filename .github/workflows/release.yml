@@ -36,6 +36,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Pre-release when .scripts/create-release.sh --prerelease was used.
+          # Marker ref: refs/cdx/prerelease/<tag> (any version, including v1.0.0).
+          EXTRA=()
+          if gh api "repos/${{ github.repository }}/git/ref/cdx/prerelease/${TAG}" >/dev/null 2>&1; then
+            EXTRA+=(--prerelease)
+            echo "Detected pre-release marker for $TAG"
+          fi
+
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Found existing GitHub Release for tag $TAG"
           else
@@ -43,7 +51,8 @@ jobs:
             gh release create "$TAG" \
               --title "$TAG" \
               --generate-notes \
-              --verify-tag
+              --verify-tag \
+              "${EXTRA[@]}"
           fi
 
           release_id=$(gh release view "$TAG" --json databaseId --jq .databaseId)
@@ -361,10 +370,13 @@ jobs:
 # 1. Bump version in app-tauri/tauri.conf.json (and Cargo.toml if you track it).
 # 2. Commit and push the version bump.
 # 3. Create a lightweight tag only (no personal name/email on the tag object):
-#      .scripts/create-release.sh            # version from tauri.conf.json
-#      .scripts/create-release.sh 0.1.3      # explicit version → tag v0.1.3
+#      .scripts/create-release.sh              # version from tauri.conf.json
+#      .scripts/create-release.sh 0.1.3        # stable → tag v0.1.3
+#      .scripts/create-release.sh -p 1.0.0     # pre-release for any version (e.g. v1.0.0)
+#      .scripts/create-release.sh --prerelease 1.0.0
 # 4. This workflow (on tag push):
 #    - Creates the GitHub Release as github-actions[bot] (hides personal identity)
+#    - Marks Pre-release when refs/cdx/prerelease/<tag> exists (--prerelease flag)
 #    - Builds + signs macOS + Windows
 #    - Uploads .dmg / .app.tar.gz + NSIS .exe + updater files to the release
 #    - Then submits macOS notarization request with `xcrun notarytool ... --no-wait` (async)
