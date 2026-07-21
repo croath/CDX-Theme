@@ -1,62 +1,25 @@
 # Build CDXTheme (macOS + Windows) and upload installers to a GitHub Release.
 #
-# Trigger: lightweight tag push (use .scripts/create-release.sh).
-# The release is created here with GITHUB_TOKEN so the public author is
-# github-actions[bot] (not your personal account / email).
+# Trigger: GitHub Release created (use .scripts/create-release.sh).
+# This workflow does not create the release — it only builds and uploads assets.
 #
 # Full secrets list: comments at the bottom of this file.
 
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [created]
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref_name || github.run_id }}
+  group: release-${{ github.event.release.tag_name || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  # Create the GitHub Release as github-actions[bot] (GITHUB_TOKEN).
-  # Lightweight tags have no tagger name/email; do not use annotated tags.
-  create-release:
-    runs-on: ubuntu-latest
-    outputs:
-      release_id: ${{ steps.create_release.outputs.release_id }}
-    steps:
-      - name: Create or find release
-        id: create_release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Found existing GitHub Release for tag $TAG"
-          else
-            echo "Creating release for tag $TAG (author: github-actions[bot])..."
-            gh release create "$TAG" \
-              --title "$TAG" \
-              --generate-notes \
-              --verify-tag
-          fi
-
-          release_id=$(gh release view "$TAG" --json databaseId --jq .databaseId)
-          if ! [[ "$release_id" =~ ^[0-9]+$ ]]; then
-            echo "::error::Failed to resolve numeric release id for tag $TAG (got: $release_id)"
-            exit 1
-          fi
-
-          echo "Resolved release_id=$release_id"
-          echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
-
   build:
-    needs: create-release
     strategy:
       fail-fast: false
       matrix:
@@ -187,8 +150,8 @@ jobs:
         with:
           projectPath: app-tauri
           tauriScript: cargo tauri
-          # Attach bundles to the release created by create-release (bot author).
-          releaseId: ${{ needs.create-release.outputs.release_id }}
+          # Attach bundles to the release that triggered this workflow.
+          releaseId: ${{ github.event.release.id }}
           # Prefer NSIS installer in updater JSON.
           updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
@@ -360,17 +323,13 @@ jobs:
 # ── How to ship ─────────────────────────────────────────────────────────────
 # 1. Bump version in app-tauri/tauri.conf.json (and Cargo.toml if you track it).
 # 2. Commit and push the version bump.
-# 3. Create a lightweight tag only (no personal name/email on the tag object):
-#      .scripts/create-release.sh            # version from tauri.conf.json
-#      .scripts/create-release.sh 0.1.3      # explicit version → tag v0.1.3
-# 4. This workflow (on tag push):
-#    - Creates the GitHub Release as github-actions[bot] (hides personal identity)
+# 3. Create the GitHub Release (tag is created automatically if missing):
+#      .scripts/create-release.sh              # version from tauri.conf.json
+#      .scripts/create-release.sh 0.1.3        # stable → tag v0.1.3
+#      .scripts/create-release.sh -p 1.0.0     # pre-release (any version)
+#      .scripts/create-release.sh --prerelease 1.0.0
+# 4. This workflow (on release created):
 #    - Builds + signs macOS + Windows
-#    - Uploads .dmg / .app.tar.gz + NSIS .exe + updater files to the release
+#    - Uploads .dmg / .app.tar.gz + NSIS .exe + updater files to that release
 #    - Then submits macOS notarization request with `xcrun notarytool ... --no-wait` (async)
-#
-# Privacy notes:
-# - Tags from the script are lightweight refs (no tagger name/email).
-# - Do not create annotated tags (`git tag -a`) — those embed git user.name/email.
-# - Release publisher on the GitHub page is github-actions[bot], not your account.
 #
