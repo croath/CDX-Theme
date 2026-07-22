@@ -40,10 +40,10 @@
   <tbody>
     <tr>
       <td width="340" align="center">
-        <img src="public/sponsors/yylx_ai_router.png" width="300" alt="Yylx AI Router logo"><br>
-        <a href="https://yylx.io"><strong>鱼鱼连线中转站</strong></a>
+        <img src="public/sponsors/yylx_ai_router.png" width="300" alt="YYLX AI Router logo"><br>
+        <a href="https://yylx.io"><strong>YYLX AI Router</strong></a>
       </td>
-      <td>Yylx provides a unified AI model API gateway optimized for Claude Code workflows. Switch between Claude and OpenAI GPT models by changing a single configuration line. It gives developers a convenient and reliable way to connect to leading AI models. <a href="https://yylx.io">Register now to receive $0.50 in free test credit.</a></td>
+      <td>YYLX provides a unified AI model API gateway optimized for Claude Code workflows. Switch between Claude and OpenAI GPT models by changing a single configuration line. It gives developers a convenient and reliable way to connect to leading AI models. <a href="https://yylx.io">Register now to receive $0.50 in free test credit.</a></td>
     </tr>
   </tbody>
 </table>
