@@ -30,9 +30,18 @@
 
 ## CDXTheme をスポンサーする
 
-CDXTheme は個人で維持されています。スポンサー支援は、継続的なリリース、各プラットフォームでのテスト、テーマツールの改善、長期的なメンテナンスに役立ちます。
+[スポンサーリストに掲載しませんか？](mailto:business@cdxtheme.com)
 
-スポンサー掲載とコラボレーションを受け付けています。スポンサーをご希望の場合は、[business@cdxtheme.com](mailto:business@cdxtheme.com) までメールでお問い合わせください。
+<table>
+  <tbody>
+    <tr>
+      <td width="260">
+        <a href="https://yylx.io"><img src="https://yylx.io/favicon.svg" width="32" align="center" alt="魚魚連線中転站のロゴ">&nbsp; <strong>鱼鱼连线中转站</strong></a>
+      </td>
+      <td>Claude と OpenAI GPT モデルを柔軟に切り替えられる、統合 AI モデル API ゲートウェイ。</td>
+    </tr>
+  </tbody>
+</table>
 
 ## CDXTheme の使い方
 

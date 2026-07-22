@@ -31,9 +31,18 @@
 
 ## 赞助 CDXTheme
 
-CDXTheme 由作者独立维护。赞助将帮助项目持续发布版本、测试不同平台、完善主题工具并进行长期维护。
+[想出现在赞助列表？](mailto:business@cdxtheme.com)
 
-现已开放赞助展示与合作。如需成为赞助商，请发送邮件至 [business@cdxtheme.com](mailto:business@cdxtheme.com)。
+<table>
+  <tbody>
+    <tr>
+      <td width="260">
+        <a href="https://yylx.io"><img src="https://yylx.io/favicon.svg" width="32" align="center" alt="鱼鱼连线中转站 Logo">&nbsp; <strong>鱼鱼连线中转站</strong></a>
+      </td>
+      <td>统一的 AI 模型 API 网关，支持在 Claude 与 OpenAI GPT 模型之间灵活切换。</td>
+    </tr>
+  </tbody>
+</table>
 
 ## 使用 CDXTheme
 

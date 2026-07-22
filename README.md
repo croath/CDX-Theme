@@ -30,9 +30,18 @@
 
 ## Sponsor CDXTheme
 
-CDXTheme is independently maintained. Sponsorship helps fund releases, platform testing, theme tooling, and long-term maintenance.
+[Want to appear in the sponsor list?](mailto:business@cdxtheme.com)
 
-Sponsor placements and collaborations are open. To become a sponsor, email [business@cdxtheme.com](mailto:business@cdxtheme.com).
+<table>
+  <tbody>
+    <tr>
+      <td width="260">
+        <a href="https://yylx.io"><img src="https://yylx.io/favicon.svg" width="32" align="center" alt="Yylx logo">&nbsp; <strong>鱼鱼连线中转站</strong></a>
+      </td>
+      <td>A unified AI model API gateway for switching between Claude and OpenAI GPT models.</td>
+    </tr>
+  </tbody>
+</table>
 
 ## Use CDXTheme
 

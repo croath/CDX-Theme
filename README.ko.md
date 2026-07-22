@@ -30,9 +30,18 @@
 
 ## CDXTheme 후원
 
-CDXTheme는 독립적으로 유지 관리됩니다. 후원금은 지속적인 릴리스, 플랫폼 테스트, 테마 도구 개선 및 장기 유지 관리에 도움이 됩니다.
+[후원자 목록에 함께하고 싶으신가요?](mailto:business@cdxtheme.com)
 
-후원 노출 및 협업을 받고 있습니다. 후원자가 되려면 [business@cdxtheme.com](mailto:business@cdxtheme.com)으로 이메일을 보내 주세요.
+<table>
+  <tbody>
+    <tr>
+      <td width="260">
+        <a href="https://yylx.io"><img src="https://yylx.io/favicon.svg" width="32" align="center" alt="鱼鱼连线中转站 로고">&nbsp; <strong>鱼鱼连线中转站</strong></a>
+      </td>
+      <td>Claude와 OpenAI GPT 모델을 유연하게 전환할 수 있는 통합 AI 모델 API 게이트웨이.</td>
+    </tr>
+  </tbody>
+</table>
 
 ## CDXTheme 사용법
 
