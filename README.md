@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://cdxtheme.com"><strong>cdxtheme.com</strong></a>
+</p>
+
+<p align="center">
   <strong>English</strong> ·
   <a href="README.zh-CN.md">简体中文</a> ·
   <a href="README.ja.md">日本語</a> ·
@@ -35,10 +39,11 @@
 <table>
   <tbody>
     <tr>
-      <td width="260">
-        <a href="https://yylx.io"><img src="https://yylx.io/favicon.svg" width="32" align="center" alt="Yylx logo">&nbsp; <strong>鱼鱼连线中转站</strong></a>
+      <td width="300">
+        <img src="public/sponsors/yylx-logo.jpg" width="80" align="center" alt="Yylx logo">&nbsp;&nbsp;
+        <a href="https://yylx.io"><strong>鱼鱼连线中转站</strong></a>
       </td>
-      <td>A unified AI model API gateway for switching between Claude and OpenAI GPT models.</td>
+      <td>Yylx provides a unified AI model API gateway optimized for Claude Code workflows. Switch between Claude and OpenAI GPT models by changing a single configuration line. It gives developers a convenient and reliable way to connect to leading AI models.</td>
     </tr>
   </tbody>
 </table>
@@ -47,7 +52,7 @@
 
 ### 1. Download
 
-Get the newest installer from [GitHub Releases](https://github.com/croath/CDX-Theme/releases/latest).
+Visit the [official website](https://cdxtheme.com) or get the newest installer directly from [GitHub Releases](https://github.com/croath/CDX-Theme/releases/latest).
 
 | Platform | Package | Status |
 | --- | --- | --- |
@@ -231,6 +236,7 @@ Proprietary / as provided by the project author unless otherwise stated. Third-p
 ---
 
 <p align="center">
+  <a href="https://cdxtheme.com">Website</a> ·
   <a href="https://github.com/croath/CDX-Theme/releases/latest">Download</a> ·
   <a href="https://github.com/croath/CDX-Theme/issues">Issues</a> ·
   <a href="cli/README.md">CLI documentation</a> ·

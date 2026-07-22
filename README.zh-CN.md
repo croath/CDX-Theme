@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://cdxtheme.com"><strong>cdxtheme.com</strong></a>
+</p>
+
+<p align="center">
   <a href="README.md">English</a> ·
   <strong>简体中文</strong> ·
   <a href="README.ja.md">日本語</a> ·
@@ -36,10 +40,11 @@
 <table>
   <tbody>
     <tr>
-      <td width="260">
-        <a href="https://yylx.io"><img src="https://yylx.io/favicon.svg" width="32" align="center" alt="鱼鱼连线中转站 Logo">&nbsp; <strong>鱼鱼连线中转站</strong></a>
+      <td width="300">
+        <img src="public/sponsors/yylx-logo.jpg" width="80" align="center" alt="鱼鱼连线中转站 Logo">&nbsp;&nbsp;
+        <a href="https://yylx.io"><strong>鱼鱼连线中转站</strong></a>
       </td>
-      <td>统一的 AI 模型 API 网关，支持在 Claude 与 OpenAI GPT 模型之间灵活切换。</td>
+      <td>鱼鱼连线中转站提供统一的 AI 模型 API 网关服务，专为 Claude Code 使用场景优化。只需替换一行配置，即可在 Claude 与 OpenAI GPT 模型之间灵活切换，为开发者提供便捷、稳定的主流 AI 模型接入体验。</td>
     </tr>
   </tbody>
 </table>
@@ -48,7 +53,7 @@
 
 ### 1. 下载
 
-从 [GitHub Releases](https://github.com/croath/CDX-Theme/releases/latest) 获取最新安装包。
+访问 [CDXTheme 官网](https://cdxtheme.com)，或直接从 [GitHub Releases](https://github.com/croath/CDX-Theme/releases/latest) 获取最新安装包。
 
 | 平台 | 安装包 | 状态 |
 | --- | --- | --- |
@@ -232,6 +237,7 @@ cargo tauri build --manifest-path app-tauri/Cargo.toml
 ---
 
 <p align="center">
+  <a href="https://cdxtheme.com">官网</a> ·
   <a href="https://github.com/croath/CDX-Theme/releases/latest">下载</a> ·
   <a href="https://github.com/croath/CDX-Theme/issues">反馈问题</a> ·
   <a href="cli/README.md">CLI 文档</a> ·
