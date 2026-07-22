@@ -40,10 +40,10 @@
   <tbody>
     <tr>
       <td width="340" align="center">
-        <img src="public/sponsors/yylx_ai_router.png" width="300" alt="鱼鱼连线中转站 로고"><br>
-        <a href="https://yylx.io"><strong>鱼鱼连线中转站</strong></a>
+        <img src="public/sponsors/yylx_ai_router.png" width="300" alt="YYLX AI Router 로고"><br>
+        <a href="https://yylx.io"><strong>YYLX AI Router</strong></a>
       </td>
-      <td>鱼鱼连线中转站은 Claude Code 워크플로에 최적화된 통합 AI 모델 API 게이트웨이를 제공합니다. 설정 한 줄만 바꾸면 Claude와 OpenAI GPT 모델을 유연하게 전환할 수 있습니다. 개발자가 주요 AI 모델에 편리하고 안정적으로 연결할 수 있도록 지원합니다. <a href="https://yylx.io">지금 가입하면 테스트용 $0.5 크레딧을 무료로 받을 수 있습니다.</a></td>
+      <td>YYLX는 Claude Code 워크플로에 최적화된 통합 AI 모델 API 게이트웨이를 제공합니다. 설정 한 줄만 바꾸면 Claude와 OpenAI GPT 모델을 유연하게 전환할 수 있습니다. 개발자가 주요 AI 모델에 편리하고 안정적으로 연결할 수 있도록 지원합니다. <a href="https://yylx.io">지금 가입하면 테스트용 $0.5 크레딧을 무료로 받을 수 있습니다.</a></td>
     </tr>
   </tbody>
 </table>
