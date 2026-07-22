@@ -32,11 +32,7 @@
 
 CDXTheme is independently maintained. Sponsorship helps fund releases, platform testing, theme tooling, and long-term maintenance.
 
-| Become a sponsor | Support without spending |
-| --- | --- |
-| Sponsor placements and collaborations are open. [Contact **@croath**](https://github.com/croath) to discuss sponsorship. | [Star the repository](https://github.com/croath/CDX-Theme), share CDXTheme, report bugs, or contribute a theme. |
-
-> No payment channel is currently published. Please contact the maintainer directly for sponsorship inquiries.
+Sponsor placements and collaborations are open. To become a sponsor, email [business@cdxtheme.com](mailto:business@cdxtheme.com).
 
 ## Use CDXTheme
 
@@ -229,5 +225,5 @@ Proprietary / as provided by the project author unless otherwise stated. Third-p
   <a href="https://github.com/croath/CDX-Theme/releases/latest">Download</a> ·
   <a href="https://github.com/croath/CDX-Theme/issues">Issues</a> ·
   <a href="cli/README.md">CLI documentation</a> ·
-  <a href="https://github.com/croath">Sponsor inquiry</a>
+  <a href="mailto:business@cdxtheme.com">Sponsor inquiry</a>
 </p>

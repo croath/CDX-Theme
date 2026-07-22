@@ -32,11 +32,7 @@
 
 CDXTheme는 독립적으로 유지 관리됩니다. 후원금은 지속적인 릴리스, 플랫폼 테스트, 테마 도구 개선 및 장기 유지 관리에 도움이 됩니다.
 
-| 후원자 되기 | 비용 없이 돕기 |
-| --- | --- |
-| 후원 노출 및 협업을 받고 있습니다. 후원 문의는 [**@croath**에게 연락](https://github.com/croath)해 주세요. | [저장소에 Star 추가](https://github.com/croath/CDX-Theme), CDXTheme 공유, 버그 제보 또는 테마 기여. |
-
-> 현재 공개된 결제 채널은 없습니다. 후원 관련 문의는 관리자에게 직접 연락해 주세요.
+후원 노출 및 협업을 받고 있습니다. 후원자가 되려면 [business@cdxtheme.com](mailto:business@cdxtheme.com)으로 이메일을 보내 주세요.
 
 ## CDXTheme 사용법
 
@@ -229,5 +225,5 @@ cargo tauri build --manifest-path app-tauri/Cargo.toml
   <a href="https://github.com/croath/CDX-Theme/releases/latest">다운로드</a> ·
   <a href="https://github.com/croath/CDX-Theme/issues">이슈</a> ·
   <a href="cli/README.md">CLI 문서</a> ·
-  <a href="https://github.com/croath">후원 문의</a>
+  <a href="mailto:business@cdxtheme.com">후원 문의</a>
 </p>

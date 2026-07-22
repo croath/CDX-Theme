@@ -32,11 +32,7 @@
 
 CDXTheme は個人で維持されています。スポンサー支援は、継続的なリリース、各プラットフォームでのテスト、テーマツールの改善、長期的なメンテナンスに役立ちます。
 
-| スポンサーになる | 費用をかけずに支援する |
-| --- | --- |
-| スポンサー掲載とコラボレーションを受け付けています。詳細は [**@croath** にお問い合わせください](https://github.com/croath)。 | [リポジトリに Star](https://github.com/croath/CDX-Theme) を付ける、共有する、不具合を報告する、テーマを提供する。 |
-
-> 現在、公開された決済窓口はありません。スポンサーに関するお問い合わせはメンテナーへ直接お願いします。
+スポンサー掲載とコラボレーションを受け付けています。スポンサーをご希望の場合は、[business@cdxtheme.com](mailto:business@cdxtheme.com) までメールでお問い合わせください。
 
 ## CDXTheme の使い方
 
@@ -229,5 +225,5 @@ cargo tauri build --manifest-path app-tauri/Cargo.toml
   <a href="https://github.com/croath/CDX-Theme/releases/latest">ダウンロード</a> ·
   <a href="https://github.com/croath/CDX-Theme/issues">Issues</a> ·
   <a href="cli/README.md">CLI ドキュメント</a> ·
-  <a href="https://github.com/croath">スポンサーのお問い合わせ</a>
+  <a href="mailto:business@cdxtheme.com">スポンサーのお問い合わせ</a>
 </p>

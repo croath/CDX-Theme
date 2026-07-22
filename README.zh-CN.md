@@ -25,18 +25,15 @@
   <a href="#许可证"><img src="https://img.shields.io/badge/license-proprietary-lightgrey?style=flat-square" alt="专有许可证"></a>
 </p>
 
-> [!NOTE]
+> **提示**
+>
 > CDXTheme 是独立的社区项目，与 OpenAI 不存在隶属关系，也未获得其官方背书。
 
 ## 赞助 CDXTheme
 
 CDXTheme 由作者独立维护。赞助将帮助项目持续发布版本、测试不同平台、完善主题工具并进行长期维护。
 
-| 成为赞助商 | 不花钱也能支持 |
-| --- | --- |
-| 现已开放赞助展示与合作。欢迎[联系 **@croath**](https://github.com/croath)沟通赞助事宜。 | [为仓库加星](https://github.com/croath/CDX-Theme)、分享 CDXTheme、报告问题或贡献主题。 |
-
-> 项目目前没有公开的付款渠道；如有赞助意向，请直接联系维护者。
+现已开放赞助展示与合作。如需成为赞助商，请发送邮件至 [business@cdxtheme.com](mailto:business@cdxtheme.com)。
 
 ## 使用 CDXTheme
 
@@ -229,5 +226,5 @@ cargo tauri build --manifest-path app-tauri/Cargo.toml
   <a href="https://github.com/croath/CDX-Theme/releases/latest">下载</a> ·
   <a href="https://github.com/croath/CDX-Theme/issues">反馈问题</a> ·
   <a href="cli/README.md">CLI 文档</a> ·
-  <a href="https://github.com/croath">赞助咨询</a>
+  <a href="mailto:business@cdxtheme.com">赞助咨询</a>
 </p>
