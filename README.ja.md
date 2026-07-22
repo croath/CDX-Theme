@@ -39,11 +39,11 @@
 <table>
   <tbody>
     <tr>
-      <td width="300">
-        <img src="public/sponsors/yylx-logo.jpg" width="80" align="center" alt="鱼鱼连线中转站のロゴ">&nbsp;&nbsp;
+      <td width="340" align="center">
+        <img src="public/sponsors/yylx_ai_router.png" width="300" alt="鱼鱼连线中转站のロゴ"><br>
         <a href="https://yylx.io"><strong>鱼鱼连线中转站</strong></a>
       </td>
-      <td>鱼鱼连线中转站は、Claude Code のワークフローに最適化された統合 AI モデル API ゲートウェイです。設定を1行変更するだけで、Claude と OpenAI GPT モデルを柔軟に切り替えられます。主要な AI モデルへ手軽かつ安定して接続できる環境を開発者に提供します。</td>
+      <td>鱼鱼连线中转站は、Claude Code のワークフローに最適化された統合 AI モデル API ゲートウェイです。設定を1行変更するだけで、Claude と OpenAI GPT モデルを柔軟に切り替えられます。主要な AI モデルへ手軽かつ安定して接続できる環境を開発者に提供します。<a href="https://yylx.io">今すぐ登録すると、テスト用の $0.5 クレジットを無料で受け取れます。</a></td>
     </tr>
   </tbody>
 </table>

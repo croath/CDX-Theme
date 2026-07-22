@@ -40,11 +40,11 @@
 <table>
   <tbody>
     <tr>
-      <td width="300">
-        <img src="public/sponsors/yylx-logo.jpg" width="80" align="center" alt="鱼鱼连线中转站 Logo">&nbsp;&nbsp;
+      <td width="340" align="center">
+        <img src="public/sponsors/yylx_ai_router.png" width="300" alt="鱼鱼连线中转站 Logo"><br>
         <a href="https://yylx.io"><strong>鱼鱼连线中转站</strong></a>
       </td>
-      <td>鱼鱼连线中转站提供统一的 AI 模型 API 网关服务，专为 Claude Code 使用场景优化。只需替换一行配置，即可在 Claude 与 OpenAI GPT 模型之间灵活切换，为开发者提供便捷、稳定的主流 AI 模型接入体验。</td>
+      <td>鱼鱼连线中转站提供统一的 AI 模型 API 网关服务，专为 Claude Code 使用场景优化。只需替换一行配置，即可在 Claude 与 OpenAI GPT 模型之间灵活切换，为开发者提供便捷、稳定的主流 AI 模型接入体验。<a href="https://yylx.io">点击注册免费领取 $0.5 测试金额</a>。</td>
     </tr>
   </tbody>
 </table>
