@@ -1,100 +1,174 @@
-# CDXTheme
+<p align="center">
+  <img src="public/logo.png" width="128" alt="CDXTheme logo">
+</p>
 
-Desktop theme manager for the **Codex / ChatGPT** app.
+<h1 align="center">CDXTheme</h1>
 
-Browse built-in themes, install portable packages, apply appearance + live CSS skins, and restore defaults — all from a native desktop UI.
+<p align="center">
+  A native desktop theme manager that gives Codex and ChatGPT a look of their own.
+</p>
 
-| Platform | Status |
-|----------|--------|
-| macOS | Supported |
-| Windows | Supported |
-| Linux | Not targeted |
+<p align="center">
+  <a href="https://cdxtheme.com"><strong>cdxtheme.com</strong></a>
+</p>
 
----
+<p align="center">
+  <strong>English</strong> ·
+  <a href="README.zh-CN.md">简体中文</a> ·
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a>
+</p>
 
-## Features
+<p align="center">
+  <a href="https://github.com/croath/CDX-Theme/releases/latest"><img src="https://img.shields.io/github/v/release/croath/CDX-Theme?style=flat-square&logo=github&label=release" alt="Latest release"></a>
+  <a href="https://github.com/croath/CDX-Theme/releases"><img src="https://img.shields.io/github/downloads/croath/CDX-Theme/total?style=flat-square&logo=github" alt="Downloads"></a>
+  <a href="https://github.com/croath/CDX-Theme/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/croath/CDX-Theme/release.yml?style=flat-square&logo=githubactions&logoColor=white&label=release" alt="Release build"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-555?style=flat-square&logo=apple" alt="macOS and Windows">
+  <img src="https://img.shields.io/badge/Rust-1.96-orange?style=flat-square&logo=rust" alt="Rust 1.96">
+  <img src="https://img.shields.io/badge/Tauri-2-24C8D8?style=flat-square&logo=tauri&logoColor=white" alt="Tauri 2">
+  <a href="#license"><img src="https://img.shields.io/badge/license-proprietary-lightgrey?style=flat-square" alt="Proprietary license"></a>
+</p>
 
-- **Recommend** — list built-in and installed themes; apply in one click  
-- **Install** — import `.cdxtheme` / `.codedrobe-theme` multi-app packages  
-- **Restore** — roll back managed appearance keys and remove injected skins  
-- **Settings** — language (EN / 简中 / 繁中 / JP), light·dark UI, CDP port  
-- **CDP inject** — live CSS/chrome skin via Chrome DevTools Protocol  
-- **Config apply** — write Codex `~/.codex/config.toml` appearance (restarts only when values change)  
-- **macOS overlay chrome** — seamless title bar without private API  
-- **Window drag** — drag non-interactive areas; double-click to maximize  
+> [!NOTE]
+> CDXTheme is an independent community project and is not affiliated with or endorsed by OpenAI.
 
----
+## Sponsor CDXTheme
 
-## How it works
+[Want to appear in the sponsor list?](mailto:business@cdxtheme.com)
 
+<table>
+  <tbody>
+    <tr>
+      <td width="340" align="center">
+        <img src="public/sponsors/yylx_ai_router.png" width="300" alt="YYLX AI Router logo"><br>
+        <a href="https://yylx.io"><strong>YYLX AI Router</strong></a>
+      </td>
+      <td>YYLX provides a unified AI model API gateway optimized for Claude Code workflows. Switch between Claude and OpenAI GPT models by changing a single configuration line. It gives developers a convenient and reliable way to connect to leading AI models. <a href="https://yylx.io">Register now to receive $0.50 in free test credit.</a></td>
+    </tr>
+  </tbody>
+</table>
+
+## Use CDXTheme
+
+### 1. Download
+
+Visit the [official website](https://cdxtheme.com) or get the newest installer directly from [GitHub Releases](https://github.com/croath/CDX-Theme/releases/latest).
+
+| Platform | Package | Status |
+| --- | --- | --- |
+| macOS 12+ (Apple Silicon) | `.dmg` | Supported |
+| Windows x64 | NSIS `.exe` | Supported |
+| Linux | — | Not currently targeted |
+
+CDXTheme expects the Codex / ChatGPT desktop app to be installed. It communicates with the app locally through Chrome DevTools Protocol (CDP) on `127.0.0.1`; the default port is `9335`.
+
+### 2. Choose and apply a theme
+
+1. Open **Recommend** to browse available and installed themes.
+2. Select a theme and apply it with one click.
+3. If requested, allow CDXTheme to relaunch Codex / ChatGPT with the CDP port enabled.
+
+CDXTheme updates supported appearance keys in `~/.codex/config.toml` and injects the live CSS skin into the desktop renderer. Codex is restarted only when startup-loaded appearance values actually change.
+
+### 3. Install your own package
+
+Open **Install** and import either supported portable format:
+
+| Extension | Package `format` |
+| --- | --- |
+| `.cdxtheme` | `cdxtheme` |
+| `.codedrobe-theme` | `codedrobe-theme` |
+
+Packages use schema version `1`, may be up to **30 MB**, and cannot load remote CSS through `@import` or `url(http…)`. A package can describe multiple app targets, but CDXTheme currently applies only `targets.codex`.
+
+### 4. Restore the default appearance
+
+Choose **Restore** to revert the managed appearance values from the one-time backup and remove injected theme elements from the live renderer.
+
+### What you can do
+
+- Browse built-in, remote, and locally installed themes.
+- Install and remove portable theme packages.
+- Apply appearance settings and live CSS/chrome skins together.
+- Restore Codex / ChatGPT to its previous managed appearance.
+- Switch CDXTheme between light, dark, and system appearance.
+- Use English, Simplified Chinese, Traditional Chinese, or Japanese in the app.
+- Configure the CDP port and relaunch the host app when needed.
+
+## Theme authoring CLI
+
+The Rust CLI is a thin interface over the shared `cdx-theme-core` library. See the [complete CLI guide](cli/README.md) for every option.
+
+```bash
+cargo install --path cli
+
+# Pack a source directory into a portable package
+cdxtheme theme pack path/to/theme-source
+
+# Unpack or convert a package
+cdxtheme theme unpack theme.cdxtheme path/to/output
+cdxtheme theme convert theme.codedrobe-theme
+
+# Apply a package directly through CDP
+cdxtheme apply --app codex --theme theme.cdxtheme
 ```
-┌─────────────┐     config.toml      ┌──────────────────┐
-│  CDXTheme   │ ───────────────────► │ Codex appearance │
-│             │                      │ (startup load)   │
-│             │   CDP inject CSS     │                  │
-│             │ ───────────────────► │ Renderer skin    │
-└─────────────┘                      └──────────────────┘
+
+A source directory uses `theme.json` (preferred) or `manifest.json`, plus CSS and optional image assets.
+
+## Technical overview
+
+### How it works
+
+```text
+                         ~/.codex/config.toml
+                    ┌──────────────────────────► startup appearance
+                    │
+┌──────────────┐    │    CDP on 127.0.0.1:9335
+│   CDXTheme   │────┼──────────────────────────► live renderer skin
+│  Tauri app   │    │
+└──────────────┘    └──────────────────────────► backup / restore
 ```
 
-1. **Appearance** — managed keys under `[desktop]` in `~/.codex/config.toml`  
-   (`appearanceTheme`, `appearanceLightCodeThemeId`, `appearanceLightChromeTheme`).  
-   Codex loads these at startup; CDXTheme restarts Codex only when they actually change.
+1. **Appearance** — manages selected keys under `[desktop]` in the Codex config.
+2. **Skin** — injects package CSS and embedded art into `app://` renderer targets over CDP.
+3. **Restore** — recovers managed keys from `config.before.toml` and removes injected DOM.
+4. **Updates** — checks signed Tauri updater metadata and installs available releases.
 
-2. **Skin** — package CSS + art injected into the Codex renderer over CDP  
-   (`--remote-debugging-port`, default `9335`).
+### Stack and architecture
 
-3. **Restore** — reverts managed keys from a one-time backup and strips injected DOM.
+| Layer | Technology | Responsibility |
+| --- | --- | --- |
+| Desktop shell | Tauri 2 | Native windows, commands, updater, bundling |
+| Frontend | Rust · Leptos 0.8 · WASM | Client-side UI and state |
+| Styling | Tailwind CSS 4 | Application UI styles |
+| Host integration | Rust · CDP | Launch, inject, verify, and restore |
+| Build | Cargo · Trunk · Bun | Workspace, WASM bundle, frontend dependencies |
 
----
-
-## Requirements
-
-### Runtime
-
-- **Codex / ChatGPT desktop app** installed  
-  - macOS: `ChatGPT.app` / bundle id `com.openai.codex`  
-  - Windows: desktop install or Microsoft Store `OpenAI.Codex`
-- Network loopback for CDP (`127.0.0.1`)
+```text
+├── src/          # Leptos CSR frontend
+├── app-tauri/    # Tauri backend and desktop bundle
+├── core/         # Shared package, launch, apply, and injection logic
+├── cli/          # cdxtheme authoring CLI
+├── types/        # Shared theme types
+├── assets/       # Renderer injection script
+├── public/       # Static assets
+├── style/        # Tailwind entry point
+└── scripts/      # Build and optional helper scripts
+```
 
 ### Development
 
-- [Rust](https://rustup.rs/) (see `rust-toolchain.toml`, channel `1.96.0`)
-- [Trunk](https://trunkrs.dev/) — WASM frontend bundler  
-- [Tauri CLI 2](https://v2.tauri.app/)  
-- Node (for Tailwind via Trunk / optional `npx @tauri-apps/cli`)  
-- macOS: Xcode CLT · Windows: WebView2 (embedBootstrapper bundled, supports Windows 7+)
+You need [Rust](https://rustup.rs/) `1.96.0`, the `wasm32-unknown-unknown` target, [Trunk](https://trunkrs.dev/), Tauri CLI 2, and Bun or Node. macOS development also requires Xcode Command Line Tools; Windows requires WebView2.
 
 ```bash
-# examples
+rustup target add wasm32-unknown-unknown
 cargo install trunk
 cargo install tauri-cli --version "^2"
-rustup target add wasm32-unknown-unknown
-```
-
----
-
-## Develop
-
-```bash
-# from repo root
+bun install
 cargo tauri dev
-# or
-npm exec --package @tauri-apps/cli@2 -- tauri dev
 ```
 
-Frontend is served by Trunk on **http://localhost:1420** (`Trunk.toml`).
-
-### Debug logging (`tauri dev`)
-
-Debug builds enable **`log::Debug`**, print to the terminal, write rotating files under the app log dir, and open **Web Inspector** automatically.
-
-| Output | Where |
-|--------|--------|
-| Terminal | stdout (from `cargo tauri dev`) |
-| Log file | macOS: `~/Library/Logs/com.cdxtheme.cdx/cdxtheme.log` |
-| Webview | DevTools console (Webview target + auto `open_devtools`) |
-
-Release builds use **`Info`** level and do not open DevTools.
+Trunk serves the frontend at `http://localhost:1420`. Debug builds log to the terminal and the platform app-log directory and automatically open Web Inspector.
 
 Useful checks:
 
@@ -104,239 +178,67 @@ cargo check --target wasm32-unknown-unknown
 cargo test --manifest-path app-tauri/Cargo.toml --lib
 ```
 
----
-
-## Build
-
-Use the project build scripts (installs missing toolchain pieces when possible):
+### Build
 
 ```bash
-# macOS / Linux
-./scripts/build.sh              # release app bundle
-./scripts/build.sh --debug      # debug build
-./scripts/build.sh --clean      # clean then release
-./scripts/build.sh --check      # typecheck only
-./scripts/build.sh --frontend   # trunk build only
-```
+# macOS / Linux host
+./scripts/build.sh
+./scripts/build.sh --debug
+./scripts/build.sh --check
 
-```powershell
-# Windows (PowerShell)
-.\scripts\build.ps1
-.\scripts\build.ps1 -Debug
-.\scripts\build.ps1 -Clean
-.\scripts\build.ps1 -Check
-```
-
-Or invoke Tauri directly:
-
-```bash
+# Direct Tauri build
 cargo tauri build --manifest-path app-tauri/Cargo.toml
 ```
 
-Outputs under `target/release/bundle/` (workspace target; `.app` / `.dmg` on macOS, NSIS .exe on Windows).
-
-Regenerate app icons from source art:
-
-```bash
-npm exec --package @tauri-apps/cli@2 -- tauri icon app-tauri/app-icon-source.png
+```powershell
+# Windows PowerShell
+.\scripts\build.ps1
+.\scripts\build.ps1 -Debug
+.\scripts\build.ps1 -Check
 ```
 
-### GitHub Release CI
+Bundles are written beneath `target/release/bundle/`. Publishing a GitHub Release triggers the release workflow for Apple Silicon macOS and Windows x64 artifacts.
 
-Workflow: [`.github/workflows/release.yml`](.github/workflows/release.yml).
+### Defaults and paths
 
-| Trigger | Behavior |
-|---------|----------|
-| **Publish a GitHub Release** | Builds macOS (Apple Silicon / arm64) and Windows (NSIS), uploads installers + updater `.sig` / `latest.json` to that release |
-| **workflow_dispatch** | Manual run; optional `release_tag` to attach assets to an existing release |
-
-**Repo setting:** Settings → Actions → General → Workflow permissions → **Read and write**.
-
-**Secrets** (Settings → Secrets and variables → Actions):
-
-| Secret | Required | Purpose |
-|--------|----------|---------|
-| `TAURI_SIGNING_PRIVATE_KEY` | **Yes** | Updater minisign private key (`cargo tauri signer generate`) |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | **Yes** | Key password (use empty secret if none) |
-| `APPLE_CERTIFICATE` | Recommended | Base64 `.p12` Developer ID Application cert |
-| `APPLE_CERTIFICATE_PASSWORD` | Recommended | Password for the `.p12` |
-| `APPLE_SIGNING_IDENTITY` | Optional | e.g. `Developer ID Application: Name (TEAMID)` |
-| `APPLE_API_ISSUER` + `APPLE_API_KEY` + `APPLE_API_KEY_CONTENT` | Notarization | App Store Connect API key (only method supported in release workflow) |
-| `WINDOWS_CERTIFICATE` + `WINDOWS_CERTIFICATE_PASSWORD` | Optional | Base64 `.pfx` for Windows signing (NSIS) |
-
-Generate updater keys (public key must match `plugins.updater.pubkey` in `app-tauri/tauri.conf.json`):
-
-```bash
-cargo tauri signer generate -w ~/.tauri/cdxtheme.key
-```
-
-**Windows Authenticode (self-signed, local):** materials live under [`.tauri/`](.tauri/) (see [`.tauri/README.md`](.tauri/README.md)).
-
-```bash
-# Regenerate if needed
-./.tauri/generate-windows-codesign.sh
-# Export env for local/CI-style bundling
-source .tauri/export-windows-signing.sh
-```
-
-`app-tauri/tauri.conf.json` → `bundle.windows` sets `digestAlgorithm` + `timestampUrl` + `webviewInstallMode` (NSIS).  
-PFX password is **not** stored in config (use env / secrets only).
-
-Export Apple cert for CI:
-
-```bash
-openssl base64 -A -in certificate.p12 -out certificate-base64.txt
-```
-
----
-
-## Theme packages
-
-### Portable formats
-
-Multi-app schema (same shape for both brands; see [CodeDrobe package.mjs](https://github.com/CodeDrobe/core/blob/main/src/theme/package.mjs)):
-
-| Extension | `format` field |
-|-----------|----------------|
-| `.cdxtheme` | `cdxtheme` (CDXTheme default) |
-| `.codedrobe-theme` | `codedrobe-theme` |
-
-Schema version `1`. Max size **30MB**. CSS must not load remote `@import` / `url(http…)`.  
-
-**Runtime loading:** the app catalogs and applies **only** `.cdxtheme` / `.codedrobe-theme` package files (not source directories).  
-Packages may include multiple `targets` (`codex`, `workbuddy`, …); **only `targets.codex` is read and applied today**.
-
-Example package (`tmp/doll-sister.cdxtheme` shape):
-
-```json
-{
-  "format": "cdxtheme",
-  "schemaVersion": 1,
-  "exportedAt": "…",
-  "theme": {
-    "id": "doll-sister",
-    "displayName": "Doll Sister",
-    "version": "1.0.0",
-    "copy": { "brandTitle": "…", "tagline": "…" }
-  },
-  "targets": {
-    "codex": {
-      "css": "/* inlined stylesheet */",
-      "options": {
-        "rendererProfile": "codex-theme-v1",
-        "baseTheme": { "mode": "light", "accent": "…" }
-      }
-    }
-  },
-  "assets": {
-    "images": {
-      "hero": { "filename": "art.png", "mimeType": "image/png", "base64": "…" }
-    }
-  }
-}
-```
-
-- **Built-in:** package files under repo `themes/` (bundled as app resources), e.g. `themes/doll-sister.cdxtheme`
-- **Installed:** same extensions under app local data `themes/`
-
-### Core library
-
-Shared host logic lives in **`core/`** (`cdx-theme-core`):
-
-| Module | Role |
-|--------|------|
-| `pack` | `pack_theme_dir` / `unpack_package` / `convert_package` |
-| `package` | Load portable packages → `LoadedTheme` |
-| `inject` | CDP apply / restore / verify |
-| `launch` | Ensure Codex remote-debugging |
-| `apply` | High-level: ensure CDP → inject |
-
-**CLI** and **app-tauri** both depend on this crate (no duplicated inject/pack paths).
-
-### CLI (authoring source → package)
-
-Rust CLI (`cli/`, binary `cdxtheme`). Full usage: **[cli/README.md](cli/README.md)**.
-
-```bash
-cargo install --path cli
-# or
-cargo run -p cdx-theme-cli -- <command>
-
-# Source dir uses theme.json (preferred) or manifest.json
-cdxtheme theme pack path/to/theme-source
-# → {id}-{version}.cdxtheme
-cdxtheme theme unpack doll-sister.cdxtheme path/to/out
-# CodeDrobe → CDXTheme (format + CSS codedrobe- → cdxtheme-)
-cdxtheme theme convert path/to/theme.codedrobe-theme
-# → {id}-{version}.cdxtheme
-
-# Ensure Codex CDP, then inject a package
-cdxtheme apply --app codex --theme path/to/theme.cdxtheme
-```
-
-### Node helpers (optional)
-
-`scripts/` still contains older Node tooling:
-
-| Script | Role |
-|--------|------|
-| `theme-package.mjs` / `export-theme.mjs` | Build portable packages |
-| `injector.mjs` | CDP inject from CLI |
-| `theme-tool.mjs` | Apply / restore config |
-| `start-codedrobe.sh` / `.ps1` | Launch Codex with debug port |
-
----
-
-## Settings
-
-| Setting | Default | Notes |
-|---------|---------|--------|
-| CDP port | `9335` | Used as `--remote-debugging-port` when launching Codex |
-| Language | system / EN | 简体中文 · 繁體中文 · English · 日本語 |
-| UI theme | system | Light / dark for CDXTheme itself |
-
-Config backup (first apply): app data `config.before.toml`.  
-Codex config path: `~/.codex/config.toml` (Windows: `%USERPROFILE%\.codex\config.toml`).
-
----
-
-## Project layout
-
-```
-├── src/                 # Leptos CSR frontend (WASM)
-├── app-tauri/           # Tauri 2 backend (CDP, catalog, launch, config)
-├── types/               # Shared ThemeMetadata / ThemeSource
-├── themes/              # Built-in theme packages
-├── assets/              # Injected renderer script (renderer-inject.js)
-├── scripts/             # Optional Node/PowerShell helpers
-├── public/              # Static assets (logo.png)
-├── style/               # Tailwind entry
-└── Trunk.toml
-```
-
-Stack: **Tauri 2 · Rust · Leptos 0.8 · Trunk · Tailwind 4**.
-
----
+| Item | Default / path |
+| --- | --- |
+| CDP endpoint | `127.0.0.1:9335` |
+| Codex config | `~/.codex/config.toml` |
+| Windows Codex config | `%USERPROFILE%\.codex\config.toml` |
+| First-apply backup | app data directory → `config.before.toml` |
+| User themes | app local data directory → `themes/` |
 
 ## Troubleshooting
 
-**Codex not found**  
-Install ChatGPT / Codex desktop. On Windows, Store package `OpenAI.Codex` is detected via Appx.
+<details>
+<summary><strong>Codex / ChatGPT is not found</strong></summary>
 
-**CDP disconnected**  
-Open Settings → confirm port → Save & relaunch. Codex must expose remote debugging on that port.
+Install the desktop app first. On Windows, CDXTheme also detects the Microsoft Store package named `OpenAI.Codex`.
+</details>
 
-**Appearance didn’t update**  
-Appearance only loads at Codex startup. Apply restarts Codex when config appearance keys change; re-apply if needed.
+<details>
+<summary><strong>CDP is disconnected</strong></summary>
 
-**Skin didn’t apply**  
-Confirm CDP status is connected, then apply again (inject is best-effort after config write).
+Open **Settings**, confirm the port, then save and relaunch. The same port must be available to both CDXTheme and the host app.
+</details>
 
-**macOS name wrong in menu / Cmd+Tab**  
-Rebuild/reinstall the app; `productName` / `CFBundleName` are set to **CDXTheme**. Log out or clear Launch Services cache if an old name sticks.
+<details>
+<summary><strong>The appearance or skin did not update</strong></summary>
 
----
+Startup appearance values require a host restart; live CSS requires a CDP connection. Reapply the theme after confirming the connection status.
+</details>
 
 ## License
 
-Proprietary / as provided by the project author unless otherwise stated.
+Proprietary / as provided by the project author unless otherwise stated. Third-party components remain subject to their respective licenses.
+
+---
+
+<p align="center">
+  <a href="https://cdxtheme.com">Website</a> ·
+  <a href="https://github.com/croath/CDX-Theme/releases/latest">Download</a> ·
+  <a href="https://github.com/croath/CDX-Theme/issues">Issues</a> ·
+  <a href="cli/README.md">CLI documentation</a> ·
+  <a href="mailto:business@cdxtheme.com">Sponsor inquiry</a>
+</p>
