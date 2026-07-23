@@ -1,4 +1,4 @@
-//! Shared CDXTheme core: pack / unpack / convert packages, load packages,
+//! Shared CDXTheme core: pack / unpack packages, load packages,
 //! CDP inject, Codex launch, and high-level apply.
 
 pub mod apply;
@@ -23,9 +23,8 @@ pub use launch::{
   restart_codex_debugging, restart_codex_debugging_with_log,
 };
 pub use pack::{
-  EXT_CDXTHEME, EXT_CODEDROBE, FORMAT_CDXTHEME, FORMAT_CODEDROBE, MAX_THEME_PACKAGE_BYTES,
-  PackageFormat, THEME_SCHEMA_VERSION, ThemePackage, convert_package, pack_theme_dir,
-  rewrite_css_codedrobe_to_cdxtheme, unpack_package,
+  EXT_CDXTHEME, FORMAT_CDXTHEME, MAX_THEME_PACKAGE_BYTES, THEME_SCHEMA_VERSION, ThemePackage,
+  pack_theme_dir, unpack_package,
 };
 pub use package::{
   ACTIVE_APP_ID, APP_CODEX, APP_WORKBUDDY, CodexThemePeek, THEME_EXTENSION,
@@ -38,4 +37,5 @@ pub use cdx_theme_types::{
   BaseTheme, BaseThemeFonts, CodexLoadedTarget, CodexTargetOptions, CodexVerification, LoadedArt,
   LoadedTargets, LoadedTheme, PublicTheme, SelectorCheck, SemanticColors, ThemeCopy,
   VerificationContext, VerificationWhen, WorkBuddyLoadedTarget, WorkBuddyVerification,
+  deserialize_version_u32, parse_version_u32,
 };

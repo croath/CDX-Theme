@@ -1,5 +1,5 @@
 //! Theme package loading for CDP injection.
-//! Runtime themes are portable package files only (`.cdxtheme` / `.codedrobe-theme`).
+//! Runtime themes are portable package files only (`.cdxtheme`).
 //! Packages are plain JSON: load = read + parse; CSS/art stay in memory.
 //!
 //! Loaded theme types live in `cdx-theme-types` and are re-exported here.
@@ -30,7 +30,7 @@ pub fn load_theme_package(package_path: impl AsRef<Path>) -> Result<LoadedTheme,
   }
   if !crate::package::is_cdx_theme_file(path) {
     return Err(format!(
-      "file is not a valid theme package (JSON with format cdxtheme|codedrobe-theme): {}",
+      "file is not a valid theme package (JSON with format cdxtheme): {}",
       path.display()
     ));
   }
@@ -40,9 +40,7 @@ pub fn load_theme_package(package_path: impl AsRef<Path>) -> Result<LoadedTheme,
 
 /// Build the Runtime.evaluate expression for the **Codex** host target.
 ///
-/// Payload: `{ theme, cssText, imageDataUrls }` with **cdxtheme-only** branding.
-/// Package CSS that still uses `codedrobe-*` tokens is rewritten to `cdxtheme-*`
-/// before inject so multi-image vars / skin classes match the runtime.
+/// Payload: `{ theme, cssText, imageDataUrls }` with **cdxtheme** branding.
 pub fn build_inject_expression(theme: &LoadedTheme) -> Result<(String, PublicTheme), String> {
   let target = theme.codex()?;
   build_inject_from_css(theme, &target.css, cdx_theme_types::APP_CODEX)
@@ -101,8 +99,6 @@ fn build_inject_from_css(
     ));
   }
 
-  // Prefer simple global rewrite (matches pack/convert).
-  let css = crate::pack::rewrite_css_codedrobe_to_cdxtheme(css);
   let images = Value::Object(build_image_data_urls(theme));
   let public = theme.public();
   let template = include_str!("../../../assets/renderer-inject.js");
@@ -141,7 +137,7 @@ mod tests {
     LoadedTheme {
       id: "demo".into(),
       display_name: "Demo".into(),
-      version: "1.0.0".into(),
+      version: 1,
       copy: ThemeCopy::default(),
       images: Default::default(),
       art: None,
@@ -182,27 +178,6 @@ mod tests {
     );
     // Quotes inside CSS are escaped for JS.
     assert!(expression.contains(r#"\"x\""#) || expression.contains(r#"\\"x\\""#));
-  }
-
-  #[test]
-  fn inject_rewrites_legacy_codedrobe_css_to_cdxtheme() {
-    let theme = demo_theme(
-      r#":root.codedrobe-codex-skin { background: var(--codedrobe-image-hero); }
-#codedrobe-codex-skin-chrome .dream-polaroid { display: block; }"#,
-    );
-    let (expression, _) = build_inject_expression(&theme).expect("build inject");
-    assert!(
-      expression.contains("cdxtheme-codex-skin")
-        && expression.contains("--cdxtheme-image-hero")
-        && expression.contains("cdxtheme-codex-skin-chrome"),
-      "legacy codedrobe CSS tokens must be rewritten to cdxtheme"
-    );
-    assert!(
-      !expression.contains("codedrobe-codex-skin")
-        && !expression.contains("--codedrobe-image-")
-        && !expression.contains("codedrobe-codex-skin-chrome"),
-      "codedrobe brand tokens must not remain in inject payload"
-    );
   }
 
   #[test]

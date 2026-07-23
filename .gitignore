@@ -1,10 +1,13 @@
 /dist/
+/app-ui/dist/
 /target/
 node_modules/
+/app-ui/node_modules/
 .DS_Store
 tmp/
 output/
 .scripts/
+.syncignore
 
 # Windows code-signing secrets (self-signed cert for Authenticode)
 .tauri/*.key

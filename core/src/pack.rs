@@ -1,12 +1,8 @@
-//! Pack / unpack portable multi-app theme packages.
-//!
-//! Supported brands (same schema):
-//! - `cdxtheme` / `.cdxtheme` (default for this project)
-//! - `codedrobe-theme` / `.codedrobe-theme` (CodeDrobe-compatible)
-//!
+//! Pack / unpack portable multi-app theme packages (`.cdxtheme`).
 
 use crate::error::{CoreError, Result};
 use base64::Engine;
+use cdx_theme_types::{deserialize_version_u32, parse_version_u32};
 use chrono::Utc;
 
 use serde::{Deserialize, Serialize};
@@ -16,9 +12,7 @@ use std::fs;
 use std::path::{Component, Path, PathBuf};
 
 pub const FORMAT_CDXTHEME: &str = "cdxtheme";
-pub const FORMAT_CODEDROBE: &str = "codedrobe-theme";
 pub const EXT_CDXTHEME: &str = "cdxtheme";
-pub const EXT_CODEDROBE: &str = "codedrobe-theme";
 
 pub const THEME_SCHEMA_VERSION: u64 = 1;
 pub const MAX_THEME_PACKAGE_BYTES: u64 = 30 * 1024 * 1024;
@@ -26,43 +20,8 @@ pub const MAX_THEME_IMAGES: usize = 32;
 
 const SAFE_IMAGE_TYPES: &[&str] = &["image/png", "image/jpeg", "image/webp", "image/gif"];
 
-/// Package brand: same multi-app JSON schema, different `format` / file extension.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum PackageFormat {
-  /// CDXTheme brand (default): `format: "cdxtheme"`, extension `.cdxtheme`.
-  #[default]
-  Cdxtheme,
-  /// CodeDrobe brand: `format: "codedrobe-theme"`, extension `.codedrobe-theme`.
-
-  CodedrobeTheme,
-}
-
-impl PackageFormat {
-  pub fn as_str(self) -> &'static str {
-    match self {
-      Self::Cdxtheme => FORMAT_CDXTHEME,
-      Self::CodedrobeTheme => FORMAT_CODEDROBE,
-    }
-  }
-
-  pub fn extension(self) -> &'static str {
-    match self {
-      Self::Cdxtheme => EXT_CDXTHEME,
-      Self::CodedrobeTheme => EXT_CODEDROBE,
-    }
-  }
-
-  pub fn parse(format: &str) -> Option<Self> {
-    match format.trim().to_ascii_lowercase().as_str() {
-      FORMAT_CDXTHEME => Some(Self::Cdxtheme),
-      FORMAT_CODEDROBE => Some(Self::CodedrobeTheme),
-      _ => None,
-    }
-  }
-}
-
 pub fn is_supported_package_format(format: &str) -> bool {
-  PackageFormat::parse(format).is_some()
+  format.trim().eq_ignore_ascii_case(FORMAT_CDXTHEME)
 }
 
 // ── Portable package ────────────────────────────────────────────────────────
@@ -72,7 +31,9 @@ pub fn is_supported_package_format(format: &str) -> bool {
 pub struct ThemeMeta {
   pub id: String,
   pub display_name: String,
-  pub version: String,
+  /// Integer package version (JSON number; legacy string versions are accepted on read).
+  #[serde(deserialize_with = "deserialize_version_u32")]
+  pub version: u32,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub copy: Option<Value>,
 }
@@ -90,7 +51,7 @@ pub struct ImageAsset {
 pub struct PackageAssets {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub images: Option<BTreeMap<String, ImageAsset>>,
-  /// Alias for `images.hero` (CodeDrobe allows either, not both).
+  /// Alias for `images.hero` (either `art` or `images.hero`, not both).
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub art: Option<ImageAsset>,
 }
@@ -120,10 +81,7 @@ pub struct ThemePackage {
 
 impl ThemePackage {
   pub fn package_filename(&self) -> String {
-    let ext = PackageFormat::parse(&self.format)
-      .unwrap_or_default()
-      .extension();
-    format!("{}-{}.{}", self.theme.id, self.theme.version, ext)
+    format!("{}-{}.{}", self.theme.id, self.theme.version, EXT_CDXTHEME)
   }
 }
 
@@ -132,18 +90,15 @@ impl ThemePackage {
 /// Preferred source filenames inside a theme directory (first match wins).
 pub const SOURCE_FILENAMES: &[&str] = &["theme.json", "manifest.json"];
 
-/// Pack a theme directory (or path to `theme.json` / `manifest.json`) into a portable package.
-///
-/// Target CSS is automatically rewritten: `codedrobe-` → `cdxtheme-`.
+/// Pack a theme directory (or path to `theme.json` / `manifest.json`) into a `.cdxtheme` package.
 pub fn pack_theme_dir(
   theme_dir_or_manifest: &Path,
   output: Option<&Path>,
-  format: PackageFormat,
   pretty: bool,
   force: bool,
 ) -> Result<(PathBuf, u64)> {
   let (base, source_path) = resolve_source_paths(theme_dir_or_manifest)?;
-  let package = build_package(&base, &source_path, format)?;
+  let package = build_package(&base, &source_path)?;
   let out = match output {
     Some(p) => {
       if p.is_dir() {
@@ -151,7 +106,7 @@ pub fn pack_theme_dir(
       } else {
         let mut path = p.to_path_buf();
         if path.extension().is_none() {
-          path.set_extension(format.extension());
+          path.set_extension(EXT_CDXTHEME);
         }
         path
       }
@@ -206,11 +161,7 @@ fn resolve_source_paths(input: &Path) -> Result<(PathBuf, PathBuf)> {
   )))
 }
 
-pub fn build_package(
-  base: &Path,
-  source_path: &Path,
-  format: PackageFormat,
-) -> Result<ThemePackage> {
+pub fn build_package(base: &Path, source_path: &Path) -> Result<ThemePackage> {
   let raw = fs::read_to_string(source_path)?;
   let source: Value = serde_json::from_str(&raw)
     .map_err(|e| CoreError::msg(format!("failed to parse {}: {e}", source_path.display())))?;
@@ -239,16 +190,14 @@ pub fn build_package(
   let display_name = require_str(obj, "displayName")
     .or_else(|_| require_str(obj, "display_name"))?
     .to_string();
-  let version = require_str(obj, "version")?.to_string();
+  let version = require_version(obj)?;
   if !is_named_theme(&id) {
     return Err(CoreError::msg(format!(
       "invalid theme id `{id}` (use alphanumeric, `_`, `-`)"
     )));
   }
-  if display_name.trim().is_empty() || version.trim().is_empty() {
-    return Err(CoreError::msg(
-      "manifest displayName and version must be non-empty",
-    ));
+  if display_name.trim().is_empty() {
+    return Err(CoreError::msg("manifest displayName must be non-empty"));
   }
 
   let copy = obj.get("copy").cloned().filter(|v| !v.is_null());
@@ -300,13 +249,6 @@ pub fn build_package(
     if css_has_remote_resources(&css) {
       return Err(CoreError::msg(format!(
         "target `{app_id}` contains an external CSS resource; only embedded data URLs are supported"
-      )));
-    }
-    // Always normalize legacy CodeDrobe tokens → CDXTheme (`codedrobe-` → `cdxtheme-`).
-    let css = rewrite_css_codedrobe_to_cdxtheme(&css);
-    if css.trim().is_empty() {
-      return Err(CoreError::msg(format!(
-        "theme css became empty after brand rewrite for target `{app_id}`"
       )));
     }
     let options = t.get("options").cloned().filter(|v| v.is_object());
@@ -367,8 +309,9 @@ pub fn build_package(
         image_path.display()
       )));
     }
-    let mime = mime_type_for(&image_path)
-      .ok_or_else(|| CoreError::msg(format!("images.{name} uses an unsupported image file type")))?;
+    let mime = mime_type_for(&image_path).ok_or_else(|| {
+      CoreError::msg(format!("images.{name} uses an unsupported image file type"))
+    })?;
     let bytes = fs::read(&image_path)?;
     let filename = safe_asset_name(
       image_path
@@ -397,7 +340,7 @@ pub fn build_package(
   };
 
   let package = ThemePackage {
-    format: format.as_str().into(),
+    format: FORMAT_CDXTHEME.into(),
     schema_version: THEME_SCHEMA_VERSION,
     exported_at: Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
     theme: ThemeMeta {
@@ -431,81 +374,9 @@ pub fn write_package(package: &ThemePackage, out: &Path, pretty: bool) -> Result
   Ok(len)
 }
 
-// ── Convert ─────────────────────────────────────────────────────────────────
-
-/// Convert a portable package to CDXTheme brand (`.cdxtheme`).
-///
-/// - Sets `format` to `cdxtheme`
-/// - Rewrites every `codedrobe-` token in target CSS to `cdxtheme-`
-///   (classes, ids, custom properties, etc.)
-///
-/// Accepts either brand as input. Output defaults to `{id}-{version}.cdxtheme`.
-pub fn convert_package(
-  package_path: &Path,
-  output: Option<&Path>,
-  pretty: bool,
-  force: bool,
-) -> Result<(PathBuf, u64)> {
-  let mut package = read_package(package_path)?;
-  validate_package(&package)?;
-
-  for (app_id, target) in package.targets.iter_mut() {
-    let rewritten = rewrite_css_codedrobe_to_cdxtheme(&target.css);
-    if rewritten.trim().is_empty() {
-      return Err(CoreError::msg(format!(
-        "target `{app_id}` CSS became empty after brand rewrite"
-      )));
-    }
-    target.css = rewritten;
-  }
-
-  package.format = FORMAT_CDXTHEME.into();
-  package.exported_at = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
-  validate_package(&package)?;
-
-  let out = match output {
-    Some(p) => {
-      if p.is_dir() {
-        p.join(package.package_filename())
-      } else {
-        let mut path = p.to_path_buf();
-        if path.extension().is_none() {
-          path.set_extension(EXT_CDXTHEME);
-        }
-        path
-      }
-    }
-    None => PathBuf::from(package.package_filename()),
-  };
-
-  if !force && out.is_file() {
-    return Err(CoreError::msg(format!(
-      "output already exists: {} (pass --force to overwrite)",
-      out.display()
-    )));
-  }
-
-  if let Some(parent) = out.parent() {
-    if !parent.as_os_str().is_empty() {
-      fs::create_dir_all(parent)?;
-    }
-  }
-
-  let bytes = write_package(&package, &out, pretty)?;
-  Ok((out, bytes))
-}
-
-/// Rewrite CodeDrobe CSS brand tokens to CDXTheme: every `codedrobe-` → `cdxtheme-`.
-///
-/// Covers selectors (`.codedrobe-…`, `#codedrobe-…`, `html.codedrobe-…`),
-/// custom properties (`--codedrobe-image-*`, `--codedrobe-art`), and related ids.
-pub fn rewrite_css_codedrobe_to_cdxtheme(css: &str) -> String {
-  css.replace("codedrobe-", "cdxtheme-")
-}
-
 // ── Unpack ──────────────────────────────────────────────────────────────────
 
-/// Unpack a `.cdxtheme` / `.codedrobe-theme` package into a source theme directory.
+/// Unpack a `.cdxtheme` package into a source theme directory.
 pub fn unpack_package(package_path: &Path, output_dir: &Path) -> Result<PathBuf> {
   let package = read_package(package_path)?;
   validate_package(&package)?;
@@ -519,10 +390,7 @@ pub fn unpack_package(package_path: &Path, output_dir: &Path) -> Result<PathBuf>
     "displayName".into(),
     Value::String(package.theme.display_name.clone()),
   );
-  source.insert(
-    "version".into(),
-    Value::String(package.theme.version.clone()),
-  );
+  source.insert("version".into(), Value::from(package.theme.version));
   if let Some(copy) = &package.theme.copy {
     source.insert("copy".into(), copy.clone());
   }
@@ -599,7 +467,7 @@ pub fn read_package(path: &Path) -> Result<ThemePackage> {
     .map_err(|e| CoreError::msg(format!("failed to parse package {}: {e}", path.display())))?;
   if !is_supported_package_format(&package.format) {
     return Err(CoreError::msg(format!(
-      "unsupported package format `{}` in {} (expected {FORMAT_CDXTHEME} or {FORMAT_CODEDROBE})",
+      "unsupported package format `{}` in {} (expected {FORMAT_CDXTHEME})",
       package.format,
       path.display()
     )));
@@ -612,7 +480,7 @@ pub fn read_package(path: &Path) -> Result<ThemePackage> {
 fn validate_package(package: &ThemePackage) -> Result<()> {
   if !is_supported_package_format(&package.format) {
     return Err(CoreError::msg(format!(
-      "unsupported theme format `{}` (expected {FORMAT_CDXTHEME} or {FORMAT_CODEDROBE})",
+      "unsupported theme format `{}` (expected {FORMAT_CDXTHEME})",
       package.format
     )));
   }
@@ -630,9 +498,6 @@ fn validate_package(package: &ThemePackage) -> Result<()> {
   }
   if package.theme.display_name.trim().is_empty() {
     return Err(CoreError::msg("theme.displayName must be non-empty"));
-  }
-  if package.theme.version.trim().is_empty() {
-    return Err(CoreError::msg("theme.version must be non-empty"));
   }
   if package.targets.is_empty() {
     return Err(CoreError::msg(
@@ -695,7 +560,9 @@ fn validate_package(package: &ThemePackage) -> Result<()> {
 
 fn validate_image_asset(image: &ImageAsset, label: &str) -> Result<()> {
   if image.filename.trim().is_empty() {
-    return Err(CoreError::msg(format!("{label}.filename must be non-empty")));
+    return Err(CoreError::msg(format!(
+      "{label}.filename must be non-empty"
+    )));
   }
   if Path::new(&image.filename)
     .file_name()
@@ -738,6 +605,30 @@ fn require_str<'a>(obj: &'a Map<String, Value>, key: &str) -> Result<&'a str> {
     .get(key)
     .and_then(|v| v.as_str())
     .ok_or_else(|| CoreError::msg(format!("manifest missing string field `{key}`")))
+}
+
+/// Source `version` as integer — accepts JSON number or legacy string (`"1"`, `"1.2.3"`).
+fn require_version(obj: &Map<String, Value>) -> Result<u32> {
+  let v = obj
+    .get("version")
+    .ok_or_else(|| CoreError::msg("manifest missing field `version`"))?;
+  match v {
+    Value::Number(n) => {
+      let n = n
+        .as_u64()
+        .or_else(|| n.as_i64().filter(|i| *i >= 0).map(|i| i as u64))
+        .ok_or_else(|| CoreError::msg("manifest version must be a non-negative integer"))?;
+      u32::try_from(n).map_err(|_| CoreError::msg(format!("manifest version {n} out of u32 range")))
+    }
+    Value::String(s) => parse_version_u32(s).ok_or_else(|| {
+      CoreError::msg(format!(
+        "manifest version must be a non-negative integer (or dotted major.minor…), got {s:?}"
+      ))
+    }),
+    _ => Err(CoreError::msg(
+      "manifest version must be a number or string",
+    )),
+  }
 }
 
 fn is_named_theme(value: &str) -> bool {
@@ -839,29 +730,11 @@ mod tests {
   use super::*;
 
   #[test]
-  fn rewrite_css_replaces_all_codedrobe_prefixes() {
-    let css = r#":root.codedrobe-codex-skin {
-  background: var(--codedrobe-image-hero);
-  --codedrobe-art: none;
-}
-#codedrobe-codex-skin-chrome .dream-polaroid { display: block; }
-html.codedrobe-host-codex .codedrobe-theme { opacity: 1; }
-"#;
-    let out = rewrite_css_codedrobe_to_cdxtheme(css);
-    assert!(out.contains("cdxtheme-codex-skin"));
-    assert!(out.contains("--cdxtheme-image-hero"));
-    assert!(out.contains("--cdxtheme-art"));
-    assert!(out.contains("#cdxtheme-codex-skin-chrome"));
-    assert!(out.contains("html.cdxtheme-host-codex"));
-    assert!(out.contains(".cdxtheme-theme"));
-    assert!(!out.contains("codedrobe-"));
-  }
-
-  #[test]
-  fn pack_auto_rewrites_css_to_cdxtheme() {
-    let dir = std::env::temp_dir().join(format!("cdxtheme-pack-brand-test-{}", std::process::id()));
+  fn pack_sets_cdxtheme_format() {
+    let dir =
+      std::env::temp_dir().join(format!("cdxtheme-pack-format-test-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
-    fs::create_dir_all(dir.join("assets")).unwrap();
+    fs::create_dir_all(&dir).unwrap();
 
     fs::write(
       dir.join("theme.json"),
@@ -869,7 +742,7 @@ html.codedrobe-host-codex .codedrobe-theme { opacity: 1; }
   "schemaVersion": 1,
   "id": "brand-demo",
   "displayName": "Brand Demo",
-  "version": "1.0.0",
+  "version": 2,
   "targets": { "codex": { "css": "style.css" } }
 }
 "#,
@@ -877,72 +750,79 @@ html.codedrobe-host-codex .codedrobe-theme { opacity: 1; }
     .unwrap();
     fs::write(
       dir.join("style.css"),
-      ":root.codedrobe-codex-skin { color: #f00; background: var(--codedrobe-image-hero); }\n",
+      ":root.cdxtheme-codex-skin { color: #f00; background: var(--cdxtheme-image-hero); }\n",
     )
     .unwrap();
 
-    let package = build_package(&dir, &dir.join("theme.json"), PackageFormat::Cdxtheme).unwrap();
+    let package = build_package(&dir, &dir.join("theme.json")).unwrap();
     assert_eq!(package.format, FORMAT_CDXTHEME);
+    assert_eq!(package.theme.version, 2);
+    assert_eq!(package.package_filename(), "brand-demo-2.cdxtheme");
+    // Packed JSON stores version as a number.
+    let out = dir.join("out.cdxtheme");
+    write_package(&package, &out, true).unwrap();
+    let raw = fs::read_to_string(&out).unwrap();
+    assert!(
+      raw.contains("\"version\": 2") || raw.contains("\"version\":2"),
+      "packed version must be a JSON number: {raw}"
+    );
     let css = &package.targets["codex"].css;
     assert!(css.contains("cdxtheme-codex-skin"));
     assert!(css.contains("--cdxtheme-image-hero"));
-    assert!(!css.contains("codedrobe-"));
 
-    // Same CSS rewrite runs regardless of package format field.
-    let package_cd =
-      build_package(&dir, &dir.join("theme.json"), PackageFormat::CodedrobeTheme).unwrap();
-    assert_eq!(package_cd.format, FORMAT_CODEDROBE);
-    assert!(
-      package_cd.targets["codex"]
-        .css
-        .contains("cdxtheme-codex-skin")
-    );
-    assert!(!package_cd.targets["codex"].css.contains("codedrobe-"));
+    // Legacy string versions still pack (major component).
+    fs::write(
+      dir.join("theme.json"),
+      r#"{
+  "schemaVersion": 1,
+  "id": "brand-demo",
+  "displayName": "Brand Demo",
+  "version": "1.2.3",
+  "targets": { "codex": { "css": "style.css" } }
+}
+"#,
+    )
+    .unwrap();
+    let legacy = build_package(&dir, &dir.join("theme.json")).unwrap();
+    assert_eq!(legacy.theme.version, 1);
 
     let _ = fs::remove_dir_all(&dir);
   }
 
   #[test]
-  fn convert_package_sets_format_and_rewrites_css() {
-    let dir = std::env::temp_dir().join(format!("cdxtheme-convert-test-{}", std::process::id()));
+  fn rejects_non_cdxtheme_format() {
+    let dir = std::env::temp_dir().join(format!("cdxtheme-reject-format-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
 
-    let input = dir.join("demo.codedrobe-theme");
+    let input = dir.join("demo.cdxtheme");
     let package = ThemePackage {
-      format: FORMAT_CODEDROBE.into(),
+      format: "codedrobe-theme".into(),
       schema_version: THEME_SCHEMA_VERSION,
       exported_at: "2020-01-01T00:00:00.000Z".into(),
       theme: ThemeMeta {
         id: "demo".into(),
         display_name: "Demo".into(),
-        version: "1.0.0".into(),
+        version: 1,
         copy: None,
       },
       targets: BTreeMap::from([(
         "codex".into(),
         ThemeTarget {
-          css: ":root.codedrobe-codex-skin { color: red; }".into(),
+          css: ":root.cdxtheme-codex-skin { color: red; }".into(),
           options: None,
           verification: None,
         },
       )]),
       assets: None,
     };
+    // write_package does not re-validate format; read_package does.
     write_package(&package, &input, true).unwrap();
-
-    let out = dir.join("out.cdxtheme");
-    let (path, _) = convert_package(&input, Some(&out), true, true).unwrap();
-    assert_eq!(path, out);
-
-    let converted = read_package(&out).unwrap();
-    assert_eq!(converted.format, FORMAT_CDXTHEME);
+    let err = read_package(&input).unwrap_err().to_string();
     assert!(
-      converted.targets["codex"]
-        .css
-        .contains("cdxtheme-codex-skin")
+      err.contains("unsupported package format") && err.contains(FORMAT_CDXTHEME),
+      "unexpected error: {err}"
     );
-    assert!(!converted.targets["codex"].css.contains("codedrobe-"));
 
     let _ = fs::remove_dir_all(&dir);
   }

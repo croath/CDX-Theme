@@ -12,17 +12,17 @@ use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
 
-/// Remote recommend catalog index.
+/// Remote recommend catalog index (fetched directly — no query params).
 pub const REMOTE_THEME_INDEX_URL: &str = "https://s3.cdxtheme.com/themes/index.json";
 
-/// Request `sig` and cache validity window (2 minutes).
-pub const REMOTE_CATALOG_SIG_WINDOW: Duration = Duration::from_secs(120);
+/// How long memory/disk cache of the index stays valid (2 minutes).
+pub const REMOTE_CATALOG_CACHE_TTL: Duration = Duration::from_secs(120);
 
 /// Disk cache file under `{app_local_data_dir}/cache/remote-theme-index.json`.
 const REMOTE_CATALOG_CACHE_FILE: &str = "remote-theme-index.json";
 
 /// Discover themes from builtin + user-installed **package files** only
-/// (`.cdxtheme` / `.codedrobe-theme`). Directory themes are ignored.
+/// (`.cdxtheme` ). Directory themes are ignored.
 pub fn discover_themes(app: &AppHandle) -> Result<Vec<ThemeMetadata>, String> {
   let mut by_id: std::collections::HashMap<String, ThemeMetadata> =
     std::collections::HashMap::new();
@@ -74,27 +74,45 @@ fn scan_root(
     if path.is_file() && is_cdx_theme_file(&path) {
       match theme_package::peek_codex_theme_meta(&path) {
         Ok(peek) => {
-          by_id.insert(
-            peek.id.clone(),
-            ThemeMetadata {
-              id: peek.id,
-              name: peek.display_name,
-              location: abs_location(&path),
-              preview_img: peek.preview_img,
-              preview_colors: peek.preview_colors,
-              is_applied: false,
-              source,
-              version: parse_version_u32(&peek.version),
-              remote_version: None,
-              update_available: false,
-              theme_url: None,
-            },
-          );
+          let candidate = ThemeMetadata {
+            id: peek.id.clone(),
+            name: peek.display_name,
+            location: abs_location(&path),
+            preview_img: peek.preview_img,
+            preview_colors: peek.preview_colors,
+            is_applied: false,
+            source,
+            version: Some(peek.version),
+            remote_version: None,
+            update_available: false,
+            theme_url: None,
+          };
+          // Multiple packages may share an id (e.g. redbull-…-1 + redbull-…-2).
+          // Keep the highest version; Installed beats Builtin on a tie.
+          match by_id.get(&peek.id) {
+            Some(existing) if !should_prefer_theme(&candidate, existing) => {}
+            _ => {
+              by_id.insert(peek.id, candidate);
+            }
+          }
         }
         Err(e) => tracing::warn!("skip package {}: {e}", path.display()),
       }
     }
   }
+}
+
+/// Prefer `candidate` over `existing` when discovering packages for the same id.
+fn should_prefer_theme(candidate: &ThemeMetadata, existing: &ThemeMetadata) -> bool {
+  let cv = candidate.version.unwrap_or(0);
+  let ev = existing.version.unwrap_or(0);
+  if cv != ev {
+    return cv > ev;
+  }
+  matches!(
+    (existing.source, candidate.source),
+    (ThemeSource::Builtin, ThemeSource::Installed)
+  )
 }
 
 pub fn colors_from_base_theme(base: Option<&cdx_theme_types::BaseTheme>) -> Vec<String> {
@@ -113,7 +131,7 @@ pub fn ensure_user_themes_dir(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 /// Validate and persist a portable theme package into the user themes dir.
-/// Accepts `.cdxtheme` / `.codedrobe-theme`; stores as `.cdxtheme`.
+/// Accepts `.cdxtheme`; stores as `.cdxtheme`.
 pub fn import_codex_theme_content(
   app: &AppHandle,
   file_name: &str,
@@ -177,6 +195,10 @@ pub fn import_codex_theme_content(
     .or_else(|_| fs::copy(&temp_path, &final_path).and_then(|_| fs::remove_file(&temp_path)))
     .map_err(|e| format!("failed to save theme package: {e}"))?;
 
+  // Drop older / alternate package files for the same theme id so discovery
+  // cannot pick a stale version (e.g. redbull-…-1.cdxtheme left after install of -2).
+  remove_other_packages_for_theme_id(&dest_dir, &loaded.id, &final_path);
+
   Ok(ThemeMetadata {
     id: loaded.id,
     name: loaded.display_name,
@@ -185,11 +207,54 @@ pub fn import_codex_theme_content(
     preview_colors: peek.preview_colors,
     is_applied: false,
     source: ThemeSource::Installed,
-    version: parse_version_u32(&loaded.version),
+    version: Some(loaded.version),
     remote_version: None,
     update_available: false,
     theme_url: None,
   })
+}
+
+/// Remove user-library package files whose theme id matches, except `keep`.
+fn remove_other_packages_for_theme_id(dest_dir: &Path, theme_id: &str, keep: &Path) {
+  let Ok(entries) = fs::read_dir(dest_dir) else {
+    return;
+  };
+  let keep_canon = keep
+    .canonicalize()
+    .map(|p| crate::paths::strip_verbatim_prefix(&p))
+    .unwrap_or_else(|_| keep.to_path_buf());
+
+  for entry in entries.flatten() {
+    let path = entry.path();
+    if !path.is_file() || !is_cdx_theme_file(&path) {
+      continue;
+    }
+    let path_canon = path
+      .canonicalize()
+      .map(|p| crate::paths::strip_verbatim_prefix(&p))
+      .unwrap_or_else(|_| path.clone());
+    if path_canon == keep_canon {
+      continue;
+    }
+    match theme_package::peek_codex_theme_meta(&path) {
+      Ok(peek) if peek.id == theme_id => {
+        if let Err(e) = fs::remove_file(&path) {
+          tracing::warn!(
+            path = %path.display(),
+            error = %e,
+            "failed to remove superseded theme package"
+          );
+        } else {
+          tracing::info!(
+            path = %path.display(),
+            theme_id,
+            "removed superseded theme package"
+          );
+        }
+      }
+      _ => {}
+    }
+  }
 }
 
 // ── Remote catalog / download ───────────────────────────────────────────────
@@ -216,33 +281,17 @@ struct RemoteThemeIndexEntry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RemoteCatalogCache {
-  /// Floor-timestamp sig for the window this payload was fetched under.
-  sig: String,
   /// Unix seconds when the cache was written.
   #[serde(default)]
   fetched_at: u64,
   entries: Vec<RemoteThemeIndexEntry>,
 }
 
-/// Process-local L1 cache (avoids re-reading disk within the same sig window).
+/// Process-local L1 cache.
 static REMOTE_CATALOG_MEMORY: LazyLock<Mutex<Option<RemoteCatalogCache>>> =
   LazyLock::new(|| Mutex::new(None));
 
-/// Parse a package / catalog version into `u32`.
-///
-/// Accepts plain integers (`1`, `"12"`) or dotted strings (`"1.2.3"` → major `1`).
-pub fn parse_version_u32(s: &str) -> Option<u32> {
-  let s = s.trim();
-  if s.is_empty() {
-    return None;
-  }
-  if let Ok(n) = s.parse::<u32>() {
-    return Some(n);
-  }
-  s.split(|c: char| !c.is_ascii_digit())
-    .find(|p| !p.is_empty())
-    .and_then(|p| p.parse().ok())
-}
+pub use cdx_theme_types::parse_version_u32;
 
 /// Remote index `version` field is a JSON number (u32) or string.
 fn version_to_u32(v: &serde_json::Value) -> u32 {
@@ -256,19 +305,6 @@ fn version_to_u32(v: &serde_json::Value) -> u32 {
   }
 }
 
-/// Unix timestamp floored to a 2-minute window (changes every 120s).
-///
-/// Example: `t=1784381254` → window start `1784381200` → sig `"1784381200"`.
-pub fn remote_catalog_sig(now: SystemTime) -> String {
-  let secs = now
-    .duration_since(UNIX_EPOCH)
-    .map(|d| d.as_secs())
-    .unwrap_or(0);
-  let window = REMOTE_CATALOG_SIG_WINDOW.as_secs().max(1);
-  let floored = (secs / window) * window;
-  floored.to_string()
-}
-
 fn unix_now_secs() -> u64 {
   SystemTime::now()
     .duration_since(UNIX_EPOCH)
@@ -276,15 +312,10 @@ fn unix_now_secs() -> u64 {
     .unwrap_or(0)
 }
 
-/// Build the recommend index URL with the current time-based `sig` query param.
-pub fn remote_catalog_url_with_sig(sig: &str) -> String {
-  // Avoid double-`?` if the base URL ever gains query params.
-  let sep = if REMOTE_THEME_INDEX_URL.contains('?') {
-    '&'
-  } else {
-    '?'
-  };
-  format!("{REMOTE_THEME_INDEX_URL}{sep}sig={sig}")
+fn cache_is_fresh(fetched_at: u64) -> bool {
+  let now = unix_now_secs();
+  let ttl = REMOTE_CATALOG_CACHE_TTL.as_secs().max(1);
+  now.saturating_sub(fetched_at) < ttl
 }
 
 /// `{app_local_data_dir}/cache/remote-theme-index.json`
@@ -298,13 +329,13 @@ pub fn remote_catalog_cache_path(app: &AppHandle) -> Result<PathBuf, String> {
   Ok(dir.join(REMOTE_CATALOG_CACHE_FILE))
 }
 
-fn load_remote_catalog_memory(sig: &str) -> Option<Vec<RemoteThemeIndexEntry>> {
+fn load_remote_catalog_memory() -> Option<Vec<RemoteThemeIndexEntry>> {
   let guard = REMOTE_CATALOG_MEMORY.lock().ok()?;
   let cache = guard.as_ref()?;
-  if cache.sig == sig {
+  if cache_is_fresh(cache.fetched_at) {
     tracing::debug!(
-      sig,
       count = cache.entries.len(),
+      fetched_at = cache.fetched_at,
       "remote catalog memory cache hit"
     );
     Some(cache.entries.clone())
@@ -317,8 +348,8 @@ fn store_remote_catalog_memory(cache: &RemoteCatalogCache) {
   if let Ok(mut guard) = REMOTE_CATALOG_MEMORY.lock() {
     *guard = Some(cache.clone());
     tracing::debug!(
-      sig = %cache.sig,
       count = cache.entries.len(),
+      fetched_at = cache.fetched_at,
       "remote catalog memory cache stored"
     );
   }
@@ -355,8 +386,8 @@ fn save_remote_catalog_disk_cache(
   fs::write(&path, raw).map_err(|e| format!("write cache {}: {e}", path.display()))?;
   tracing::debug!(
     path = %path.display(),
-    sig = %cache.sig,
     count = cache.entries.len(),
+    fetched_at = cache.fetched_at,
     "remote catalog disk cache stored"
   );
   Ok(())
@@ -382,20 +413,19 @@ pub fn clear_remote_catalog_cache(app: &AppHandle) {
   }
 }
 
-async fn fetch_remote_index_entries(
-  app: &AppHandle,
-  sig: &str,
-) -> Result<Vec<RemoteThemeIndexEntry>, String> {
-  // L1: process memory (same 2-minute sig window).
-  if let Some(entries) = load_remote_catalog_memory(sig) {
+/// GET [`REMOTE_THEME_INDEX_URL`] and parse the theme list.
+///
+/// Uses a short memory/disk TTL cache unless the caller cleared it via `force`.
+async fn fetch_remote_index_entries(app: &AppHandle) -> Result<Vec<RemoteThemeIndexEntry>, String> {
+  // L1: process memory.
+  if let Some(entries) = load_remote_catalog_memory() {
     return Ok(entries);
   }
 
   // L2: disk under app local data.
   if let Some(cache) = load_remote_catalog_disk_cache(app) {
-    if cache.sig == sig {
+    if cache_is_fresh(cache.fetched_at) {
       tracing::debug!(
-        sig,
         count = cache.entries.len(),
         fetched_at = cache.fetched_at,
         "remote catalog disk cache hit"
@@ -404,22 +434,21 @@ async fn fetch_remote_index_entries(
       return Ok(cache.entries);
     }
     tracing::debug!(
-      cached_sig = %cache.sig,
-      current_sig = %sig,
+      fetched_at = cache.fetched_at,
       "remote catalog disk cache stale"
     );
   }
 
-  // L3: network.
-  let url = remote_catalog_url_with_sig(sig);
+  // L3: direct network request (no query params).
+  let url = REMOTE_THEME_INDEX_URL;
   let client = reqwest::Client::builder()
     .timeout(Duration::from_secs(30))
     .build()
     .map_err(|e| format!("http client: {e}"))?;
 
-  tracing::info!(%url, sig, "fetching remote theme catalog");
+  tracing::info!(%url, "fetching remote theme catalog");
   let response = client
-    .get(&url)
+    .get(url)
     .send()
     .await
     .map_err(|e| format!("failed to fetch theme catalog: {e}"))?;
@@ -441,7 +470,6 @@ async fn fetch_remote_index_entries(
   })?;
 
   let cache = RemoteCatalogCache {
-    sig: sig.to_string(),
     fetched_at: unix_now_secs(),
     entries: entries.clone(),
   };
@@ -510,9 +538,9 @@ fn map_remote_entries_to_metadata(
 
 /// Fetch the public recommend index and map to UI metadata (`source = Remote`).
 ///
-/// - Appends `?sig=<floor_unix_2min>` so the request token rotates every 2 minutes.
+/// - GETs [`REMOTE_THEME_INDEX_URL`] directly (no `sig` / query params).
 /// - Caches the raw index in process memory (L1) and under
-///   `{app_local_data}/cache/remote-theme-index.json` (L2) for the current sig window.
+///   `{app_local_data}/cache/remote-theme-index.json` (L2) for [`REMOTE_CATALOG_CACHE_TTL`].
 ///   Local install state is re-merged each call.
 /// - When `force` is true, clears memory + disk caches and re-fetches from the network.
 pub async fn fetch_remote_theme_catalog(
@@ -522,8 +550,7 @@ pub async fn fetch_remote_theme_catalog(
   if force {
     clear_remote_catalog_cache(app);
   }
-  let sig = remote_catalog_sig(SystemTime::now());
-  let entries = fetch_remote_index_entries(app, &sig).await?;
+  let entries = fetch_remote_index_entries(app).await?;
   let mut list = map_remote_entries_to_metadata(app, entries);
   // Download / reuse on-disk hero images so the UI never loads remote <img> srcs.
   crate::image_cache::localize_preview_images(app, &mut list).await;
@@ -626,6 +653,9 @@ pub async fn ensure_theme_package_path(
 }
 
 /// Delete a user-installed theme package. Built-in themes cannot be deleted.
+///
+/// Removes **all** package files under the user library whose theme id matches
+/// (e.g. both `id-1.cdxtheme` and `id-2.cdxtheme`).
 pub fn delete_installed_theme(app: &AppHandle, theme_id: &str) -> Result<(), String> {
   let list = discover_themes(app)?;
   let meta = list
@@ -637,24 +667,52 @@ pub fn delete_installed_theme(app: &AppHandle, theme_id: &str) -> Result<(), Str
     return Err("only installed themes can be deleted (built-in themes are protected)".into());
   }
 
-  let path = PathBuf::from(&meta.location);
   let user_root = user_themes_dir(app)?;
-  if !crate::paths::path_is_under(&path, &user_root) {
+  let reported = PathBuf::from(&meta.location);
+  if !meta.location.is_empty() && !crate::paths::path_is_under(&reported, &user_root) {
     return Err("refusing to delete theme outside user themes directory".into());
   }
 
-  let path_canon = path
-    .canonicalize()
-    .map(|p| crate::paths::strip_verbatim_prefix(&p))
-    .unwrap_or_else(|_| path.clone());
-
-  if path_canon.is_file() {
-    fs::remove_file(&path_canon)
-      .map_err(|e| format!("failed to delete {}: {e}", path_canon.display()))?;
-  } else {
+  // Delete every matching package file (not only the highest-version one discover returns).
+  let Ok(entries) = fs::read_dir(&user_root) else {
     return Err(format!(
-      "theme package missing or not a file: {}",
-      path_canon.display()
+      "failed to read user themes dir {}",
+      user_root.display()
+    ));
+  };
+  let mut removed = 0u32;
+  for entry in entries.flatten() {
+    let path = entry.path();
+    if !path.is_file() || !is_cdx_theme_file(&path) {
+      continue;
+    }
+    let Ok(peek) = theme_package::peek_codex_theme_meta(&path) else {
+      continue;
+    };
+    if peek.id != theme_id {
+      continue;
+    }
+    if !crate::paths::path_is_under(&path, &user_root) {
+      continue;
+    }
+    let path_canon = path
+      .canonicalize()
+      .map(|p| crate::paths::strip_verbatim_prefix(&p))
+      .unwrap_or_else(|_| path.clone());
+    if path_canon.is_file() {
+      fs::remove_file(&path_canon).map_err(|e| {
+        format!(
+          "failed to delete theme package {}: {e}",
+          path_canon.display()
+        )
+      })?;
+      removed += 1;
+    }
+  }
+
+  if removed == 0 {
+    return Err(format!(
+      "theme package missing or not a file for id `{theme_id}`"
     ));
   }
 

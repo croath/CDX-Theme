@@ -195,8 +195,10 @@ fn verify_expression(expected_theme: Option<&PublicTheme>) -> String {
     );
     const classPresent = document.documentElement.classList.contains("cdxtheme-codex-skin");
     const themeId = state ? state.themeId : (document.documentElement.dataset.codexSkinTheme || null);
-    const version = state ? state.version : (document.documentElement.dataset.cdxthemeThemeVersion || null);
-    const themeMatches = !expected || (themeId === expected.id && version === expected.version);
+    const versionRaw = state ? state.version : (document.documentElement.dataset.cdxthemeThemeVersion || null);
+    const version = versionRaw == null || versionRaw === "" ? null : Number(versionRaw);
+    const expectedVersion = expected && expected.version != null ? Number(expected.version) : null;
+    const themeMatches = !expected || (themeId === expected.id && version === expectedVersion);
     const imageNames = (state && state.imageNames) ? state.imageNames : [];
     const root = document.documentElement;
     const imageVars = {{}};

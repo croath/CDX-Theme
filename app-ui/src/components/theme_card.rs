@@ -98,14 +98,20 @@ pub fn ThemeCard(
         Ok(_) => {
           applied_theme_id.set(Some(id.clone()));
           // Apply downloads remote packages — mark card as installed / up to date.
+          // Keep local package version when known; only fill from remote if missing.
           themes.update(|list| {
             if let Some(t) = list.iter_mut().find(|t| t.id == id) {
               t.source = ThemeSource::Installed;
               t.is_applied = true;
-              if let Some(rv) = t.remote_version {
-                t.version = Some(rv);
+              if t.version.is_none() {
+                if let Some(rv) = t.remote_version {
+                  t.version = Some(rv);
+                }
               }
-              t.update_available = false;
+              t.update_available = t
+                .remote_version
+                .zip(t.version)
+                .is_some_and(|(rv, lv)| rv > lv);
             }
             for t in list.iter_mut() {
               if t.id != id {
@@ -151,7 +157,10 @@ pub fn ThemeCard(
               t.location = meta.location.clone();
               // Prefer version from the downloaded package; fall back to remote catalog.
               t.version = meta.version.or(t.remote_version).or(t.version);
-              t.update_available = false;
+              t.update_available = t
+                .remote_version
+                .zip(t.version)
+                .is_some_and(|(rv, lv)| rv > lv);
               if t.preview_img.is_none() {
                 t.preview_img = meta.preview_img.clone();
               }
@@ -362,7 +371,8 @@ pub fn ThemeCard(
                 }}
               </p>
             }.into_any()
-          } else if let Some(v) = remote_version.or(local_version) {
+          } else if let Some(v) = local_version.or(remote_version) {
+            // Prefer installed package version over catalog version.
             view! {
               <p class="mt-1 text-xs text-muted-foreground">
                 {format!("v{v}")}

@@ -7,4 +7,4 @@ pub use loaded::{
   SemanticColors, ThemeCopy, VerificationContext, VerificationWhen, WorkBuddyLoadedTarget,
   WorkBuddyVerification,
 };
-pub use theme::{ThemeMetadata, ThemeSource};
+pub use theme::{ThemeMetadata, ThemeSource, deserialize_version_u32, parse_version_u32};

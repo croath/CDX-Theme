@@ -77,7 +77,6 @@ CDXTheme는 `~/.codex/config.toml`에서 지원되는 모양 설정을 업데이
 | 확장자 | 패키지 `format` |
 | --- | --- |
 | `.cdxtheme` | `cdxtheme` |
-| `.codedrobe-theme` | `codedrobe-theme` |
 
 패키지는 스키마 버전 `1`을 사용하며 최대 크기는 **30 MB**입니다. `@import` 또는 `url(http…)`를 통한 원격 CSS 로드는 허용되지 않습니다. 여러 앱 대상을 포함할 수 있지만 현재 CDXTheme는 `targets.codex`만 적용합니다.
 
@@ -107,7 +106,6 @@ cdxtheme theme pack path/to/theme-source
 
 # 패키지 풀기 또는 변환
 cdxtheme theme unpack theme.cdxtheme path/to/output
-cdxtheme theme convert theme.codedrobe-theme
 
 # CDP를 통해 패키지 직접 적용
 cdxtheme apply --app codex --theme theme.cdxtheme

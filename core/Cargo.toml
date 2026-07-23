@@ -7,17 +7,14 @@ authors = ["CDXTheme"]
 license = "MIT"
 
 [dependencies]
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 cdx-theme-types = { workspace = true }
-base64 = "0.22"
-chrono = { version = "0.4", default-features = false, features = [
-  "clock",
-  "std",
-] }
-thiserror = "2"
-tracing = { version = "0.1", features = ["log"] }
-tokio = { version = "1", features = [
+base64 = { workspace = true }
+chrono = { workspace = true, features = ["clock", "std"] }
+thiserror = { workspace = true }
+tracing = { workspace = true, features = ["log"] }
+tokio = { workspace = true, features = [
   "rt-multi-thread",
   "macros",
   "time",
@@ -25,9 +22,6 @@ tokio = { version = "1", features = [
   "net",
   "io-util",
 ] }
-tokio-tungstenite = { version = "0.26", features = ["connect"] }
-futures-util = "0.3"
-reqwest = { version = "0.13", default-features = false, features = [
-  "json",
-  "rustls",
-] }
+tokio-tungstenite = { workspace = true, features = ["connect"] }
+futures-util = { workspace = true }
+reqwest = { workspace = true, features = ["json", "rustls"] }

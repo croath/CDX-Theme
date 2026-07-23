@@ -576,7 +576,7 @@ dependencies = [
 
 [[package]]
 name = "cdx-theme"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "cdx-theme-types",
  "console_error_panic_hook",
@@ -598,7 +598,7 @@ dependencies = [
 
 [[package]]
 name = "cdx-theme-app"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "base64 0.22.1",
  "cdx-theme-core",
@@ -624,7 +624,7 @@ dependencies = [
 
 [[package]]
 name = "cdx-theme-cli"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "cdx-theme-core",
  "clap",
@@ -635,7 +635,7 @@ dependencies = [
 
 [[package]]
 name = "cdx-theme-core"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "base64 0.22.1",
  "cdx-theme-types",
@@ -652,7 +652,7 @@ dependencies = [
 
 [[package]]
 name = "cdx-theme-types"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "serde",
 ]
@@ -4996,6 +4996,7 @@ dependencies = [
  "plist",
  "raw-window-handle",
  "reqwest",
+ "rustls",
  "serde",
  "serde_json",
  "serde_repr",

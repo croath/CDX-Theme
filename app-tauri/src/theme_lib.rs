@@ -499,7 +499,7 @@ mod tests {
     LoadedTheme {
       id: "demo".into(),
       display_name: "Demo".into(),
-      version: "1.0.0".into(),
+      version: 1,
       copy: ThemeCopy::default(),
       images: Default::default(),
       art: None,

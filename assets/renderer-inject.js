@@ -418,7 +418,8 @@
     root.classList.add("cdxtheme-theme", CLASS_HOST, host.className);
     root.dataset.cdxthemeHost = host.id;
     root.dataset.cdxthemeTheme = theme.id;
-    root.dataset.cdxthemeThemeVersion = theme.version;
+    // dataset values are always strings; keep state.version as a number.
+    root.dataset.cdxthemeThemeVersion = String(theme.version);
 
     for (var imgName in imageUrls) {
       if (!Object.prototype.hasOwnProperty.call(imageUrls, imgName)) continue;

@@ -209,8 +209,7 @@ fn looks_like_theme_package_json(content: &str) -> bool {
     return false;
   }
   // Need multi-app package markers — not a full schema check.
-  let has_format =
-    t.contains("\"format\"") && (t.contains("cdxtheme") || t.contains("codedrobe-theme"));
+  let has_format = t.contains("\"format\"") && t.contains("cdxtheme");
   let has_theme = t.contains("\"theme\"");
   let has_targets = t.contains("\"targets\"");
   has_format && has_theme && has_targets

@@ -77,7 +77,6 @@ Open **Install** and import either supported portable format:
 | Extension | Package `format` |
 | --- | --- |
 | `.cdxtheme` | `cdxtheme` |
-| `.codedrobe-theme` | `codedrobe-theme` |
 
 Packages use schema version `1`, may be up to **30 MB**, and cannot load remote CSS through `@import` or `url(http…)`. A package can describe multiple app targets, but CDXTheme currently applies only `targets.codex`.
 
@@ -107,7 +106,6 @@ cdxtheme theme pack path/to/theme-source
 
 # Unpack or convert a package
 cdxtheme theme unpack theme.cdxtheme path/to/output
-cdxtheme theme convert theme.codedrobe-theme
 
 # Apply a package directly through CDP
 cdxtheme apply --app codex --theme theme.cdxtheme

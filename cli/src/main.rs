@@ -2,15 +2,11 @@
 //!
 //! Examples:
 //!   cdxtheme theme pack themes/redbull-racing
-//!   cdxtheme theme pack themes/ferrari --format codedrobe-theme
 //!   cdxtheme theme unpack ferrari-1.0.0.cdxtheme themes/ferrari
-//!   cdxtheme theme convert ferrari-1.0.0.codedrobe-theme
 //!   cdxtheme apply --app codex --theme ferrari-1.0.0.cdxtheme
 
-use cdx_theme_core::{
-  DEFAULT_CDP_PORT, PackageFormat, apply_theme, convert_package, pack_theme_dir, unpack_package,
-};
-use clap::{Parser, Subcommand, ValueEnum};
+use cdx_theme_core::{DEFAULT_CDP_PORT, apply_theme, pack_theme_dir, unpack_package};
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -18,7 +14,7 @@ use std::path::PathBuf;
   name = "cdxtheme",
   version,
   about = "CDXTheme CLI",
-  long_about = "Pack, unpack, convert, and apply multi-app theme packages (.cdxtheme / .codedrobe-theme)."
+  long_about = "Pack, unpack, and apply multi-app theme packages (.cdxtheme)."
 )]
 struct Cli {
   #[command(subcommand)]
@@ -27,7 +23,7 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-  /// Theme package commands (pack / unpack / convert).
+  /// Theme package commands (pack / unpack).
   Theme {
     #[command(subcommand)]
     command: ThemeCommands,
@@ -39,7 +35,7 @@ enum Commands {
     #[arg(long, default_value = "codex")]
     app: String,
 
-    /// Path to `.cdxtheme` / `.codedrobe-theme` package.
+    /// Path to `.cdxtheme` package.
     #[arg(long, short = 't')]
     theme: PathBuf,
 
@@ -53,26 +49,6 @@ enum Commands {
   },
 }
 
-/// Clap-facing package format (maps to `cdx_theme_core::PackageFormat`).
-#[derive(Debug, Clone, Copy, ValueEnum, Default)]
-enum FormatArg {
-  /// CDXTheme brand (default): `.cdxtheme`
-  #[default]
-  Cdxtheme,
-  /// CodeDrobe brand: `.codedrobe-theme`
-  #[value(name = "codedrobe-theme")]
-  CodedrobeTheme,
-}
-
-impl From<FormatArg> for PackageFormat {
-  fn from(value: FormatArg) -> Self {
-    match value {
-      FormatArg::Cdxtheme => PackageFormat::Cdxtheme,
-      FormatArg::CodedrobeTheme => PackageFormat::CodedrobeTheme,
-    }
-  }
-}
-
 #[derive(Subcommand, Debug)]
 enum ThemeCommands {
   /// Pack a source theme (directory or theme.json / manifest.json) into a portable package.
@@ -83,10 +59,6 @@ enum ThemeCommands {
     /// Output file path. Defaults to `{id}-{version}.cdxtheme`.
     #[arg(short, long)]
     output: Option<PathBuf>,
-
-    /// Package brand: `cdxtheme` (default) or `codedrobe-theme` (same schema).
-    #[arg(long, value_enum, default_value_t = FormatArg::Cdxtheme)]
-    format: FormatArg,
 
     /// Pretty-print JSON (default: compact).
     #[arg(long)]
@@ -99,29 +71,11 @@ enum ThemeCommands {
 
   /// Unpack a portable package into a source theme directory.
   Unpack {
-    /// Package file (`.cdxtheme` or `.codedrobe-theme`).
+    /// Package file (`.cdxtheme`).
     input: PathBuf,
 
     /// Destination theme directory (theme.json + per-target css + images).
     output: PathBuf,
-  },
-
-  /// Convert a `codedrobe-theme` package to `.cdxtheme` (rewrites CSS brand tokens).
-  Convert {
-    /// Package file (`.codedrobe-theme` or `.cdxtheme`).
-    input: PathBuf,
-
-    /// Output file path. Defaults to `{id}-{version}.cdxtheme`.
-    #[arg(short, long)]
-    output: Option<PathBuf>,
-
-    /// Pretty-print JSON (default: compact).
-    #[arg(long)]
-    pretty: bool,
-
-    /// Overwrite existing output file.
-    #[arg(long)]
-    force: bool,
   },
 }
 
@@ -150,12 +104,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
       ThemeCommands::Pack {
         source,
         output,
-        format,
         pretty,
         force,
       } => {
-        let (path, bytes) =
-          pack_theme_dir(&source, output.as_deref(), format.into(), pretty, force)?;
+        let (path, bytes) = pack_theme_dir(&source, output.as_deref(), pretty, force)?;
         println!(
           "packed {} → {} ({} bytes)",
           source.display(),
@@ -167,21 +119,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
       ThemeCommands::Unpack { input, output } => {
         let dir = unpack_package(&input, &output)?;
         println!("unpacked {} → {}", input.display(), dir.display());
-      }
-
-      ThemeCommands::Convert {
-        input,
-        output,
-        pretty,
-        force,
-      } => {
-        let (path, bytes) = convert_package(&input, output.as_deref(), pretty, force)?;
-        println!(
-          "converted {} → {} ({} bytes)",
-          input.display(),
-          path.display(),
-          bytes
-        );
       }
     },
 

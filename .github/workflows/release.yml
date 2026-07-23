@@ -1,5 +1,10 @@
 # Build CDXTheme (macOS + Windows) and upload installers to a GitHub Release.
 #
+# Project layout (workspace Cargo.toml):
+#   app-tauri/  Tauri 2 host — projectPath, tauri.conf.json
+#   app-ui/     Leptos + Trunk frontend — package.json, bun.lock, Trunk.toml, dist/
+#   core/ types/ cli/  shared workspace crates
+#
 # Trigger: GitHub Release created (use .scripts/create-release.sh).
 # This workflow does not create the release — it only builds and uploads assets.
 #
@@ -25,13 +30,11 @@ jobs:
       matrix:
         include:
           # Apple Silicon (M1+)
-          # Note: notarization is NOT done by Tauri here.
-          # We only do code signing during build. Notarization is submitted
-          # asynchronously in a dedicated step after upload (see below).
+          # Code sign during build; notarization is submitted async after upload.
           - platform: macos-latest
             args: --target aarch64-apple-darwin
             rust_targets: aarch64-apple-darwin,wasm32-unknown-unknown
-          # Windows x64
+          # Windows x64 (NSIS)
           - platform: windows-latest
             args: ''
             rust_targets: wasm32-unknown-unknown
@@ -50,12 +53,13 @@ jobs:
         run: |
           # Installs channel, components, and profile from rust-toolchain.toml
           rustup show
-          # Matrix-specific targets (not declared in rust-toolchain.toml)
+          # Matrix-specific targets (wasm for Trunk/Leptos; apple-darwin for macOS matrix)
           rustup target add $(echo '${{ matrix.rust_targets }}' | tr ',' ' ')
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
+          # Workspace root Cargo.toml → shared target/
           workspaces: '. -> target'
           shared-key: ${{ runner.os }}-${{ matrix.args }}
 
@@ -72,7 +76,9 @@ jobs:
           trunk --version
           cargo tauri --version
 
+      # Frontend lives in app-ui/ (tauri.conf.json build.cwd / frontendDist).
       - name: Install frontend deps
+        working-directory: app-ui
         run: bun install --frozen-lockfile
 
       # Prepare App Store Connect API key (for manual async notarization submission).
@@ -128,12 +134,15 @@ jobs:
             -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
           Write-Host 'Windows certificate imported.'
 
+      # tauri.conf.json:
+      #   projectPath app-tauri
+      #   beforeBuildCommand: trunk build (cwd app-ui) → frontendDist app-ui/dist
       - name: Build and upload to GitHub Release
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-          # Tell Trunk to do an optimized release build (instead of debug)
+          # Prefer release frontend when tools honor it; beforeBuildCommand is in tauri.conf.json.
           TRUNK_BUILD_RELEASE: "true"
 
           # Tauri updater signing (required while createUpdaterArtifacts is true)
@@ -145,7 +154,7 @@ jobs:
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
 
-          # macOS minimum deployment target
+          # macOS minimum deployment target (matches bundle.macOS.minimumSystemVersion)
           MACOSX_DEPLOYMENT_TARGET: "12.0"
         with:
           projectPath: app-tauri
@@ -156,9 +165,9 @@ jobs:
           updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
 
-      # Submit notarization request to Apple asynchronously using --no-wait.
-      # This runs AFTER the release assets have been uploaded.
-      # Tauri build above only did code signing (no API keys were provided to it).
+      # Submit notarization after assets upload. Paths depend on --target:
+      #   host:   target/release/bundle/macos
+      #   cross:  target/<triple>/release/bundle/macos
       - name: Submit macOS notarization (async)
         if: runner.os == 'macOS'
         continue-on-error: true
@@ -180,14 +189,27 @@ jobs:
             exit 0
           fi
 
-          # Write the .p8 key (same logic as prepare step)
           KEY_PATH="${RUNNER_TEMP}/AuthKey_${APPLE_API_KEY}.p8"
           printf '%s\n' "$APPLE_API_KEY_CONTENT" | sed 's/\r$//' | sed 's/\\n/\n/g' > "$KEY_PATH"
           chmod 600 "$KEY_PATH"
 
-          BUNDLE_DIR="target/release/bundle/macos"
+          # Prefer triple-specific bundle dir when building with --target.
+          BUNDLE_DIR=""
+          for d in \
+            "target/aarch64-apple-darwin/release/bundle/macos" \
+            "target/release/bundle/macos"
+          do
+            if [[ -d "$d" ]]; then
+              BUNDLE_DIR="$d"
+              break
+            fi
+          done
 
-          # Prefer notarizing the .dmg (common for distribution)
+          if [[ -z "$BUNDLE_DIR" ]]; then
+            echo "::warning::No macOS bundle directory found under target/**/release/bundle/macos"
+            exit 0
+          fi
+
           DMG_PATH=$(find "$BUNDLE_DIR" -maxdepth 1 -name '*.dmg' 2>/dev/null | head -1 || true)
           APP_PATH=$(find "$BUNDLE_DIR" -maxdepth 1 -name '*.app' -type d 2>/dev/null | head -1 || true)
 
@@ -206,7 +228,6 @@ jobs:
 
           if [[ -n "${APP_PATH}" && "$SUBMITTED" != "true" ]]; then
             echo "==> Submitting .app for notarization (async)"
-            # Apple recommends a zip for .app submissions
             ZIP_PATH="${RUNNER_TEMP}/$(basename "$APP_PATH").zip"
             ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH" 2>/dev/null || true
             if [[ -f "$ZIP_PATH" ]]; then
@@ -286,50 +307,27 @@ jobs:
 # - Installer stays small (no full ~150 MB runtime bundled).
 # - On first run (or install), if WebView2 not present, bootstrapper downloads
 #   the Evergreen runtime from Microsoft.
-# - Good compatibility with Windows 7 (better than plain "downloadBootstrapper"
-#   (NSIS embedBootstrapper is used).
-# - For completely offline installs (no internet), switch to "offlineInstaller"
-#   (makes installer much larger) or "fixedVersion".
 #
 # ── Windows NSIS ────────────────────────────────────────────────────────────
-# We use NSIS installer for Windows (see bundle.windows in app-tauri/tauri.conf.json).
-# NSIS is preferred (updaterJsonPreferNsis: true). MSI support has been removed.
-
+# NSIS is preferred (updaterJsonPreferNsis: true).
+#
 # ── macOS Notarization (async submit after release upload) ──────────────────
 # Notarization is **not** performed by Tauri during `cargo tauri build`.
-# Instead, after the release assets are attached, we run:
-#
-#   xcrun notarytool submit <file> --keypath ... --issuer ... --key-id ... --no-wait
-#
-# --no-wait tells notarytool to submit and return immediately (async behavior).
-# (The default is also non-waiting, but we pass --no-wait explicitly.)
-#
-# Benefits:
-# - GitHub Release is created/uploaded immediately.
-# - Notarization request is still sent to Apple.
-# - The main job never blocks on Apple's notarization queue.
-#
-# After submission you can monitor with:
-#   xcrun notarytool history --keypath ... --issuer ... --key-id ...
-#   xcrun notarytool log <submission-id> --keypath ...
-#
-# Stapling is not performed automatically. On recent macOS the online
-# notarization check is usually sufficient. You can staple manually later if needed.
+# After assets are attached, we run notarytool with --no-wait.
 #
 # ── Repo settings ───────────────────────────────────────────────────────────
 # Settings → Actions → General → Workflow permissions → Read and write permissions
 # (needed so GITHUB_TOKEN can upload release assets).
 #
 # ── How to ship ─────────────────────────────────────────────────────────────
-# 1. Bump version in app-tauri/tauri.conf.json (and Cargo.toml if you track it).
+# 1. Bump version in app-tauri/tauri.conf.json and workspace Cargo.toml version.
 # 2. Commit and push the version bump.
 # 3. Create the GitHub Release (tag is created automatically if missing):
 #      .scripts/create-release.sh              # version from tauri.conf.json
 #      .scripts/create-release.sh 0.1.3        # stable → tag v0.1.3
 #      .scripts/create-release.sh -p 1.0.0     # pre-release (any version)
-#      .scripts/create-release.sh --prerelease 1.0.0
 # 4. This workflow (on release created):
-#    - Builds + signs macOS + Windows
-#    - Uploads .dmg / .app.tar.gz + NSIS .exe + updater files to that release
-#    - Then submits macOS notarization request with `xcrun notarytool ... --no-wait` (async)
+#    - Builds + signs macOS (aarch64) + Windows
+#    - Uploads dmg/app + NSIS exe + updater files to that release
+#    - Submits macOS notarization with notarytool --no-wait (async)
 #

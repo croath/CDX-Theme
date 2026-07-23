@@ -43,7 +43,8 @@ impl Default for ThemeCopy {
 pub struct PublicTheme {
   pub id: String,
   pub display_name: String,
-  pub version: String,
+  /// Package version (integer).
+  pub version: u32,
   pub copy: ThemeCopy,
 }
 
@@ -238,7 +239,8 @@ impl LoadedTargets {
 pub struct LoadedTheme {
   pub id: String,
   pub display_name: String,
-  pub version: String,
+  /// Package version (integer).
+  pub version: u32,
   pub copy: ThemeCopy,
   /// All package images (`assets.images`), e.g. `hero`, `texture`.
   /// Inject sets `--cdxtheme-image-{name}` for each entry.
@@ -257,7 +259,7 @@ impl LoadedTheme {
     PublicTheme {
       id: self.id.clone(),
       display_name: self.display_name.clone(),
-      version: self.version.clone(),
+      version: self.version,
       copy: self.copy.clone(),
     }
   }

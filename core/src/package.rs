@@ -1,11 +1,8 @@
 //! Portable multi-app theme package format.
 //!
-//! Supported brands (identical schema):
-//! - `cdxtheme` / `.cdxtheme` (CDXTheme default)
-//! - `codedrobe-theme` / `.codedrobe-theme` (CodeDrobe-compatible)
+//! Format: `cdxtheme` / `.cdxtheme`
 //!
 //! Shape: `theme` + `targets.{appId}` + optional `assets.images`
-//! See https://github.com/CodeDrobe/core/blob/main/src/theme/package.mjs
 //!
 //! Packages are **plain JSON files**. Load = read + parse into memory
 //! (CSS / art stay inline — no extract-to-disk).
@@ -18,7 +15,7 @@
 use crate::util::{is_named_theme, merge_copy};
 use cdx_theme_types::{
   BaseTheme, CodexLoadedTarget, CodexTargetOptions, CodexVerification, LoadedArt, LoadedTargets,
-  LoadedTheme, WorkBuddyLoadedTarget, WorkBuddyVerification,
+  LoadedTheme, WorkBuddyLoadedTarget, WorkBuddyVerification, deserialize_version_u32,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -30,11 +27,9 @@ pub const MAX_THEME_PACKAGE_BYTES: u64 = 30 * 1024 * 1024;
 pub const THEME_SCHEMA_VERSION: u64 = 1;
 
 pub const FORMAT_CDXTHEME: &str = "cdxtheme";
-pub const FORMAT_CODEDROBE: &str = "codedrobe-theme";
 pub const EXT_CDXTHEME: &str = "cdxtheme";
-pub const EXT_CODEDROBE: &str = "codedrobe-theme";
 
-/// Default store / install extension (CDXTheme brand).
+/// Default store / install extension.
 pub const THEME_EXTENSION: &str = EXT_CDXTHEME;
 
 // ── Host app ids (package `targets` keys) ───────────────────────────────────
@@ -52,7 +47,7 @@ pub const DEFAULT_APP_ID: &str = ACTIVE_APP_ID;
 const CODEX_THEME_V1_PROFILE: &str = "codex-theme-v1";
 
 /// Accepted package file extensions.
-pub const THEME_PACKAGE_EXTENSIONS: &[&str] = &[EXT_CDXTHEME, EXT_CODEDROBE];
+pub const THEME_PACKAGE_EXTENSIONS: &[&str] = &[EXT_CDXTHEME];
 
 /// Soft cap for list-response preview data URLs (~3MB base64 payload).
 const PREVIEW_BASE64_MAX_LEN: usize = 3_500_000;
@@ -64,7 +59,9 @@ const PREVIEW_BASE64_MAX_LEN: usize = 3_500_000;
 struct ThemeMetaIn {
   id: String,
   display_name: String,
-  version: String,
+  /// Integer version (JSON number; legacy string versions accepted).
+  #[serde(deserialize_with = "deserialize_version_u32")]
+  version: u32,
   #[serde(default)]
   copy: Option<Value>,
 }
@@ -112,10 +109,7 @@ struct ThemePackageFile {
 // ── Public API ──────────────────────────────────────────────────────────────
 
 pub fn is_supported_package_format(format: &str) -> bool {
-  matches!(
-    format.trim().to_ascii_lowercase().as_str(),
-    FORMAT_CDXTHEME | FORMAT_CODEDROBE
-  )
+  format.trim().eq_ignore_ascii_case(FORMAT_CDXTHEME)
 }
 
 /// Optional filename hint for file pickers / UI filters (not used for validation).
@@ -150,7 +144,7 @@ pub fn is_theme_package_content(content: &str) -> bool {
 pub struct CodexThemePeek {
   pub id: String,
   pub display_name: String,
-  pub version: String,
+  pub version: u32,
   pub preview_img: Option<String>,
   pub preview_colors: Vec<String>,
 }
@@ -278,7 +272,7 @@ fn parse_bundle_str(raw: &str) -> Result<ThemePackageFile, String> {
     serde_json::from_str(raw.trim()).map_err(|e| format!("invalid theme JSON: {e}"))?;
   if !is_supported_package_format(&bundle.format) {
     return Err(format!(
-      "unsupported package format {:?} (expected {FORMAT_CDXTHEME} or {FORMAT_CODEDROBE})",
+      "unsupported package format {:?} (expected {FORMAT_CDXTHEME})",
       bundle.format
     ));
   }
@@ -293,9 +287,6 @@ fn parse_bundle_str(raw: &str) -> Result<ThemePackageFile, String> {
   }
   if bundle.theme.display_name.trim().is_empty() {
     return Err("theme.displayName must be a non-empty string".into());
-  }
-  if bundle.theme.version.trim().is_empty() {
-    return Err("theme.version must be a non-empty string".into());
   }
   if bundle.targets.is_empty() {
     return Err("theme package must support at least one app target".into());

@@ -9,7 +9,9 @@
   <link rel="apple-touch-icon" href="public/logo.png" />
   <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
   <link data-trunk rel="copy-dir" href="public" />
-  <link data-trunk rel="rust" data-wasm-opt="z" />
+  <!-- Rust 1.87+ emits bulk-memory / nontrapping-fptoint by default; wasm-opt must allow them. -->
+  <link data-trunk rel="rust" data-wasm-opt="z"
+    data-wasm-opt-params="--enable-bulk-memory --enable-bulk-memory-opt --enable-nontrapping-float-to-int" />
   <script>
     (function () {
       try {

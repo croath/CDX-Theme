@@ -16,7 +16,7 @@ fn inject_options(state: &AppState) -> InjectOptions {
   }
 }
 
-/// Runtime local theme list: scan builtin + user `.cdxtheme` / `.codedrobe-theme` packages.
+/// Runtime local theme list: scan builtin + user `.cdxtheme` packages.
 #[tauri::command]
 pub async fn retrieve_local_theme_list(
   app: AppHandle,
