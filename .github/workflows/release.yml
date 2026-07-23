@@ -218,7 +218,7 @@ jobs:
           if [[ -n "${DMG_PATH}" ]]; then
             echo "==> Submitting DMG for notarization (async): $DMG_PATH"
             xcrun notarytool submit "$DMG_PATH" \
-              --keypath "$KEY_PATH" \
+              -k "$KEY_PATH" \
               --issuer "$APPLE_API_ISSUER" \
               --key-id "$APPLE_API_KEY" \
               --no-wait \
@@ -232,7 +232,7 @@ jobs:
             ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH" 2>/dev/null || true
             if [[ -f "$ZIP_PATH" ]]; then
               xcrun notarytool submit "$ZIP_PATH" \
-                --keypath "$KEY_PATH" \
+                -k "$KEY_PATH" \
                 --issuer "$APPLE_API_ISSUER" \
                 --key-id "$APPLE_API_KEY" \
                 --no-wait \
