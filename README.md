@@ -14,7 +14,8 @@
 
 <p align="center">
   <strong>English</strong> ·
-  <a href="README.zh-CN.md">简体中文</a> ·
+  <a href="README.zh-Hans.md">简体中文</a> ·
+  <a href="README.zh-Hant.md">繁體中文</a> ·
   <a href="README.ja.md">日本語</a> ·
   <a href="README.ko.md">한국어</a>
 </p>
@@ -53,9 +54,7 @@
 ### CDXTheme app
 
 <p align="center">
-  <img src="public/screenshots/screenshot1.png" width="280" alt="CDXTheme app screenshot 1">
-  <img src="public/screenshots/screenshot2.png" width="280" alt="CDXTheme app screenshot 2">
-  <img src="public/screenshots/screenshot3.png" width="280" alt="CDXTheme app screenshot 3">
+  <img src="public/screenshots/screenshot-en.png" width="720" alt="CDXTheme app (English)">
 </p>
 
 ### ChatGPT with a theme applied
