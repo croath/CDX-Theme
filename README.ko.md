@@ -48,6 +48,23 @@
   </tbody>
 </table>
 
+## 스크린샷
+
+### CDXTheme 앱
+
+<p align="center">
+  <img src="public/screenshots/screenshot1.png" width="280" alt="CDXTheme 앱 스크린샷 1">
+  <img src="public/screenshots/screenshot2.png" width="280" alt="CDXTheme 앱 스크린샷 2">
+  <img src="public/screenshots/screenshot3.png" width="280" alt="CDXTheme 앱 스크린샷 3">
+</p>
+
+### 테마가 적용된 ChatGPT
+
+<p align="center">
+  <img src="public/screenshots/screenshot4.png" width="400" alt="CDXTheme 테마가 적용된 ChatGPT.app">
+  <img src="public/screenshots/screenshot5.png" width="400" alt="CDXTheme 테마가 적용된 ChatGPT.app">
+</p>
+
 ## CDXTheme 사용법
 
 ### 1. 다운로드

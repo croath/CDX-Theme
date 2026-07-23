@@ -48,6 +48,23 @@
   </tbody>
 </table>
 
+## Screenshots
+
+### CDXTheme app
+
+<p align="center">
+  <img src="public/screenshots/screenshot1.png" width="280" alt="CDXTheme app screenshot 1">
+  <img src="public/screenshots/screenshot2.png" width="280" alt="CDXTheme app screenshot 2">
+  <img src="public/screenshots/screenshot3.png" width="280" alt="CDXTheme app screenshot 3">
+</p>
+
+### ChatGPT with a theme applied
+
+<p align="center">
+  <img src="public/screenshots/screenshot4.png" width="400" alt="ChatGPT.app with a CDXTheme skin applied">
+  <img src="public/screenshots/screenshot5.png" width="400" alt="ChatGPT.app with a CDXTheme skin applied">
+</p>
+
 ## Use CDXTheme
 
 ### 1. Download

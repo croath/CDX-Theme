@@ -49,6 +49,23 @@
   </tbody>
 </table>
 
+## 截图
+
+### CDXTheme 应用
+
+<p align="center">
+  <img src="public/screenshots/screenshot1.png" width="280" alt="CDXTheme 应用截图 1">
+  <img src="public/screenshots/screenshot2.png" width="280" alt="CDXTheme 应用截图 2">
+  <img src="public/screenshots/screenshot3.png" width="280" alt="CDXTheme 应用截图 3">
+</p>
+
+### 应用主题后的 ChatGPT
+
+<p align="center">
+  <img src="public/screenshots/screenshot4.png" width="400" alt="应用 CDXTheme 主题后的 ChatGPT.app">
+  <img src="public/screenshots/screenshot5.png" width="400" alt="应用 CDXTheme 主题后的 ChatGPT.app">
+</p>
+
 ## 使用 CDXTheme
 
 ### 1. 下载

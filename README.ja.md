@@ -48,6 +48,23 @@
   </tbody>
 </table>
 
+## スクリーンショット
+
+### CDXTheme アプリ
+
+<p align="center">
+  <img src="public/screenshots/screenshot1.png" width="280" alt="CDXTheme アプリのスクリーンショット 1">
+  <img src="public/screenshots/screenshot2.png" width="280" alt="CDXTheme アプリのスクリーンショット 2">
+  <img src="public/screenshots/screenshot3.png" width="280" alt="CDXTheme アプリのスクリーンショット 3">
+</p>
+
+### テーマ適用後の ChatGPT
+
+<p align="center">
+  <img src="public/screenshots/screenshot4.png" width="400" alt="CDXTheme のテーマを適用した ChatGPT.app">
+  <img src="public/screenshots/screenshot5.png" width="400" alt="CDXTheme のテーマを適用した ChatGPT.app">
+</p>
+
 ## CDXTheme の使い方
 
 ### 1. ダウンロード
