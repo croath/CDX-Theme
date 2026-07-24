@@ -699,6 +699,70 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::DeDe, "settings.theme.hint") => "Zwischen Hell- und Dunkelmodus wechseln",
     (Locale::EsEs, "settings.theme.hint") => "Cambiar entre modo claro y oscuro",
 
+    (Locale::EnUs, "settings.analytics") => "Usage analytics",
+    (Locale::ZhHans, "settings.analytics") => "使用分析",
+    (Locale::ZhHant, "settings.analytics") => "使用分析",
+    (Locale::JaJp, "settings.analytics") => "利用状況の分析",
+    (Locale::KoKr, "settings.analytics") => "사용 분석",
+    (Locale::DeDe, "settings.analytics") => "Nutzungsanalyse",
+    (Locale::EsEs, "settings.analytics") => "Análisis de uso",
+
+    (Locale::EnUs, "settings.analytics.hint") => "Help improve CDXTheme with anonymous product usage data",
+    (Locale::ZhHans, "settings.analytics.hint") => "通过匿名产品使用数据帮助改进 CDXTheme",
+    (Locale::ZhHant, "settings.analytics.hint") => "透過匿名產品使用資料協助改進 CDXTheme",
+    (Locale::JaJp, "settings.analytics.hint") => "匿名の利用データで CDXTheme の改善にご協力ください",
+    (Locale::KoKr, "settings.analytics.hint") => "익명 제품 사용 데이터로 CDXTheme 개선에 도움을 주세요",
+    (Locale::DeDe, "settings.analytics.hint") => "Hilf, CDXTheme mit anonymen Nutzungsdaten zu verbessern",
+    (Locale::EsEs, "settings.analytics.hint") => {
+      "Ayuda a mejorar CDXTheme con datos anónimos de uso del producto"
+    },
+
+    (Locale::EnUs, "settings.analytics.detail") => {
+      "Events like theme apply/install and app open. No account, no chat content."
+    },
+    (Locale::ZhHans, "settings.analytics.detail") => {
+      "记录主题应用/安装、应用启动等事件。无账号、无聊天内容。"
+    },
+    (Locale::ZhHant, "settings.analytics.detail") => {
+      "記錄主題套用/安裝、應用程式啟動等事件。無帳號、無聊天內容。"
+    },
+    (Locale::JaJp, "settings.analytics.detail") => {
+      "テーマ適用・インストールやアプリ起動などのイベントのみ。アカウントやチャット内容は含みません。"
+    },
+    (Locale::KoKr, "settings.analytics.detail") => {
+      "테마 적용/설치, 앱 실행 등 이벤트만 수집합니다. 계정·채팅 내용은 없습니다."
+    },
+    (Locale::DeDe, "settings.analytics.detail") => {
+      "Ereignisse wie Theme anwenden/installieren und App-Start. Kein Konto, keine Chat-Inhalte."
+    },
+    (Locale::EsEs, "settings.analytics.detail") => {
+      "Eventos como aplicar/instalar temas y abrir la app. Sin cuenta ni contenido de chat."
+    },
+
+    (Locale::EnUs, "settings.analytics.on") => "Analytics enabled",
+    (Locale::ZhHans, "settings.analytics.on") => "已启用分析",
+    (Locale::ZhHant, "settings.analytics.on") => "已啟用分析",
+    (Locale::JaJp, "settings.analytics.on") => "分析を有効",
+    (Locale::KoKr, "settings.analytics.on") => "분석 사용 중",
+    (Locale::DeDe, "settings.analytics.on") => "Analyse aktiv",
+    (Locale::EsEs, "settings.analytics.on") => "Análisis activado",
+
+    (Locale::EnUs, "settings.analytics.off") => "Analytics disabled",
+    (Locale::ZhHans, "settings.analytics.off") => "已关闭分析",
+    (Locale::ZhHant, "settings.analytics.off") => "已關閉分析",
+    (Locale::JaJp, "settings.analytics.off") => "分析を無効",
+    (Locale::KoKr, "settings.analytics.off") => "분석 사용 안 함",
+    (Locale::DeDe, "settings.analytics.off") => "Analyse deaktiviert",
+    (Locale::EsEs, "settings.analytics.off") => "Análisis desactivado",
+
+    (Locale::EnUs, "settings.analytics.saved") => "Preference saved",
+    (Locale::ZhHans, "settings.analytics.saved") => "偏好已保存",
+    (Locale::ZhHant, "settings.analytics.saved") => "偏好已儲存",
+    (Locale::JaJp, "settings.analytics.saved") => "設定を保存しました",
+    (Locale::KoKr, "settings.analytics.saved") => "환경설정이 저장되었습니다",
+    (Locale::DeDe, "settings.analytics.saved") => "Einstellung gespeichert",
+    (Locale::EsEs, "settings.analytics.saved") => "Preferencia guardada",
+
     _ => "…",
   }
 }

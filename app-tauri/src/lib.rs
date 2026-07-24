@@ -1,3 +1,4 @@
+pub mod analytics;
 pub mod app_state;
 pub mod cdp_monitor;
 pub mod codex_launch;
@@ -14,7 +15,7 @@ pub mod types;
 
 use app_state::AppState;
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::{Manager, RunEvent};
 use tauri_plugin_log::{Target, TargetKind};
 use tauri_plugin_updater::UpdaterExt;
 
@@ -93,9 +94,10 @@ pub fn run() {
         tracing::warn!("user themes dir: {e}");
       }
 
-      // Background: check / install app updates, then monitor CDP (do not auto-launch ChatGPT).
+      // Background: analytics init, then updates, then CDP monitor (do not auto-launch ChatGPT).
       let handle = app.handle().clone();
       tauri::async_runtime::spawn(async move {
+        analytics::Analytics::init(&handle).await;
         run_updater_check(&handle).await;
         cdp_monitor::start(handle);
       });
@@ -115,9 +117,19 @@ pub fn run() {
       commands::download_theme,
       commands::install_theme,
       commands::delete_theme,
+      commands::get_analytics_enabled,
+      commands::get_analytics_state,
+      commands::set_analytics_enabled,
+      commands::track_event,
     ])
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .build(tauri::generate_context!())
+    .expect("error while building tauri application")
+    .run(|_app, event| {
+      if matches!(event, RunEvent::Exit) {
+        // Best-effort flush so buffered events are not lost on quit.
+        tauri::async_runtime::block_on(analytics::Analytics::shutdown());
+      }
+    });
 }
 
 /// Check for a newer app build via `tauri-plugin-updater` and log every stage.

@@ -3,6 +3,7 @@ mod app;
 mod components;
 mod i18n;
 mod pages;
+mod posthog;
 mod state;
 mod types;
 mod window_chrome;

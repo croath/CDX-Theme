@@ -15,6 +15,13 @@ pub struct AppSettings {
   /// Last successfully applied theme `manifest.id`, if any.
   #[serde(default)]
   pub applied_theme_id: Option<String>,
+  /// When true, anonymous product analytics may be sent to PostHog.
+  /// Defaults to **false** (opt-in); users enable it in Settings.
+  #[serde(default)]
+  pub analytics_enabled: bool,
+  /// Stable anonymous id for PostHog (`distinct_id`). Generated once per install.
+  #[serde(default)]
+  pub analytics_distinct_id: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -22,6 +29,8 @@ impl Default for AppSettings {
     Self {
       cdp_port: DEFAULT_CDP_PORT,
       applied_theme_id: None,
+      analytics_enabled: false,
+      analytics_distinct_id: None,
     }
   }
 }

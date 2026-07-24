@@ -9,6 +9,19 @@ pub enum Page {
   Settings,
 }
 
+impl Page {
+  /// Stable analytics / routing id (snake_case).
+  pub fn analytics_id(self) -> &'static str {
+    match self {
+      Page::Recommend => "recommend",
+      Page::Install => "install",
+      Page::Library => "library",
+      Page::Restore => "restore",
+      Page::Settings => "settings",
+    }
+  }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Locale {
   ZhHans,

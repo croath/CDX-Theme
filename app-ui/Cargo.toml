@@ -33,6 +33,7 @@ web-sys = { workspace = true, features = [
   "MouseEvent",
 ] }
 serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 serde-wasm-bindgen = { workspace = true }
 console_error_panic_hook = { workspace = true }
 tw_merge = { workspace = true, features = ["variant"] }

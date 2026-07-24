@@ -121,7 +121,9 @@ pub fn RecommendPage() -> impl IntoView {
         </button>
       </header>
 
-      <div class="min-h-0 flex-1 overflow-y-auto pr-1">
+      // Full-width scroll so the scrollbar sits on the main panel's right edge
+      // (cancels parent px-5/7/8 on the right, then restores content inset with matching pr).
+      <div class="content-scroll -mr-5 min-h-0 flex-1 overflow-y-auto pr-5 sm:-mr-7 sm:pr-7 lg:-mr-8 lg:pr-8">
         <Suspense fallback=move || {
           view! {
             <div class="flex h-48 flex-col items-center justify-center gap-3 text-muted-foreground">

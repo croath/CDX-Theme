@@ -233,3 +233,98 @@ pub async fn delete_theme(theme_id: impl Into<String>) -> Result<bool, String> {
   .map_err(|e| e.to_string())?;
   invoke_cmd_with_args::<bool>("delete_theme", args).await
 }
+
+pub async fn get_analytics_enabled() -> Result<bool, String> {
+  invoke_cmd_with_args::<bool>("get_analytics_enabled", empty_args()).await
+}
+
+#[derive(Clone, Debug, Default, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyticsState {
+  pub enabled: bool,
+  pub distinct_id: String,
+  #[allow(dead_code)]
+  pub configured: bool,
+}
+
+pub async fn get_analytics_state() -> Result<AnalyticsState, String> {
+  invoke_cmd_with_args::<AnalyticsState>("get_analytics_state", empty_args()).await
+}
+
+#[derive(Serialize)]
+struct SetAnalyticsEnabledArgs {
+  enabled: bool,
+}
+
+pub async fn set_analytics_enabled(enabled: bool) -> Result<bool, String> {
+  let args = to_value(&SetAnalyticsEnabledArgs { enabled }).map_err(|e| e.to_string())?;
+  let result = invoke_cmd_with_args::<bool>("set_analytics_enabled", args).await;
+  // Keep the HTML PostHog snippet in sync with the persisted preference.
+  if let Ok(saved) = result.as_ref() {
+    if let Ok(state) = get_analytics_state().await {
+      crate::posthog::apply_state(*saved, &state.distinct_id);
+    } else {
+      crate::posthog::set_enabled(*saved);
+    }
+    // After opt-in, send a standard `$pageview` so PostHog install check can pass.
+    if *saved {
+      crate::posthog::capture_pageview("settings");
+    }
+  }
+  result
+}
+
+/// Pull install analytics state and sync posthog-js (identify + opt-in).
+/// Returns whether capturing is enabled after sync.
+pub async fn sync_posthog_js() -> bool {
+  match get_analytics_state().await {
+    Ok(state) => crate::posthog::apply_state(state.enabled, &state.distinct_id),
+    Err(_) => {
+      if let Ok(enabled) = get_analytics_enabled().await {
+        crate::posthog::set_enabled(enabled);
+        enabled
+      } else {
+        false
+      }
+    }
+  }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+struct TrackEventArgs {
+  name: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  properties: Option<serde_json::Map<String, serde_json::Value>>,
+}
+
+/// Fire a allow-listed product analytics event via the native SDK
+/// (no-op if analytics is off / not configured). Prefer this for non-page UI events.
+#[allow(dead_code)]
+pub async fn track_event(
+  name: impl Into<String>,
+  properties: Option<serde_json::Map<String, serde_json::Value>>,
+) -> Result<(), String> {
+  let args = to_value(&TrackEventArgs {
+    name: name.into(),
+    properties,
+  })
+  .map_err(|e| e.to_string())?;
+  match invoke_unit_with_args("track_event", args).await {
+    Ok(()) => Ok(()),
+    Err(e) if e.contains("__TAURI__") || e.contains("undefined") => Ok(()),
+    Err(e) => Err(e),
+  }
+}
+
+pub async fn track_page_viewed(page: &str) {
+  // PostHog standard `$pageview` (+ automatic `$pageleave` for the previous page).
+  // No-op while opted out or when POSTHOG_API_KEY was not baked into the build.
+  crate::posthog::capture_pageview(page);
+}
+
+/// Explicit `$pageleave` (e.g. app hide). Usually handled inside `capture_pageview`.
+#[allow(dead_code)]
+pub async fn track_page_leave(page: Option<&str>) {
+  crate::posthog::capture_pageleave(page);
+}

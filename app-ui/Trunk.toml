@@ -5,7 +5,15 @@ public_url = "./"
 minify = "on_release"
 
 [watch]
-ignore = ["../app-tauri", "../target", "../core", "../cli", "../types"]
+ignore = [
+  "../app-tauri",
+  "../target",
+  "../core",
+  "../cli",
+  "../types",
+  # Written by build.rs during wasm compile — watching it causes infinite rebuilds.
+  "public/posthog-config.js",
+]
 
 [tools]
 # Must match a version Trunk can download; processes style/tailwind.css via rel="tailwind-css"

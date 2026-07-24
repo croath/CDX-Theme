@@ -145,6 +145,10 @@ jobs:
           # Prefer release frontend when tools honor it; beforeBuildCommand is in tauri.conf.json.
           TRUNK_BUILD_RELEASE: "true"
 
+          # PostHog product analytics (public project API key; embedded at compile time)
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
+
           # Tauri updater signing (required while createUpdaterArtifacts is true)
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -314,6 +318,13 @@ jobs:
 # ── macOS Notarization (async submit after release upload) ──────────────────
 # Notarization is **not** performed by Tauri during `cargo tauri build`.
 # After assets are attached, we run notarytool with --no-wait.
+#
+# ── PostHog product analytics (optional) ────────────────────────────────────
+# Project API key is a public client token (phc_…); embed at compile time.
+# If unset, analytics is a no-op in that build. Users can still opt out in Settings.
+#
+#   POSTHOG_API_KEY    Project API key from PostHog → Project settings
+#   POSTHOG_HOST       Optional. Default US cloud. EU: https://eu.i.posthog.com
 #
 # ── Repo settings ───────────────────────────────────────────────────────────
 # Settings → Actions → General → Workflow permissions → Read and write permissions

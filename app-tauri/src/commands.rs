@@ -1,3 +1,4 @@
+use crate::analytics;
 use crate::app_state::{AppState, CdpServerStatus};
 use crate::codex_launch;
 use crate::image_cache;
@@ -6,6 +7,8 @@ use crate::settings_store;
 use crate::theme_catalog;
 use crate::theme_tool;
 use cdx_theme_types::ThemeMetadata;
+use serde_json::Value;
+use std::collections::HashMap;
 use tauri::{AppHandle, Manager, State};
 
 fn inject_options(state: &AppState) -> InjectOptions {
@@ -95,6 +98,7 @@ pub async fn set_cdp_port(
     Err(e) => tracing::warn!("ensure Codex on port {port}: {e}"),
   }
 
+  analytics::track_cdp_port_changed(port);
   Ok(port)
 }
 
@@ -169,6 +173,7 @@ pub async fn apply_theme(
   // Record applied theme id for UI state
   settings_store::set_applied_theme_id(&app, Some(theme.id.clone()))?;
   tracing::info!("theme apply complete id={}", theme.id);
+  analytics::track_theme_applied(&theme.id, theme_url.is_some(), true);
 
   Ok(true)
 }
@@ -211,6 +216,7 @@ pub async fn restore_theme(app: AppHandle, state: State<'_, AppState>) -> Result
 
   // Clear applied theme marker
   settings_store::set_applied_theme_id(&app, None)?;
+  analytics::track_theme_restored(true);
 
   Ok(true)
 }
@@ -222,7 +228,16 @@ pub async fn download_theme(
   app: AppHandle,
   _state: State<'_, AppState>,
 ) -> Result<ThemeMetadata, String> {
-  theme_catalog::download_theme_to_library(&app, &theme_url).await
+  match theme_catalog::download_theme_to_library(&app, &theme_url).await {
+    Ok(meta) => {
+      analytics::track_theme_downloaded(Some(&meta.id), true);
+      Ok(meta)
+    }
+    Err(e) => {
+      analytics::track_theme_downloaded(None, false);
+      Err(e)
+    }
+  }
 }
 
 /// Install a portable multi-app theme package (raw JSON text) into the user themes library.
@@ -233,20 +248,83 @@ pub async fn install_theme(
   app: AppHandle,
 ) -> Result<ThemeMetadata, String> {
   // Content is validated by import (JSON deserialize); filename is optional.
-  let meta = theme_catalog::import_codex_theme_content(&app, &file_name, &content)?;
-  tracing::info!(
-    "installed theme id={} name={} location={}",
-    meta.id,
-    meta.name,
-    meta.location
-  );
-  Ok(meta)
+  match theme_catalog::import_codex_theme_content(&app, &file_name, &content) {
+    Ok(meta) => {
+      tracing::info!(
+        "installed theme id={} name={} location={}",
+        meta.id,
+        meta.name,
+        meta.location
+      );
+      analytics::track_theme_installed(&meta.id, true);
+      Ok(meta)
+    }
+    Err(e) => {
+      analytics::track_theme_installed("unknown", false);
+      Err(e)
+    }
+  }
 }
 
 /// Delete a user-installed theme package from the local library.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn delete_theme(theme_id: String, app: AppHandle) -> Result<bool, String> {
-  theme_catalog::delete_installed_theme(&app, &theme_id)?;
-  tracing::info!("deleted installed theme id={theme_id}");
-  Ok(true)
+  match theme_catalog::delete_installed_theme(&app, &theme_id) {
+    Ok(()) => {
+      tracing::info!("deleted installed theme id={theme_id}");
+      analytics::track_theme_deleted(&theme_id, true);
+      Ok(true)
+    }
+    Err(e) => {
+      analytics::track_theme_deleted(&theme_id, false);
+      Err(e)
+    }
+  }
+}
+
+/// Whether anonymous product analytics is enabled for this install.
+#[tauri::command]
+pub async fn get_analytics_enabled(app: AppHandle) -> Result<bool, String> {
+  Ok(settings_store::load(&app).analytics_enabled)
+}
+
+/// Full analytics snapshot (opt-in + anonymous distinct_id + build-time configured).
+#[tauri::command]
+pub async fn get_analytics_state(app: AppHandle) -> Result<analytics::AnalyticsState, String> {
+  Ok(analytics::Analytics::state(&app))
+}
+
+/// Persist analytics preference and update the in-process gate immediately.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn set_analytics_enabled(enabled: bool, app: AppHandle) -> Result<bool, String> {
+  analytics::Analytics::set_enabled(&app, enabled)?;
+  Ok(enabled)
+}
+
+/// Generic UI event capture (e.g. page views). Properties must be JSON-serializable scalars/objects.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn track_event(
+  name: String,
+  properties: Option<HashMap<String, Value>>,
+) -> Result<(), String> {
+  let name = name.trim();
+  if name.is_empty() || name.len() > 100 {
+    return Err("invalid event name".into());
+  }
+  // Allow only product-safe event names from the UI surface.
+  let allowed = matches!(name, "page_viewed" | "ui_theme_toggled" | "locale_changed");
+  if !allowed {
+    return Err(format!("event `{name}` is not allowed from the UI"));
+  }
+  let props = properties.unwrap_or_default();
+  if name == "page_viewed" {
+    let page = props
+      .get("page")
+      .and_then(|v| v.as_str())
+      .unwrap_or("unknown");
+    analytics::track_page_viewed(page);
+  } else {
+    analytics::capture(name, props);
+  }
+  Ok(())
 }
