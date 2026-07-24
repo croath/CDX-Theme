@@ -73,8 +73,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo binstall --no-confirm trunk
-          cargo binstall --no-confirm tauri-cli
+          cargo binstall --locked --no-confirm trunk
+          cargo binstall --locked --no-confirm tauri-cli
           trunk --version
           cargo tauri --version
 
