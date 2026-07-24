@@ -6,13 +6,13 @@
   "identifier": "com.cdxtheme.cdx",
   "build": {
     "beforeDevCommand": {
-      "script": "trunk serve",
-      "cwd": "../app-ui"
+      "script": "python3 ../scripts/before-tauri-build.py --dev",
+      "cwd": "."
     },
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": {
-      "script": "trunk build",
-      "cwd": "../app-ui"
+      "script": "python3 ../scripts/before-tauri-build.py",
+      "cwd": "."
     },
     "frontendDist": "../app-ui/dist"
   },
@@ -58,6 +58,9 @@
       "icons/icon.ico"
     ],
     "createUpdaterArtifacts": true,
+    "externalBin": [
+      "binaries/cdxtheme"
+    ],
     "resources": {
     },
     "macOS": {

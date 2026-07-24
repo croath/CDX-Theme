@@ -129,6 +129,16 @@ switch ($Mode) {
     if ($Mode -eq 'debug') { $tauriArgs += '--debug' }
     if ($VerboseBuild) { $tauriArgs += '--verbose' }
 
+    # Stage cdxtheme next to the app binary (Tauri externalBin).
+    Write-Step 'Preparing cdxtheme CLI sidecar…'
+    if ($Mode -eq 'debug') {
+      $env:CLI_SIDECAR_PROFILE = 'debug'
+    } else {
+      Remove-Item Env:CLI_SIDECAR_PROFILE -ErrorAction SilentlyContinue
+    }
+    & (Join-Path $PSScriptRoot 'prepare-cli-sidecar.ps1')
+    if ($LASTEXITCODE -ne 0) { Die "prepare-cli-sidecar failed with $LASTEXITCODE" }
+
     Write-Step ("Building CDXTheme ({0})…" -f $Mode)
     Invoke-Tauri $tauriArgs
 

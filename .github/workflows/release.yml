@@ -81,6 +81,38 @@ jobs:
         working-directory: app-ui
         run: bun install --frozen-lockfile
 
+      # Stage `cdxtheme` for Tauri bundle.externalBin (also re-run by beforeBuildCommand).
+      # Matrix macOS uses --target aarch64-apple-darwin; match that triple for the sidecar.
+      - name: Prepare CLI sidecar
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            export CLI_SIDECAR_TARGET=aarch64-apple-darwin
+          fi
+          bash scripts/prepare-cli-sidecar.sh
+          ls -la app-tauri/binaries/
+
+      # beforeBuildCommand uses `python3`; Windows images sometimes only expose `python`.
+      - name: Ensure python3 launcher (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v python3 >/dev/null 2>&1; then
+            python3 --version
+            exit 0
+          fi
+          if ! command -v python >/dev/null 2>&1; then
+            echo "::error::Neither python3 nor python found on PATH"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/py3bin"
+          printf '%s\n' '#!/usr/bin/env bash' 'exec python "$@"' > "$RUNNER_TEMP/py3bin/python3"
+          chmod +x "$RUNNER_TEMP/py3bin/python3"
+          echo "$RUNNER_TEMP/py3bin" >> "$GITHUB_PATH"
+          echo "Aliased python → python3 via $RUNNER_TEMP/py3bin"
+
       # Prepare App Store Connect API key (for manual async notarization submission).
       # We do NOT pass APPLE_API_* to the build step so that Tauri only performs
       # code signing. Notarization is submitted later with `xcrun notarytool ... --no-wait`.
