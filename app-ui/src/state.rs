@@ -42,6 +42,17 @@ impl AppCtx {
       persist(LOCALE_KEY, loc.code());
     });
 
+    // Sync opt-in / identify first, then `$pageview` on each navigation.
+    // JS bridge also emits `$pageleave` for the previous page (and on app hide).
+    // Await sync so the first pageview is not dropped while still opted out by default.
+    Effect::new(move |_| {
+      let page_id = page.get().analytics_id().to_string();
+      spawn_local(async move {
+        let _ = api::sync_posthog_js().await;
+        api::track_page_viewed(&page_id).await;
+      });
+    });
+
     provide_context(ctx);
     ctx
   }

@@ -57,3 +57,5 @@ env_filter = { workspace = true }
 reqwest = { workspace = true, features = ["json", "rustls"] }
 base64 = { workspace = true }
 sha2 = { workspace = true }
+uuid = { workspace = true }
+posthog-rs = { workspace = true }

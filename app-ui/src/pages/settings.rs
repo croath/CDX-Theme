@@ -15,111 +15,243 @@ pub fn SettingsPage() -> impl IntoView {
   let lang_open = RwSignal::new(false);
 
   view! {
-    <div class="flex h-full flex-col overflow-visible">
-      <header class="mb-6 shrink-0">
-        <h1 class="bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-2xl font-semibold tracking-tight text-transparent sm:text-3xl">
-          {move || {
-            let i18n = I18n { locale: ctx.locale.get() };
-            i18n.t("settings.title")
-          }}
-        </h1>
-        <p class="mt-1.5 max-w-xl text-sm text-muted-foreground">
-          {move || {
-            let i18n = I18n { locale: ctx.locale.get() };
-            i18n.t("settings.subtitle")
-          }}
-        </p>
-      </header>
+    // Full-width scroll so the scrollbar sits on the main panel's right edge
+    // (pulls out of parent px-5/7/8, then restores content inset with matching pr).
+    // No bottom padding on the scroll box so the scrollbar track reaches the page bottom.
+    <div class="content-scroll -mr-5 min-h-0 h-full overflow-y-auto pr-5 sm:-mr-7 sm:pr-7 lg:-mr-8 lg:pr-8">
+      <div class="mx-auto w-full max-w-2xl">
+        <header class="mb-6">
+          <h1 class="bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-2xl font-semibold tracking-tight text-transparent sm:text-3xl">
+            {move || {
+              let i18n = I18n { locale: ctx.locale.get() };
+              i18n.t("settings.title")
+            }}
+          </h1>
+          <p class="mt-1.5 max-w-xl text-sm text-muted-foreground">
+            {move || {
+              let i18n = I18n { locale: ctx.locale.get() };
+              i18n.t("settings.subtitle")
+            }}
+          </p>
+        </header>
 
-      <div class="relative isolate mx-auto w-full max-w-2xl space-y-5 overflow-visible">
-        // Language card
-        <section class=move || {
-          if lang_open.get() {
-            "relative z-30 overflow-visible rounded-3xl border border-border/70 bg-card shadow-sm"
-          } else {
-            "relative z-20 overflow-visible rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-md"
-          }
-        }>
-          <div class="flex items-start gap-4 border-b border-border/50 px-5 py-4">
-            <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/20">
-              <Languages class="size-5" />
+        <div class="relative isolate space-y-5">
+          // Language card
+          <section class=move || {
+            if lang_open.get() {
+              "relative z-30 overflow-visible rounded-3xl border border-border/70 bg-card shadow-sm"
+            } else {
+              "relative z-20 overflow-visible rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-md"
+            }
+          }>
+            <div class="flex items-start gap-4 border-b border-border/50 px-5 py-4">
+              <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/20">
+                <Languages class="size-5" />
+              </div>
+              <div>
+                <h2 class="text-sm font-semibold text-foreground">
+                  {move || {
+                    let i18n = I18n { locale: ctx.locale.get() };
+                    i18n.t("settings.language")
+                  }}
+                </h2>
+                <p class="mt-0.5 text-xs text-muted-foreground">
+                  {move || {
+                    let i18n = I18n { locale: ctx.locale.get() };
+                    i18n.t("settings.language.hint")
+                  }}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 class="text-sm font-semibold text-foreground">
-                {move || {
-                  let i18n = I18n { locale: ctx.locale.get() };
-                  i18n.t("settings.language")
-                }}
-              </h2>
-              <p class="mt-0.5 text-xs text-muted-foreground">
-                {move || {
-                  let i18n = I18n { locale: ctx.locale.get() };
-                  i18n.t("settings.language.hint")
-                }}
-              </p>
-            </div>
-          </div>
 
-          <div class="p-4">
-            <LanguageDropdown open=lang_open />
-          </div>
-        </section>
+            <div class="p-4">
+              <LanguageDropdown open=lang_open />
+            </div>
+          </section>
 
-        // CDP port
-        <section class="relative z-10 overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-md">
-          <div class="flex items-start gap-4 border-b border-border/50 px-5 py-4">
-            <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/20">
-              <Globe class="size-5" />
+          // CDP port
+          <section class="relative z-10 overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-md">
+            <div class="flex items-start gap-4 border-b border-border/50 px-5 py-4">
+              <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/20">
+                <Globe class="size-5" />
+              </div>
+              <div>
+                <h2 class="text-sm font-semibold text-foreground">
+                  {move || {
+                    let i18n = I18n { locale: ctx.locale.get() };
+                    i18n.t("settings.cdp")
+                  }}
+                </h2>
+                <p class="mt-0.5 text-xs text-muted-foreground">
+                  {move || {
+                    let i18n = I18n { locale: ctx.locale.get() };
+                    i18n.t("settings.cdp.port.hint")
+                  }}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 class="text-sm font-semibold text-foreground">
-                {move || {
-                  let i18n = I18n { locale: ctx.locale.get() };
-                  i18n.t("settings.cdp")
-                }}
-              </h2>
-              <p class="mt-0.5 text-xs text-muted-foreground">
-                {move || {
-                  let i18n = I18n { locale: ctx.locale.get() };
-                  i18n.t("settings.cdp.port.hint")
-                }}
-              </p>
+            <div class="p-4">
+              <CdpPortSetting />
             </div>
-          </div>
-          <div class="p-4">
-            <CdpPortSetting />
-          </div>
-        </section>
+          </section>
 
-        // Theme card
-        <section class="relative z-10 overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-md">
-          <div class="flex items-start gap-4 border-b border-border/50 px-5 py-4">
-            <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/20">
-              <Globe class="size-5" />
+          // Theme card — compact control row
+          <section class="relative z-10 overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-md">
+            <div class="flex items-center gap-4 px-5 py-3.5">
+              <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/20">
+                <Globe class="size-4" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <h2 class="text-sm font-semibold text-foreground">
+                  {move || {
+                    let i18n = I18n { locale: ctx.locale.get() };
+                    i18n.t("settings.theme")
+                  }}
+                </h2>
+                <p class="mt-0.5 text-xs text-muted-foreground">
+                  {move || {
+                    let i18n = I18n { locale: ctx.locale.get() };
+                    i18n.t("settings.theme.hint")
+                  }}
+                </p>
+              </div>
+              <div class="flex shrink-0 gap-1.5 rounded-xl border border-border/60 bg-background/50 p-1">
+                <ThemeOption dark=false />
+                <ThemeOption dark=true />
+              </div>
             </div>
-            <div>
-              <h2 class="text-sm font-semibold text-foreground">
-                {move || {
-                  let i18n = I18n { locale: ctx.locale.get() };
-                  i18n.t("settings.theme")
-                }}
-              </h2>
-              <p class="mt-0.5 text-xs text-muted-foreground">
-                {move || {
-                  let i18n = I18n { locale: ctx.locale.get() };
-                  i18n.t("settings.theme.hint")
-                }}
-              </p>
-            </div>
-          </div>
+          </section>
 
-          <div class="grid grid-cols-2 gap-2 p-4">
-            <ThemeOption dark=false />
-            <ThemeOption dark=true />
-          </div>
-        </section>
+          // Analytics / privacy
+          <section class="relative z-10 overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-md">
+            <div class="flex items-start gap-4 border-b border-border/50 px-5 py-4">
+              <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/20">
+                <Globe class="size-5" />
+              </div>
+              <div>
+                <h2 class="text-sm font-semibold text-foreground">
+                  {move || {
+                    let i18n = I18n { locale: ctx.locale.get() };
+                    i18n.t("settings.analytics")
+                  }}
+                </h2>
+                <p class="mt-0.5 text-xs text-muted-foreground">
+                  {move || {
+                    let i18n = I18n { locale: ctx.locale.get() };
+                    i18n.t("settings.analytics.hint")
+                  }}
+                </p>
+              </div>
+            </div>
+            <div class="p-4">
+              <AnalyticsSetting />
+            </div>
+          </section>
+        </div>
       </div>
     </div>
+  }
+}
+
+#[component]
+fn AnalyticsSetting() -> impl IntoView {
+  let ctx = AppCtx::use_ctx();
+  // Opt-in: default off until the backend preference loads.
+  let enabled = RwSignal::new(false);
+  let saving = RwSignal::new(false);
+
+  Effect::new(move |_| {
+    spawn_local(async move {
+      if let Ok(state) = api::get_analytics_state().await {
+        enabled.set(state.enabled);
+        let _ = api::sync_posthog_js().await;
+      } else if let Ok(v) = api::get_analytics_enabled().await {
+        enabled.set(v);
+      }
+    });
+  });
+
+  let on_toggle = move |_| {
+    if saving.get_untracked() {
+      return;
+    }
+    let next = !enabled.get_untracked();
+    saving.set(true);
+    spawn_local(async move {
+      let locale = ctx.locale.get_untracked();
+      let i18n = I18n { locale };
+      match api::set_analytics_enabled(next).await {
+        Ok(saved) => {
+          enabled.set(saved);
+          toast(
+            i18n.t("settings.analytics.saved"),
+            if saved {
+              i18n.t("settings.analytics.on")
+            } else {
+              i18n.t("settings.analytics.off")
+            },
+            ToastType::Success,
+          );
+        }
+        Err(e) => toast_error(i18n.t("settings.analytics"), &e),
+      }
+      saving.set(false);
+    });
+  };
+
+  view! {
+    <button
+      type="button"
+      role="switch"
+      prop:aria-checked=move || enabled.get()
+      class=move || {
+        if enabled.get() {
+          "flex w-full items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-primary/8 px-4 py-3 text-left transition-colors"
+        } else {
+          "flex w-full items-center justify-between gap-4 rounded-2xl border border-border/70 bg-background/60 px-4 py-3 text-left transition-colors hover:border-border"
+        }
+      }
+      disabled=move || saving.get()
+      on:click=on_toggle
+    >
+      <div class="min-w-0">
+        <div class="text-sm font-medium text-foreground">
+          {move || {
+            let i18n = I18n { locale: ctx.locale.get() };
+            if enabled.get() {
+              i18n.t("settings.analytics.on")
+            } else {
+              i18n.t("settings.analytics.off")
+            }
+          }}
+        </div>
+        <div class="mt-0.5 text-xs text-muted-foreground">
+          {move || {
+            let i18n = I18n { locale: ctx.locale.get() };
+            i18n.t("settings.analytics.detail")
+          }}
+        </div>
+      </div>
+      <span
+        class=move || {
+          if enabled.get() {
+            "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full bg-primary transition-colors"
+          } else {
+            "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full bg-muted transition-colors"
+          }
+        }
+      >
+        <span
+          class=move || {
+            if enabled.get() {
+              "inline-block size-5 translate-x-5 rounded-full bg-primary-foreground shadow transition-transform"
+            } else {
+              "inline-block size-5 translate-x-0.5 rounded-full bg-foreground/80 shadow transition-transform"
+            }
+          }
+        />
+      </span>
+    </button>
   }
 }
 
@@ -306,28 +438,19 @@ fn ThemeOption(dark: bool) -> impl IntoView {
       class=move || {
         let active = ctx.is_dark.get() == dark;
         if active {
-          "flex flex-col items-center gap-3 rounded-2xl border border-primary/40 bg-primary/10 px-4 py-5 transition-all ring-1 ring-primary/20"
+          "inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-medium text-primary-foreground shadow-sm transition-all"
         } else {
-          "flex flex-col items-center gap-3 rounded-2xl border border-border/60 bg-background/40 px-4 py-5 transition-all hover:border-border hover:bg-accent/40"
+          "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground transition-all hover:bg-accent/70 hover:text-foreground"
         }
       }
       on:click=move |_| ctx.set_theme(dark)
     >
-      <div class=move || {
-        let active = ctx.is_dark.get() == dark;
-        if active {
-          "flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md shadow-primary/30"
-        } else {
-          "flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground"
-        }
-      }>
-        {if dark {
-          view! { <Moon class="size-5" /> }.into_any()
-        } else {
-          view! { <Sun class="size-5" /> }.into_any()
-        }}
-      </div>
-      <span class="text-sm font-medium text-foreground">
+      {if dark {
+        view! { <Moon class="size-3.5" /> }.into_any()
+      } else {
+        view! { <Sun class="size-3.5" /> }.into_any()
+      }}
+      <span>
         {move || {
           let i18n = I18n { locale: ctx.locale.get() };
           if dark {
