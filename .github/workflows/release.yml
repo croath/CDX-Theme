@@ -68,6 +68,8 @@ jobs:
         uses: cargo-bins/cargo-binstall@v1.21.0
 
       - name: Install trunk + Tauri CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
