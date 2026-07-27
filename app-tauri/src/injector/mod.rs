@@ -1,9 +1,9 @@
 //! CDP theme injector — re-exports from `cdx-theme-core`.
 
 pub use cdx_theme_core::inject::{
-  InjectOptions, InjectRunResult, TargetResult, apply_loaded_theme, apply_theme_package,
-  build_inject_expression, build_inject_expression_workbuddy, load_theme_package,
-  restore_default_theme, verify_theme, DEFAULT_CDP_PORT,
+  DEFAULT_CDP_PORT, InjectOptions, InjectRunResult, TargetResult, apply_loaded_theme,
+  apply_theme_package, build_inject_expression, build_inject_expression_workbuddy,
+  load_theme_package, restore_default_theme, verify_theme,
 };
 pub use cdx_theme_core::{CdpTarget, wait_for_targets};
 pub use cdx_theme_types::{

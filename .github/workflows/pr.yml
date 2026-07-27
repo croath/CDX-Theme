@@ -1,0 +1,118 @@
+# PR / branch CI for CDXTheme.
+#
+# Mirrors the checks in AGENTS.md / scripts/build.sh --check:
+#   - rustfmt
+#   - clippy
+#   - cargo check (Tauri host + Leptos WASM frontend)
+#   - cargo test (app-tauri lib, core, types, cli)
+#
+# Does not build installers or sign (see release.yml for that).
+
+name: PR Check
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  check:
+    name: fmt · clippy · check · test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux deps (Tauri / WebKit)
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            libgtk-3-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            librsvg2-dev \
+            patchelf \
+            wget
+
+      - name: Install Rust toolchain
+        shell: bash
+        run: |
+          # Channel, components (rustfmt, clippy), profile from rust-toolchain.toml
+          rustup show
+          rustup target add wasm32-unknown-unknown
+          rustc --version
+          cargo --version
+          rustfmt --version
+          cargo clippy --version
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+          shared-key: pr-ubuntu
+
+      # tauri-build validates bundle.externalBin paths exist. A zero-byte placeholder
+      # is enough for check/clippy/lib tests (real sidecar is built in release.yml).
+      - name: Stage CLI sidecar placeholder
+        run: |
+          set -euo pipefail
+          triple="$(rustc --print host-tuple 2>/dev/null || rustc -vV | sed -n 's/^host: //p')"
+          mkdir -p app-tauri/binaries
+          : > "app-tauri/binaries/cdxthemex-${triple}"
+          chmod +x "app-tauri/binaries/cdxthemex-${triple}"
+          ls -la app-tauri/binaries/
+
+      - name: Format (rustfmt)
+        run: cargo fmt --all -- --check
+
+      - name: Clippy (host workspace, except WASM UI)
+        # Frontend is analyzed for wasm32 below. Without -D warnings so existing
+        # style nits do not block CI; compile/analysis errors still fail the job.
+        run: |
+          cargo clippy \
+            --workspace \
+            --exclude cdx-theme \
+            --all-targets
+
+      - name: Clippy (frontend wasm32)
+        run: |
+          cargo clippy \
+            -p cdx-theme \
+            --target wasm32-unknown-unknown \
+            --all-targets
+
+      - name: Check Tauri host
+        run: cargo check --manifest-path app-tauri/Cargo.toml
+
+      - name: Check frontend (wasm32)
+        run: cargo check -p cdx-theme --target wasm32-unknown-unknown
+
+      - name: Test app-tauri (lib)
+        run: cargo test --manifest-path app-tauri/Cargo.toml --lib
+
+      - name: Test core
+        run: cargo test -p cdx-theme-core
+
+      - name: Test types
+        run: cargo test -p cdx-theme-types
+
+      - name: Test CLI
+        run: cargo test -p cdx-theme-cli
