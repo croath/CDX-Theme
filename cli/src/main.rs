@@ -317,12 +317,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
               any_fail = true;
             }
             let status = if pass { "PASS" } else { "FAIL" };
-            println!(
-              "  [{status}] {} {} → {}",
-              t.target_id,
-              t.url,
-              t.result
-            );
+            println!("  [{status}] {} {} → {}", t.target_id, t.url, t.result);
           }
           if any_fail {
             return Ok(ExitCode::from(1));
@@ -330,8 +325,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
         }
         // if json mode still check fail
         let any_fail = result.targets.iter().any(|t| {
-          !t
-            .result
+          !t.result
             .get("pass")
             .and_then(|v| v.as_bool())
             .unwrap_or(false)
@@ -369,10 +363,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
             .cloned()
             .unwrap_or_default();
           let status = if issues.is_empty() { "PASS" } else { "FAIL" };
-          let context = data
-            .get("context")
-            .and_then(|v| v.as_str())
-            .unwrap_or("?");
+          let context = data.get("context").and_then(|v| v.as_str()).unwrap_or("?");
           println!("\n[{status}] {name} ({context})");
           if let Some(brand) = data.get("brand") {
             println!("  brand={brand}");
@@ -383,10 +374,22 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
           if name == "work" || data.get("isWork").and_then(|v| v.as_bool()) == Some(true) {
             println!(
               "  wrapPos={} util={} hero={} missions={} gapHeroMissions={} gapMissionsUtil={}",
-              data.get("wrapPos").map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
-              data.get("utilBox").map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
-              data.get("hero").map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
-              data.get("missions").map(|v| v.to_string()).unwrap_or_else(|| "null".into()),
+              data
+                .get("wrapPos")
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "null".into()),
+              data
+                .get("utilBox")
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "null".into()),
+              data
+                .get("hero")
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "null".into()),
+              data
+                .get("missions")
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "null".into()),
               data
                 .get("gapHeroMissions")
                 .map(|v| v.to_string())
