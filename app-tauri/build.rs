@@ -7,10 +7,10 @@ fn main() {
 
   // Embed public PostHog project key / host into the native binary (posthog-rs).
   for key in ["POSTHOG_API_KEY", "POSTHOG_HOST"] {
-    if let Ok(val) = std::env::var(key) {
-      if !val.trim().is_empty() {
-        println!("cargo:rustc-env={key}={}", val.trim());
-      }
+    if let Ok(val) = std::env::var(key)
+      && !val.trim().is_empty()
+    {
+      println!("cargo:rustc-env={key}={}", val.trim());
     }
     println!("cargo:rerun-if-env-changed={key}");
   }

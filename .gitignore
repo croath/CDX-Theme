@@ -17,6 +17,7 @@ output/
 
 # Tauri externalBin staging (built by scripts/prepare-cli-sidecar.*)
 /app-tauri/binaries/cdxtheme-*
+/app-tauri/binaries/cdxthemex-*
 
 # Windows code-signing secrets (self-signed cert for Authenticode)
 .tauri/*.key

@@ -707,37 +707,45 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::DeDe, "settings.analytics") => "Nutzungsanalyse",
     (Locale::EsEs, "settings.analytics") => "Análisis de uso",
 
-    (Locale::EnUs, "settings.analytics.hint") => "Help improve CDXTheme with anonymous product usage data",
+    (Locale::EnUs, "settings.analytics.hint") => {
+      "Help improve CDXTheme with anonymous product usage data"
+    }
     (Locale::ZhHans, "settings.analytics.hint") => "通过匿名产品使用数据帮助改进 CDXTheme",
     (Locale::ZhHant, "settings.analytics.hint") => "透過匿名產品使用資料協助改進 CDXTheme",
-    (Locale::JaJp, "settings.analytics.hint") => "匿名の利用データで CDXTheme の改善にご協力ください",
-    (Locale::KoKr, "settings.analytics.hint") => "익명 제품 사용 데이터로 CDXTheme 개선에 도움을 주세요",
-    (Locale::DeDe, "settings.analytics.hint") => "Hilf, CDXTheme mit anonymen Nutzungsdaten zu verbessern",
+    (Locale::JaJp, "settings.analytics.hint") => {
+      "匿名の利用データで CDXTheme の改善にご協力ください"
+    }
+    (Locale::KoKr, "settings.analytics.hint") => {
+      "익명 제품 사용 데이터로 CDXTheme 개선에 도움을 주세요"
+    }
+    (Locale::DeDe, "settings.analytics.hint") => {
+      "Hilf, CDXTheme mit anonymen Nutzungsdaten zu verbessern"
+    }
     (Locale::EsEs, "settings.analytics.hint") => {
       "Ayuda a mejorar CDXTheme con datos anónimos de uso del producto"
-    },
+    }
 
     (Locale::EnUs, "settings.analytics.detail") => {
       "Events like theme apply/install and app open. No account, no chat content."
-    },
+    }
     (Locale::ZhHans, "settings.analytics.detail") => {
       "记录主题应用/安装、应用启动等事件。无账号、无聊天内容。"
-    },
+    }
     (Locale::ZhHant, "settings.analytics.detail") => {
       "記錄主題套用/安裝、應用程式啟動等事件。無帳號、無聊天內容。"
-    },
+    }
     (Locale::JaJp, "settings.analytics.detail") => {
       "テーマ適用・インストールやアプリ起動などのイベントのみ。アカウントやチャット内容は含みません。"
-    },
+    }
     (Locale::KoKr, "settings.analytics.detail") => {
       "테마 적용/설치, 앱 실행 등 이벤트만 수집합니다. 계정·채팅 내용은 없습니다."
-    },
+    }
     (Locale::DeDe, "settings.analytics.detail") => {
       "Ereignisse wie Theme anwenden/installieren und App-Start. Kein Konto, keine Chat-Inhalte."
-    },
+    }
     (Locale::EsEs, "settings.analytics.detail") => {
       "Eventos como aplicar/instalar temas y abrir la app. Sin cuenta ni contenido de chat."
-    },
+    }
 
     (Locale::EnUs, "settings.analytics.on") => "Analytics enabled",
     (Locale::ZhHans, "settings.analytics.on") => "已启用分析",
