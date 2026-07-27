@@ -27,6 +27,7 @@ tauri-build = { version = "2", features = [] }
 # `devtools` enables Web Inspector in debug / `tauri dev` builds.
 # Keep local so the Tauri CLI can rewrite features (workspace inheritance blocks that).
 tauri = { version = "2", features = ["rustls-tls"] }
+tauri-plugin-dialog = { workspace = true }
 tauri-plugin-opener = { workspace = true }
 tauri-plugin-updater = { workspace = true }
 tauri-plugin-log = { workspace = true }
