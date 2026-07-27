@@ -1,6 +1,9 @@
 # Build the `cdxtheme` CLI and stage it for Tauri `bundle.externalBin`.
 #
-# Output: app-tauri\binaries\cdxtheme-<target-triple>.exe
+# Output: app-tauri\binaries\cdxthemex-<target-triple>.exe
+#
+# IMPORTANT: Staged name must not case-collide with main binary `CDXTheme`
+# (Windows NTFS is case-insensitive). Use `cdxthemex`, not `cdxtheme`.
 #
 # Honors:
 #   TAURI_ENV_TARGET_TRIPLE, TAURI_ENV_DEBUG
@@ -57,6 +60,11 @@ if (-not (Test-Path $Src)) {
   else { throw "CLI binary not found at $Src" }
 }
 
-$Dest = Join-Path $BinDir "cdxtheme-$Triple$Ext"
+# Stage as cdxthemex (not cdxtheme) — avoids case collision with CDXTheme.exe.
+$Dest = Join-Path $BinDir "cdxthemex-$Triple$Ext"
+foreach ($legacyName in @("cdxtheme-$Triple$Ext", "cdxtheme-cli-$Triple$Ext")) {
+  $legacy = Join-Path $BinDir $legacyName
+  if (Test-Path $legacy) { Remove-Item -Force $legacy }
+}
 Copy-Item -Force -Path $Src -Destination $Dest
 Write-Host "OK  CLI sidecar → $Dest"
