@@ -2,7 +2,7 @@
 
 Thin CLI over shared library **`cdx-theme-core`**.
 
-Pack, unpack, convert, and apply **multi-app** portable theme packages.
+Pack, unpack, apply, and **verify** multi-app portable theme packages (`.cdxtheme`) over CDP.
 
 | Brand | `format` field | Extension |
 |-------|----------------|-----------|
@@ -27,8 +27,11 @@ Binary: **`cdxtheme`**.
 ```text
 cdxtheme theme pack <SOURCE> [OPTIONS]
 cdxtheme theme unpack <INPUT> <OUTPUT>
-cdxtheme theme convert <INPUT> [OPTIONS]
 cdxtheme apply --app codex --theme <PACKAGE> [OPTIONS]
+cdxtheme verify inject [-t PACKAGE]
+cdxtheme verify layout [--contexts chat,work]
+cdxtheme probe [--tab chat|work] [--expr JS]
+cdxtheme screenshot -o OUT.jpg [--tab chat|work]
 ```
 
 ### `theme pack`
@@ -139,6 +142,51 @@ cdxtheme apply -t themes/doll-sister.cdxtheme --port 9335
 | `-t`, `--theme` | Path to `.cdxtheme` / `.codedrobe-theme` |
 | `--port` | CDP port (default `9335`) |
 | `--timeout-ms` | Wait / inject timeout (default `120000`) |
+
+
+### `verify`
+
+Check live Codex over CDP (default port **9335**). Requires Codex with remote debugging.
+
+```bash
+# Inject state: host classes, style tag, theme id/version, image vars
+cdxtheme verify inject
+cdxtheme verify inject -t output/mclaren-f1.cdxtheme
+
+# Layout contracts: Chat fixed composer, Work util+composer stack, ribbon, hero
+cdxtheme verify layout
+cdxtheme verify layout --contexts chat,work --json-out /tmp/layout.json
+```
+
+| Subcommand | Exit 0 | Exit 1 |
+| --- | --- | --- |
+| `inject` | all targets `pass: true` | any fail |
+| `layout` | no layout issues | one or more issues |
+
+### `probe`
+
+Quick DOM snapshot or custom JS:
+
+```bash
+cdxtheme probe
+cdxtheme probe --tab work
+cdxtheme probe --expr 'getComputedStyle(document.querySelector(".composer-surface-chrome"),"::before").content'
+```
+
+### `screenshot`
+
+```bash
+cdxtheme screenshot -o /tmp/chat.jpg --tab chat
+cdxtheme screenshot -o /tmp/work.jpg --tab work --quality 80
+```
+
+### Authoring loop
+
+```bash
+cdxtheme theme pack src/mclaren-f1 -o output/mclaren-f1.cdxtheme --force
+cdxtheme apply -t output/mclaren-f1.cdxtheme
+cdxtheme verify layout
+```
 
 ## Package JSON
 
