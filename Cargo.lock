@@ -667,6 +667,7 @@ version = "0.1.6"
 dependencies = [
  "cdx-theme-core",
  "clap",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",

@@ -6,6 +6,7 @@ pub mod cdp;
 pub mod error;
 pub mod inject;
 pub mod launch;
+pub mod layout;
 pub mod pack;
 pub mod package;
 pub mod util;
@@ -38,4 +39,9 @@ pub use cdx_theme_types::{
   LoadedTargets, LoadedTheme, PublicTheme, SelectorCheck, SemanticColors, ThemeCopy,
   VerificationContext, VerificationWhen, WorkBuddyLoadedTarget, WorkBuddyVerification,
   deserialize_version_u32, parse_version_u32,
+};
+
+pub use layout::{
+  LayoutVerifyReport, click_tab, default_options as layout_default_options, probe, probe_layout,
+  screenshot, verify_layout,
 };

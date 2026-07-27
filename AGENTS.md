@@ -28,7 +28,7 @@ Cargo workspace (`edition = "2024"`, version `0.1.3`, Rust **1.96.0** via `rust-
 | `app-tauri/` | Tauri 2 shell, commands, plugins, bundling (`cdx-theme-app`, binary `CDXTheme`) |
 | `core/` | Shared lib `cdx-theme-core`: pack/unpack, CDP inject, launch, apply, restore |
 | `types/` | Shared types `cdx-theme-types` (theme metadata, loaded theme, verification) |
-| `cli/` | `cdxtheme` CLI over core |
+| `cli/` | `cdxtheme` CLI over core (pack/unpack/apply/**verify layout**/probe/screenshot) |
 | `assets/renderer-inject.js` | Script injected into the host renderer |
 | `public/` | Marketing assets / screenshots (not the WASM public dir) |
 | `scripts/build.sh`, `scripts/build.ps1` | Release/debug/check builds |
