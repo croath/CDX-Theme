@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Build the `cdxtheme` CLI and stage it for Tauri `bundle.externalBin`.
 #
-# Output: app-tauri/binaries/cdxtheme-<target-triple>[.exe]
+# Output: app-tauri/binaries/cdxthemex-<target-triple>[.exe]
+#
+# IMPORTANT: The staged name must NOT case-collide with the app main binary
+# (`CDXTheme`). macOS/Windows default filesystems are case-insensitive, so
+# bundling as plain `cdxtheme` overwrites `CDXTheme` and breaks notarization
+# ("The signature of the binary is invalid").
 #
 # Honors:
 #   TAURI_ENV_TARGET_TRIPLE  — set by `cargo tauri` during build/dev
@@ -81,7 +86,10 @@ if [[ ! -f "$SRC" ]]; then
   fi
 fi
 
-DEST="$BIN_DIR/cdxtheme-${TRIPLE}${EXT}"
+# Stage as cdxthemex (not cdxtheme) — see header comment about case collision.
+DEST="$BIN_DIR/cdxthemex-${TRIPLE}${EXT}"
+# Remove legacy staged names (case-collision with CDXTheme, or old cdxtheme-cli).
+rm -f "$BIN_DIR/cdxtheme-${TRIPLE}${EXT}" "$BIN_DIR/cdxtheme-cli-${TRIPLE}${EXT}"
 cp -f "$SRC" "$DEST"
 chmod +x "$DEST" 2>/dev/null || true
 

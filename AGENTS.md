@@ -112,7 +112,7 @@ Logging: `tracing` + `tauri-plugin-log`; respect `RUST_LOG` filter syntax (defau
 
 - Prefer implementing pack/load/CDP/apply/restore once in **`cdx-theme-core`**, then call from Tauri and CLI.
 - CLI binary name: **`cdxtheme`** (`cargo run -p cdx-theme-cli -- …` or `cargo install --path cli`).
-- The desktop app **bundles** `cdxtheme` via Tauri `bundle.externalBin` (`app-tauri/binaries/cdxtheme-<triple>`). Staging: `scripts/prepare-cli-sidecar.sh` / `.ps1` (also run from `beforeBuildCommand` / `beforeDevCommand` via `scripts/before-tauri-build.sh`). In the installed app it sits next to the main binary (macOS: `CDXTheme.app/Contents/MacOS/cdxtheme`).
+- The desktop app **bundles** the CLI via Tauri `bundle.externalBin` as **`cdxthemex`** (`app-tauri/binaries/cdxthemex-<triple>`). Staging: `scripts/prepare-cli-sidecar.sh` / `.ps1` (also run from `beforeBuildCommand` / `beforeDevCommand`). Cargo binary name stays `cdxtheme` for `cargo install`; the staged sidecar must **not** be named `cdxtheme` because macOS/Windows filesystems are case-insensitive and that collides with main binary `CDXTheme` (breaks codesign/notarization). Installed path: `CDXTheme.app/Contents/MacOS/cdxthemex`.
 - Supported portable formats include `cdxtheme` (`.cdxtheme`) and CodeDrobe-compatible packing; packing rewrites `codedrobe-` CSS tokens to `cdxtheme-`.
 - Legacy single-file `.codex-theme` layouts are **not** supported.
 
