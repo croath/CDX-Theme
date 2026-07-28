@@ -1,0 +1,158 @@
+/* codex/01-shell.css
+ *
+ * Page shell: body bg/texture/top stripe, sidebar, main surface + header tint.
+ *
+ * Merge: `/path/to/cdxthemex theme merge-css <theme-dir>` → codex.css
+ * Pack still reads the merged root file declared in theme.json.
+ */
+
+html.cdxtheme-host-codex body,
+html.cdxtheme-codex-skin body {
+  background:
+    radial-gradient(ellipse 80% 50% at 100% 0%, color-mix(in srgb, var(--theme-accent) 15%, transparent), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, color-mix(in srgb, var(--theme-accent-3) 5%, transparent), transparent 55%),
+    linear-gradient(160deg, var(--theme-bg) 0%, var(--theme-bg-elevated) 42%, var(--theme-bg) 100%) !important;
+  color: var(--theme-text) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif !important;
+}
+
+/* Optional texture overlay */
+html.cdxtheme-host-codex body::before,
+html.cdxtheme-codex-skin body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .25;
+  background-image:
+    repeating-linear-gradient(
+      -18deg,
+      transparent 0 11px,
+      color-mix(in srgb, var(--theme-white) 2%, transparent) 11px 12px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-black) 15%, transparent) 0 1px,
+      transparent 1px 3px
+    );
+  background-size: auto, 3px 100%;
+}
+
+/* Accent stripe at the top: accent / accent-3 / accent-2 stripe */
+html.cdxtheme-host-codex body::after,
+html.cdxtheme-codex-skin body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  z-index: 9999;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--theme-accent) 0%,
+    var(--theme-accent) 70%,
+    var(--theme-accent-3) 70%,
+    var(--theme-accent-3) 73%,
+    var(--theme-accent-2) 73%,
+    var(--theme-accent-2) 100%
+  );
+  box-shadow: 0 0 18px color-mix(in srgb, var(--theme-accent) 55%, transparent);
+}
+
+/* —— Sidebar —— */
+html.cdxtheme-host-codex aside.app-shell-left-panel,
+html.cdxtheme-codex-skin aside.app-shell-left-panel {
+  background:
+    linear-gradient(180deg, var(--theme-bg) 0%, var(--theme-bg) 100%) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 25%, transparent) !important;
+  border-left: 0 !important;
+  border-radius: 0 16px 16px 0 !important;
+  box-shadow:
+    12px 0 40px color-mix(in srgb, var(--theme-black) 45%, transparent),
+    inset -1px 0 0 color-mix(in srgb, var(--theme-accent-2) 8%, transparent),
+    inset 3px 0 0 var(--theme-accent) !important;
+  backdrop-filter: none !important;
+  color: var(--theme-text) !important;
+}
+
+html.cdxtheme-host-codex aside.app-shell-left-panel nav,
+html.cdxtheme-codex-skin aside.app-shell-left-panel nav {
+  background: transparent !important;
+}
+
+html.cdxtheme-host-codex aside.app-shell-left-panel button,
+html.cdxtheme-codex-skin aside.app-shell-left-panel button {
+  color: var(--theme-muted) !important;
+  transition: transform .14s ease, background .14s ease, color .14s ease, box-shadow .14s ease !important;
+  border-radius: 10px !important;
+}
+
+html.cdxtheme-host-codex aside.app-shell-left-panel button:hover,
+html.cdxtheme-codex-skin aside.app-shell-left-panel button:hover {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 18%, transparent), color-mix(in srgb, var(--theme-accent-2) 6%, transparent)) !important;
+  color: var(--theme-text) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
+  transform: translateX(2px);
+}
+
+html.cdxtheme-host-codex aside.app-shell-left-panel button[aria-label^="切换模式"],
+html.cdxtheme-codex-skin aside.app-shell-left-panel button[aria-label^="切换模式"] {
+  background: transparent !important;
+  border-color: transparent !important;
+  font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  letter-spacing: .12em !important;
+  text-transform: uppercase !important;
+  color: var(--theme-accent-2-hot) !important;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--theme-accent-2-hot) 35%, transparent);
+}
+
+html.cdxtheme-host-codex aside.app-shell-left-panel button[aria-label^="切换模式"]::after,
+html.cdxtheme-codex-skin aside.app-shell-left-panel button[aria-label^="切换模式"]::after {
+  content: "";
+  margin-left: 6px;
+  color: var(--theme-accent);
+  font-size: .80em;
+}
+
+html.cdxtheme-host-codex aside.app-shell-left-panel [class~="bg-token-list-hover-background"],
+html.cdxtheme-host-codex aside.app-shell-left-panel [aria-current="page"],
+html.cdxtheme-codex-skin aside.app-shell-left-panel [class~="bg-token-list-hover-background"],
+html.cdxtheme-codex-skin aside.app-shell-left-panel [aria-current="page"] {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 28%, transparent), color-mix(in srgb, var(--theme-bg-elevated) 70%, transparent)) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 40%, transparent) !important;
+  color: var(--theme-text) !important;
+  box-shadow:
+    0 4px 18px color-mix(in srgb, var(--theme-accent) 20%, transparent),
+    inset 3px 0 0 var(--theme-accent-2) !important;
+}
+
+/* —— Main surface —— */
+html.cdxtheme-host-codex main.main-surface,
+html.cdxtheme-codex-skin main.main-surface {
+  background:
+    radial-gradient(ellipse 70% 40% at 90% 0%, color-mix(in srgb, var(--theme-accent) 8%, transparent), transparent 50%),
+    linear-gradient(180deg, var(--theme-bg-elevated) 0%, var(--theme-bg) 100%) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 18%, transparent) !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: 16px 0 0 0 !important;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-white) 4%, transparent),
+    -10px 0 36px color-mix(in srgb, var(--theme-black) 35%, transparent) !important;
+  overflow: hidden !important;
+}
+
+html.cdxtheme-host-codex main.main-surface > header.app-header-tint,
+html.cdxtheme-codex-skin main.main-surface > header.app-header-tint {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-bg) 98%, transparent), color-mix(in srgb, var(--theme-bg-elevated) 95%, transparent), color-mix(in srgb, var(--theme-bg) 98%, transparent)) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--theme-accent-2) 8%, transparent);
+}
+

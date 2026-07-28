@@ -9,7 +9,7 @@ use crate::theme_tool;
 use cdx_theme_types::ThemeMetadata;
 use serde_json::Value;
 use std::collections::HashMap;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 fn inject_options(state: &AppState) -> InjectOptions {
   InjectOptions {
@@ -327,4 +327,321 @@ pub async fn track_event(
     analytics::capture(name, props);
   }
   Ok(())
+}
+
+/// Create `{app_data_dir}/theme_builder/{random_id}` with bundled skill + theme scaffold.
+#[tauri::command]
+pub async fn start_theme_build(
+  app: AppHandle,
+) -> Result<crate::theme_builder_store::PreparedWorkspace, String> {
+  tokio::task::spawn_blocking(move || crate::theme_builder_store::prepare_workspace(&app))
+    .await
+    .map_err(|e| format!("start_theme_build task failed: {e}"))?
+}
+
+/// Theme Builder: list sessions that exist in **both** app data and Codex history.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn list_codex_sessions(
+  limit: Option<usize>,
+  app: AppHandle,
+) -> Result<Vec<cdx_theme_core::CodexSessionSummary>, String> {
+  let codex = cdx_theme_core::list_codex_sessions_async(Some(200)).await?;
+  crate::theme_builder_store::list_intersection(&app, codex, limit)
+}
+
+/// Theme Builder: delete a tracked session (app data registry + workspace folder).
+#[tauri::command(rename_all = "snake_case")]
+pub async fn delete_theme_builder_session(
+  session_id: String,
+  app: AppHandle,
+) -> Result<bool, String> {
+  let session_id = session_id.trim().to_string();
+  if session_id.is_empty() {
+    return Err("session id is empty".into());
+  }
+  tokio::task::spawn_blocking(move || {
+    crate::theme_builder_store::delete_session(&app, &session_id)
+  })
+  .await
+  .map_err(|e| format!("delete session task failed: {e}"))??;
+  Ok(true)
+}
+
+/// Theme Builder: load a Codex session transcript for the chat view.
+/// Only sessions tracked in app data (and still present in Codex) are allowed.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn get_codex_session(
+  session_id: String,
+  app: AppHandle,
+) -> Result<cdx_theme_core::CodexSessionDetail, String> {
+  let session_id = session_id.trim().to_string();
+  if session_id.is_empty() {
+    return Err("session id is empty".into());
+  }
+  if !crate::theme_builder_store::is_tracked(&app, &session_id) {
+    return Err(
+      "session is not a Theme Builder session (not found in app data). Start a theme build first."
+        .into(),
+    );
+  }
+  let workspace_path = crate::theme_builder_store::workspace_path_for(&app, &session_id);
+  let mut detail = tokio::task::spawn_blocking({
+    let session_id = session_id.clone();
+    move || cdx_theme_core::load_codex_session(&session_id)
+  })
+  .await
+  .map_err(|e| format!("load session task failed: {e}"))??;
+  detail.workspace_path = workspace_path;
+  Ok(detail)
+}
+
+/// Theme Builder: send a prompt to Codex over ACP (`codex-acp` / official adapter).
+///
+/// - `workspace_path`: absolute Theme Builder workspace (skill + theme-dir); required for new chats
+/// - `session_id`: resume via `session/load` (cwd taken from stored workspace when omitted)
+/// - On success, auto-saves under `{app_data_dir}/theme_builder/sessions.json`
+#[tauri::command(rename_all = "snake_case")]
+pub async fn codex_chat(
+  prompt: String,
+  session_id: Option<String>,
+  workspace_path: Option<String>,
+  workspace_id: Option<String>,
+  wait_ms: Option<u64>,
+  app: AppHandle,
+  _state: State<'_, AppState>,
+) -> Result<cdx_theme_core::CodexChatResult, String> {
+  let prompt = prompt.trim().to_string();
+  if prompt.is_empty() {
+    return Err("prompt is empty".into());
+  }
+  let resume_id = session_id
+    .map(|s| s.trim().to_string())
+    .filter(|s| !s.is_empty());
+
+  if let Some(ref id) = resume_id {
+    if !crate::theme_builder_store::is_tracked(&app, id) {
+      return Err(
+        "session is not a Theme Builder session (not found in app data). Start a theme build first."
+          .into(),
+      );
+    }
+  }
+
+  // Resolve ACP cwd: explicit arg → stored workspace for resume → error for new chat.
+  let mut cwd_path = workspace_path
+    .as_deref()
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .map(std::path::PathBuf::from);
+  if cwd_path.is_none() {
+    if let Some(ref id) = resume_id {
+      cwd_path =
+        crate::theme_builder_store::workspace_path_for(&app, id).map(std::path::PathBuf::from);
+    }
+  }
+  let Some(cwd) = cwd_path else {
+    return Err(
+      "workspace_path is required for a new Theme Builder chat (call start_theme_build first)"
+        .into(),
+    );
+  };
+  if !cwd.is_absolute() {
+    return Err(format!(
+      "workspace_path must be absolute: {}",
+      cwd.display()
+    ));
+  }
+
+  // App-bundled CLI for skill pack/apply/probe.
+  let cdxthemex = crate::theme_builder_store::resolve_cdxthemex(&app)?;
+  let cli_dir = cdxthemex
+    .parent()
+    .map(|p| p.to_path_buf())
+    .ok_or_else(|| "cdxthemex parent dir missing".to_string())?;
+
+  // First turn: wrap with skill bootstrap so Codex uses the bundled skill + CLI.
+  // Follow-ups: keep messages short — only a brief summary in the chat reply.
+  let wire = if resume_id.is_none() {
+    crate::theme_builder_store::skill_bootstrap_prompt(
+      &prompt,
+      &cwd.display().to_string(),
+      &cdxthemex,
+    )
+  } else {
+    format!(
+      "{prompt}\n\n\
+       [Reply style] User-facing UI: reply with a short plain-text summary only \
+       (2–5 lines). No code, no CSS, no actions/tool lists, no file paths."
+    )
+  };
+
+  let wid = workspace_id.filter(|s| !s.trim().is_empty()).or_else(|| {
+    cwd
+      .file_name()
+      .and_then(|n| n.to_str())
+      .map(|s| s.to_string())
+  });
+
+  tracing::info!(
+    chars = wire.len(),
+    wait_ms = wait_ms.unwrap_or(180_000),
+    session = resume_id.as_deref().unwrap_or(""),
+    cwd = %cwd.display(),
+    cdxthemex = %cdxthemex.display(),
+    "theme builder → ACP session/prompt"
+  );
+
+  // Live ACP transcript → frontend via Tauri event.
+  let app_stream = app.clone();
+  let on_stream: cdx_theme_core::CodexStreamCallback = std::sync::Arc::new(move |text: String| {
+    let payload = serde_json::json!({
+      "text": text,
+      "done": false,
+    });
+    let _ = app_stream.emit("theme-builder-acp-stream", payload);
+  });
+
+  let mut result = cdx_theme_core::codex_chat_send_and_wait_with(
+    &wire,
+    cdx_theme_core::CodexChatOptions {
+      session_id: resume_id.clone(),
+      cwd: Some(cwd.clone()),
+      wait_ms,
+      path_prepend: vec![cli_dir],
+      extra_env: vec![
+        ("CDXTHEME".into(), cdxthemex.to_string_lossy().into_owned()),
+        ("CDXTHEMEX".into(), cdxthemex.to_string_lossy().into_owned()),
+      ],
+      on_stream: Some(on_stream),
+    },
+  )
+  .await?;
+
+  // Final stream tick so the UI can mark the turn complete if needed.
+  let _ = app.emit(
+    "theme-builder-acp-stream",
+    serde_json::json!({
+      "text": result.reply,
+      "done": true,
+    }),
+  );
+
+  if let Some(ref sid) = result.session_id {
+    let title = crate::theme_builder_store::title_from_prompt(&prompt);
+    if let Err(e) = crate::theme_builder_store::record_session(
+      &app,
+      sid,
+      Some(title.as_str()),
+      wid.as_deref(),
+      Some(cwd.to_string_lossy().as_ref()),
+    ) {
+      tracing::warn!("theme builder session save failed: {e}");
+    } else {
+      tracing::info!(session = %sid, "theme builder session saved to app data");
+    }
+  }
+
+  // Detect packed theme for the UI Apply button (do not install/apply here).
+  if result.submitted {
+    if let Some(pkg) = crate::theme_builder_store::find_newest_theme_package(&cwd) {
+      tracing::info!(
+        package = %pkg.display(),
+        "theme builder package ready for manual apply"
+      );
+      result.package_path = Some(pkg.to_string_lossy().into_owned());
+    }
+  }
+
+  Ok(result)
+}
+
+/// Result of installing + applying a Theme Builder package.
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplyBuiltThemeResult {
+  pub theme_id: String,
+  pub theme_name: String,
+  pub package_path: String,
+  pub applied: bool,
+}
+
+/// Install the newest `.cdxtheme` from a Theme Builder workspace into the user
+/// themes library (`app_data_dir/themes`), then apply it to Codex.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn apply_built_theme(
+  workspace_path: String,
+  package_path: Option<String>,
+  app: AppHandle,
+  state: State<'_, AppState>,
+) -> Result<ApplyBuiltThemeResult, String> {
+  let workspace_path = workspace_path.trim().to_string();
+  if workspace_path.is_empty() {
+    return Err("workspace_path is empty".into());
+  }
+  let cwd = std::path::PathBuf::from(&workspace_path);
+  if !cwd.is_absolute() {
+    return Err(format!("workspace_path must be absolute: {workspace_path}"));
+  }
+  if !cwd.is_dir() {
+    return Err(format!("workspace not found: {workspace_path}"));
+  }
+
+  let pkg = if let Some(p) = package_path
+    .as_deref()
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+  {
+    let path = std::path::PathBuf::from(p);
+    if path.is_file() {
+      path
+    } else {
+      return Err(format!("theme package not found: {p}"));
+    }
+  } else {
+    crate::theme_builder_store::find_newest_theme_package(&cwd).ok_or_else(|| {
+      format!(
+        "no .cdxtheme package in workspace — generate first (expected under output/): {}",
+        cwd.display()
+      )
+    })?
+  };
+
+  tracing::info!(
+    package = %pkg.display(),
+    workspace = %cwd.display(),
+    "theme builder apply_built_theme — install + apply"
+  );
+
+  let meta = theme_catalog::install_theme_package_file(&app, &pkg)?;
+  apply_theme(meta.id.clone(), None, app, state).await?;
+
+  Ok(ApplyBuiltThemeResult {
+    theme_id: meta.id,
+    theme_name: meta.name,
+    package_path: pkg.to_string_lossy().into_owned(),
+    applied: true,
+  })
+}
+
+/// Save a user-uploaded hero image into a Theme Builder workspace (`theme/assets/hero.*`).
+#[tauri::command(rename_all = "snake_case")]
+pub async fn save_theme_builder_hero(
+  workspace_path: String,
+  file_name: String,
+  content_base64: String,
+) -> Result<crate::theme_builder_store::SavedHeroImage, String> {
+  let workspace_path = workspace_path.trim().to_string();
+  if workspace_path.is_empty() {
+    return Err("workspace_path is empty".into());
+  }
+  let cwd = std::path::PathBuf::from(&workspace_path);
+  let file_name = file_name.trim().to_string();
+  if file_name.is_empty() {
+    return Err("file_name is empty".into());
+  }
+  tokio::task::spawn_blocking(move || {
+    crate::theme_builder_store::save_hero_image(&cwd, &file_name, &content_base64)
+  })
+  .await
+  .map_err(|e| format!("save hero task failed: {e}"))?
 }

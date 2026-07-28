@@ -1,0 +1,75 @@
+/* codex/00-tokens.css
+ *
+ * Color tokens only (--theme-*). Edit this when recoloring / generating a brand. Keep in sync with workbuddy/00-tokens.css.
+ *
+ * Surfaces to recolor: THIS FILE ONLY for brand colors.
+ * Keep primary --theme-* in sync with workbuddy/00-tokens.css.
+ *
+ * Merge: `/path/to/cdxthemex theme merge-css <theme-dir>` → codex.css
+ */
+
+/* —— 1. Tokens (edit these when generating a theme) —— */
+:root.cdxtheme-host-codex,
+:root.cdxtheme-codex-skin {
+  color-scheme: light !important;
+
+  /* Primary palette — set these for a new brand */
+  --theme-accent: #7867a8;              /* primary brand */
+  --theme-accent-hot: #9b8bc9;          /* lighter / highlight */
+  --theme-accent-deep: #5c4d8a;         /* darker gradient end */
+  --theme-accent-2: #9a93a8;            /* secondary (metal / silver role) */
+  --theme-accent-2-hot: #c8c2d4;        /* secondary highlight */
+  --theme-accent-3: #c45c8a;            /* tertiary stripe / badge accent */
+  --theme-text: #2f2b3a;                /* primary ink */
+  --theme-muted: #756f82;               /* secondary ink */
+  --theme-bg: #f0eef6;                  /* deepest page bg */
+  --theme-bg-elevated: #f8f7fc;         /* elevated surface */
+  --theme-panel: #ffffff;               /* cards / solid panels */
+  --theme-panel-mid: #f4f1fa;           /* mid panel / chips */
+  --theme-on-accent: #ffffff;           /* text/icons on accent fills */
+  --theme-white: #ffffff;
+  --theme-black: #2f2b3a;               /* used for shadows in light mode */
+
+  /* Semantic aliases (usually leave; override only if needed) */
+  --theme-surface: color-mix(in srgb, var(--theme-panel) 92%, transparent);
+  --theme-surface-strong: var(--theme-panel);
+  --theme-sidebar: color-mix(in srgb, var(--theme-panel-mid) 94%, transparent);
+  --theme-border: color-mix(in srgb, var(--theme-accent) 22%, transparent);
+  --theme-shadow: color-mix(in srgb, var(--theme-black) 12%, transparent);
+  --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 15%, transparent);
+  --theme-accent-strong: var(--theme-accent-deep);
+
+  /* Layout constants (not brand colors) */
+  --theme-composer-bottom: 24px;
+  --theme-chat-composer-height: 60px; /* single-row Chat shell; ribbon half-cover math */
+  --theme-detail-composer-bottom: 16px; /* conversation composer bottom inset; ribbon half-cover */
+
+  /* Optional decorative copy overrides (prefer theme.json → copy when runtime maps them) */
+  --theme-eyebrow: "THEME";
+  --theme-eyebrow-work: "THEME · WORK";
+  --theme-panel-label: "BRIEFING";
+  --theme-badge: "✦";
+
+  /* Host color-token bridges */
+  --color-token-bg-primary: var(--theme-bg) !important;
+  --color-token-bg-secondary: var(--theme-surface) !important;
+  --color-token-bg-tertiary: var(--theme-surface-strong) !important;
+  --color-token-main-surface-primary: var(--theme-surface) !important;
+  --color-token-side-bar-background: var(--theme-sidebar) !important;
+  --color-token-foreground: var(--theme-text) !important;
+  --color-token-text-primary: var(--theme-text) !important;
+  --color-token-text-secondary: var(--theme-muted) !important;
+  --color-token-text-tertiary: var(--theme-muted) !important;
+  --color-token-border: var(--theme-border) !important;
+  --color-token-input-background: var(--theme-bg-elevated) !important;
+  --color-token-input-border: color-mix(in srgb, var(--theme-accent) 30%, transparent) !important;
+  --color-token-list-hover-background: var(--theme-accent-soft) !important;
+  --color-token-list-active-selection-background: color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
+  --color-token-link: var(--theme-accent) !important;
+  --color-token-primary: var(--theme-accent) !important;
+  --color-token-focus-border: color-mix(in srgb, var(--theme-accent) 60%, transparent) !important;
+  --color-token-dropdown-background: var(--theme-surface-strong) !important;
+  --color-token-composer-surface: var(--theme-surface-strong) !important;
+  scrollbar-color: color-mix(in srgb, var(--theme-accent) 38%, transparent) transparent;
+}
+

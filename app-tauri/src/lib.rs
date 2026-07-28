@@ -7,6 +7,7 @@ pub mod image_cache;
 pub mod injector;
 pub mod paths;
 pub mod settings_store;
+pub mod theme_builder_store;
 pub mod theme_catalog;
 pub mod theme_lib;
 pub mod theme_package;
@@ -194,6 +195,13 @@ pub fn run() {
       commands::get_analytics_state,
       commands::set_analytics_enabled,
       commands::track_event,
+      commands::codex_chat,
+      commands::apply_built_theme,
+      commands::save_theme_builder_hero,
+      commands::list_codex_sessions,
+      commands::delete_theme_builder_session,
+      commands::get_codex_session,
+      commands::start_theme_build,
     ])
     .build(tauri::generate_context!())
     .expect("error while building tauri application")

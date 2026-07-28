@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "id": "my-theme",
+  "displayName": "My CDXTheme Theme",
+  "version": 0,
+  "copy": {
+    "brandTitle": "My Theme",
+    "brandSubtitle": "Codex skin",
+    "signature": "Built with CDXTheme",
+    "tagline": "Ship a skin, not a fork.",
+    "projectPrefix": "",
+    "projectLabel": "PROJECT",
+    "ribbon": "✦"
+  },
+  "targets": {
+    "codex": {
+      "css": "codex.css",
+      "options": {
+        "rendererProfile": "codex-theme-v1",
+        "baseTheme": {
+          "mode": "light",
+          "accent": "#7867A8",
+          "ink": "#2F2B3A",
+          "surface": "#F8F7FC"
+        }
+      },
+      "verification": {
+        "contexts": [
+          {
+            "name": "home",
+            "when": {
+              "any": [
+                ".dream-home",
+                "[role='main']:has([data-testid='home-icon'])",
+                "h1.heading-xl"
+              ]
+            },
+            "recommended": [
+              { "name": "home-suggestions", "any": [".group\\/home-suggestions"] },
+              { "name": "composer", "any": [".composer-surface-chrome"] },
+              { "name": "chrome", "any": ["#cdxtheme-codex-skin-chrome"] }
+            ]
+          },
+          {
+            "name": "work-home",
+            "when": {
+              "any": [
+                "[data-feature='game-source']",
+                ".group\\/home-suggestion-list-item"
+              ]
+            },
+            "recommended": [
+              {
+                "name": "work-missions",
+                "any": ["button.group\\/home-suggestion-list-item"]
+              },
+              {
+                "name": "work-composer",
+                "any": [".composer-surface-chrome"]
+              }
+            ]
+          },
+          {
+            "name": "conversation",
+            "when": {
+              "any": [
+                "[data-message-author-role]",
+                ".thread-scroll-container"
+              ]
+            },
+            "required": [
+              {
+                "name": "conversation-composer",
+                "any": [".composer-surface-chrome"]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "workbuddy": {
+      "css": "workbuddy.css",
+      "verification": {
+        "contexts": [
+          {
+            "name": "home",
+            "when": { "any": [".wb-home-page"] },
+            "required": [
+              { "name": "home-header", "any": [".wb-home-header"] },
+              { "name": "home-composer", "any": [".wb-home-composer"] }
+            ],
+            "recommended": [
+              { "name": "quick-actions", "any": [".quick-actions"] }
+            ]
+          },
+          {
+            "name": "conversation",
+            "when": { "any": [".chat-container:not(.chat-container--welcome)"] },
+            "required": [
+              {
+                "name": "conversation-composer",
+                "any": [".chat-container:not(.chat-container--welcome) [role='textbox'][contenteditable='true']"]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

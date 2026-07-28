@@ -19,6 +19,7 @@ web-sys = { workspace = true, features = [
   "EventTarget",
   "HtmlElement",
   "HtmlInputElement",
+  "HtmlTextAreaElement",
   "File",
   "FileList",
   "FileReader",
@@ -31,6 +32,7 @@ web-sys = { workspace = true, features = [
   "DataTransfer",
   "DataTransferItemList",
   "MouseEvent",
+  "KeyboardEvent",
 ] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

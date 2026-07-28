@@ -2,7 +2,9 @@ use leptos::prelude::*;
 
 use crate::components::layout::{Sidebar, StatusBar};
 use crate::components::ui::sonner::{SonnerPosition, SonnerToaster};
-use crate::pages::{InstallPage, LibraryPage, RecommendPage, RestorePage, SettingsPage};
+use crate::pages::{
+  InstallPage, LibraryPage, RecommendPage, RestorePage, SettingsPage, ThemeBuilderPage,
+};
 use crate::state::AppCtx;
 use crate::types::Page;
 use crate::window_chrome;
@@ -35,6 +37,7 @@ pub fn App() -> impl IntoView {
               Page::Recommend => view! { <RecommendPage /> }.into_any(),
               Page::Install => view! { <InstallPage /> }.into_any(),
               Page::Library => view! { <LibraryPage /> }.into_any(),
+              Page::ThemeBuilder => view! { <ThemeBuilderPage /> }.into_any(),
               Page::Restore => view! { <RestorePage /> }.into_any(),
               Page::Settings => view! { <SettingsPage /> }.into_any(),
             }}

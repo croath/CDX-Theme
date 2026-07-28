@@ -19,7 +19,7 @@ fn is_interactive_target(target: &web_sys::EventTarget) -> bool {
     "[role='button'], [role='link'], [role='menuitem'], [role='switch'],",
     "[role='tab'], [role='checkbox'], [role='radio'], [role='listbox'],",
     "[role='option'], [role='slider'], [role='textbox'], [role='alertdialog'],",
-    "[role='dialog'], [contenteditable='true'], .no-drag,",
+    "[role='dialog'], [contenteditable='true'], .no-drag, .select-text, .selectable,",
     "iframe, video, canvas"
   );
 

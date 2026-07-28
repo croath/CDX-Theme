@@ -21,7 +21,10 @@ tokio = { workspace = true, features = [
   "sync",
   "net",
   "io-util",
+  "process",
 ] }
 tokio-tungstenite = { workspace = true, features = ["connect"] }
 futures-util = { workspace = true }
 reqwest = { workspace = true, features = ["json", "rustls"] }
+# Theme Builder talks to Codex through the Agent Client Protocol adapter.
+agent-client-protocol = "2.0.0"

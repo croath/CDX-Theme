@@ -130,6 +130,29 @@ pub fn ensure_user_themes_dir(app: &AppHandle) -> Result<PathBuf, String> {
   crate::paths::user_themes_dir(app)
 }
 
+/// Install a theme package already on disk (e.g. Theme Builder `output/*.cdxtheme`).
+pub fn install_theme_package_file(
+  app: &AppHandle,
+  package_path: &Path,
+) -> Result<ThemeMetadata, String> {
+  let package_path = package_path
+    .canonicalize()
+    .unwrap_or_else(|_| package_path.to_path_buf());
+  if !package_path.is_file() {
+    return Err(format!(
+      "theme package not found: {}",
+      package_path.display()
+    ));
+  }
+  let content = fs::read_to_string(&package_path)
+    .map_err(|e| format!("read theme package {}: {e}", package_path.display()))?;
+  let file_name = package_path
+    .file_name()
+    .and_then(|n| n.to_str())
+    .unwrap_or("theme.cdxtheme");
+  import_codex_theme_content(app, file_name, &content)
+}
+
 /// Validate and persist a portable theme package into the user themes dir.
 /// Accepts `.cdxtheme`; stores as `.cdxtheme`.
 pub fn import_codex_theme_content(

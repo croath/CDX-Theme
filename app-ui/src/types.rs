@@ -5,6 +5,8 @@ pub enum Page {
   Install,
   /// Local library: builtin + downloaded/installed packages.
   Library,
+  /// Chat UI that talks to Codex over ACP (`codex-acp`).
+  ThemeBuilder,
   Restore,
   Settings,
 }
@@ -16,6 +18,7 @@ impl Page {
       Page::Recommend => "recommend",
       Page::Install => "install",
       Page::Library => "library",
+      Page::ThemeBuilder => "theme_builder",
       Page::Restore => "restore",
       Page::Settings => "settings",
     }

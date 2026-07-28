@@ -1,0 +1,171 @@
+/* workbuddy/01-shell.css
+ *
+ * Page shell: body bg/texture/top stripe, conversation sidebar and list chrome.
+ *
+ * Merge: `/path/to/cdxthemex theme merge-css <theme-dir>` → workbuddy.css
+ * Pack still reads the merged root file declared in theme.json.
+ */
+
+html.cdxtheme-host-workbuddy,
+html.cdxtheme-host-workbuddy body,
+html.cdxtheme-host-workbuddy #root,
+html.cdxtheme-host-workbuddy .teams-container {
+  background:
+    radial-gradient(ellipse 80% 50% at 100% 0%, color-mix(in srgb, var(--theme-accent) 15%, transparent), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, color-mix(in srgb, var(--theme-accent-3) 5%, transparent), transparent 55%),
+    linear-gradient(160deg, var(--theme-bg) 0%, var(--theme-bg-elevated) 42%, var(--theme-bg) 100%) !important;
+  color: var(--theme-text) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif !important;
+}
+
+/* Optional texture overlay */
+html.cdxtheme-host-workbuddy body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .25;
+  background-image:
+    repeating-linear-gradient(
+      -18deg,
+      transparent 0 11px,
+      color-mix(in srgb, var(--theme-white) 2%, transparent) 11px 12px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-black) 15%, transparent) 0 1px,
+      transparent 1px 3px
+    );
+  background-size: auto, 3px 100%;
+}
+
+/* Accent stripe at the top: accent / accent-3 / accent-2 stripe */
+html.cdxtheme-host-workbuddy body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  z-index: 9999;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--theme-accent) 0%,
+    var(--theme-accent) 70%,
+    var(--theme-accent-3) 70%,
+    var(--theme-accent-3) 73%,
+    var(--theme-accent-2) 73%,
+    var(--theme-accent-2) 100%
+  );
+  box-shadow: 0 0 18px color-mix(in srgb, var(--theme-accent) 55%, transparent);
+}
+
+/* —— Sidebar —— */
+html.cdxtheme-host-workbuddy .conversation-sidebar,
+html.cdxtheme-host-workbuddy .conversation-list {
+  background:
+    linear-gradient(180deg, var(--theme-bg) 0%, var(--theme-bg) 100%) !important;
+  border-right: 1px solid color-mix(in srgb, var(--theme-accent) 25%, transparent) !important;
+  box-shadow:
+    12px 0 40px color-mix(in srgb, var(--theme-black) 45%, transparent),
+    inset -1px 0 0 color-mix(in srgb, var(--theme-accent-2) 8%, transparent),
+    inset 3px 0 0 var(--theme-accent) !important;
+  color: var(--theme-text) !important;
+  backdrop-filter: none !important;
+}
+
+html.cdxtheme-host-workbuddy .conversation-sidebar :is(a, button, div, p, span, svg) {
+  color: var(--theme-muted) !important;
+}
+
+html.cdxtheme-host-workbuddy .conversation-sidebar a:hover,
+html.cdxtheme-host-workbuddy .conversation-sidebar button:hover {
+  color: var(--theme-text) !important;
+}
+
+html.cdxtheme-host-workbuddy .conversation-sidebar svg {
+  stroke: currentColor !important;
+}
+
+html.cdxtheme-host-workbuddy :is(
+  .conversation-list-topbar,
+  .conversation-list-header,
+  .conversation-list-content,
+  .conversation-list-footer
+) {
+  background: transparent !important;
+}
+
+html.cdxtheme-host-workbuddy .conversation-list-logo {
+  color: var(--theme-text) !important;
+  font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: .12em !important;
+  text-transform: uppercase !important;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--theme-accent) 25%, transparent);
+}
+
+html.cdxtheme-host-workbuddy .conversation-list-logo::after {
+  content: "";
+  color: var(--theme-accent);
+}
+
+html.cdxtheme-host-workbuddy :is(
+  .conversation-list-version-badge,
+  .conversation-section-label,
+  .conversation-show-more-button,
+  .conversation-list-tab-button-sub
+) {
+  color: var(--theme-muted) !important;
+}
+
+html.cdxtheme-host-workbuddy .conversation-list-tab-button,
+html.cdxtheme-host-workbuddy .conversation-agent-card,
+html.cdxtheme-host-workbuddy .conversation-list-topbar button {
+  border: 1px solid transparent !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  transition: transform .14s ease, background .14s ease, box-shadow .14s ease, color .14s ease !important;
+}
+
+html.cdxtheme-host-workbuddy :is(
+  .conversation-list-tab-button:hover,
+  .conversation-agent-card:hover,
+  .conversation-list-topbar button:hover
+) {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 18%, transparent), color-mix(in srgb, var(--theme-accent-2) 6%, transparent)) !important;
+  border-color: color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-black) 30%, transparent) !important;
+  transform: translateX(2px);
+}
+
+html.cdxtheme-host-workbuddy :is(
+  .conversation-list-tab-button:hover *,
+  .conversation-agent-card:hover *,
+  .conversation-list-topbar button:hover *
+) {
+  color: var(--theme-text) !important;
+}
+
+html.cdxtheme-host-workbuddy :is(
+  .conversation-list-tab-button.active,
+  .conversation-agent-card[aria-selected="true"],
+  .conversation-agent-card.active
+) {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 28%, transparent), color-mix(in srgb, var(--theme-bg-elevated) 70%, transparent)) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 40%, transparent) !important;
+  box-shadow:
+    0 4px 18px color-mix(in srgb, var(--theme-accent) 20%, transparent),
+    inset 3px 0 0 var(--theme-accent-2) !important;
+}
+
+html.cdxtheme-host-workbuddy :is(
+  .conversation-list-tab-button.active *,
+  .conversation-agent-card[aria-selected="true"] *,
+  .conversation-agent-card.active *
+) {
+  color: var(--theme-text) !important;
+}
+
