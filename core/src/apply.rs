@@ -1,4 +1,4 @@
-//! `cdxtheme apply` — ensure host CDP, then inject a theme package.
+//! `cdxtheme apply` / `restore` — ensure host CDP, then inject or remove a theme.
 
 use crate::cdp::wait_for_targets;
 use crate::error::{CoreError, Result};
@@ -6,6 +6,37 @@ use crate::inject::DEFAULT_CDP_PORT;
 use crate::inject::{self, InjectOptions, InjectRunResult};
 use crate::launch;
 use std::path::Path;
+
+fn validate_port(port: u16) -> Result<u16> {
+  if !(1024..=65535).contains(&port) {
+    return Err(CoreError::msg(format!(
+      "invalid port {port} (use 1024–65535)"
+    )));
+  }
+  Ok(port)
+}
+
+/// Ensure Codex is reachable over CDP (launch/restart host if needed).
+async fn ensure_cdp(port: u16) -> Result<()> {
+  match wait_for_targets(port, 1_500).await {
+    Ok(targets) => {
+      tracing::info!(
+        port,
+        targets = targets.len(),
+        "CDP connected (app:// targets)"
+      );
+      Ok(())
+    }
+    Err(_) => {
+      tracing::info!(port, "CDP not reachable; ensuring Codex is open");
+      let msg = launch::ensure_codex_debugging(port)
+        .await
+        .map_err(CoreError::msg)?;
+      tracing::info!("{msg}");
+      Ok(())
+    }
+  }
+}
 
 /// Apply a portable theme package to a host app via CDP.
 ///
@@ -32,35 +63,26 @@ pub async fn apply_theme(
     )));
   }
 
-  let port = port.unwrap_or(DEFAULT_CDP_PORT);
-  if !(1024..=65535).contains(&port) {
-    return Err(CoreError::msg(format!(
-      "invalid port {port} (use 1024–65535)"
-    )));
-  }
+  let port = validate_port(port.unwrap_or(DEFAULT_CDP_PORT))?;
+  ensure_cdp(port).await?;
 
-  // 1) Detect CDP; open app if needed.
-  match wait_for_targets(port, 1_500).await {
-    Ok(targets) => {
-      tracing::info!(
-        port,
-        targets = targets.len(),
-        "CDP connected (app:// targets)"
-      );
-    }
-    Err(_) => {
-      tracing::info!(port, "CDP not reachable; ensuring Codex is open");
-      let msg = launch::ensure_codex_debugging(port)
-        .await
-        .map_err(CoreError::msg)?;
-      tracing::info!("{msg}");
-    }
-  }
-
-  // 2) Inject theme (app currently only codex; validated above).
+  // Inject theme (app currently only codex; validated above).
   let _ = app;
   let options = InjectOptions { port, timeout_ms };
   inject::apply_theme_package(theme_path, options)
+    .await
+    .map_err(CoreError::msg)
+}
+
+/// Restore the host skin: ensure CDP, then remove injected theme DOM/CSS.
+///
+/// This is the inverse of [`apply_theme`]'s inject step. It does **not** rewrite
+/// `config.toml` appearance keys (use [`crate::set_appearance_theme`] for mode).
+pub async fn restore_theme(port: Option<u16>, timeout_ms: u64) -> Result<InjectRunResult> {
+  let port = validate_port(port.unwrap_or(DEFAULT_CDP_PORT))?;
+  ensure_cdp(port).await?;
+  let options = InjectOptions { port, timeout_ms };
+  inject::restore_default_theme(options)
     .await
     .map_err(CoreError::msg)
 }

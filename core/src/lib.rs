@@ -1,6 +1,7 @@
 //! Shared CDXTheme core: pack / unpack packages, load packages,
-//! CDP inject, Codex launch, and high-level apply.
+//! CDP inject, Codex launch, and high-level apply / restore.
 
+pub mod appearance;
 pub mod apply;
 pub mod cdp;
 pub mod error;
@@ -11,7 +12,11 @@ pub mod pack;
 pub mod package;
 pub mod util;
 
-pub use apply::apply_theme;
+pub use appearance::{
+  APPEARANCE_THEME_KEY, AppearanceResult, AppearanceTheme, appearance_theme_value,
+  codex_config_path, set_appearance_theme, upsert_appearance_theme,
+};
+pub use apply::{apply_theme, restore_theme};
 pub use cdp::{CdpTarget, wait_for_targets};
 pub use error::{CoreError, Result};
 pub use inject::{
@@ -24,8 +29,11 @@ pub use launch::{
   restart_codex_debugging, restart_codex_debugging_with_log,
 };
 pub use pack::{
-  EXT_CDXTHEME, FORMAT_CDXTHEME, MAX_THEME_PACKAGE_BYTES, THEME_SCHEMA_VERSION, ThemePackage,
-  pack_theme_dir, unpack_package,
+  CSS_PARTIAL_TARGETS, CssMergeResult, EXT_CDXTHEME, FORMAT_CDXTHEME, MAX_THEME_PACKAGE_BYTES,
+  PackThemeResult, THEME_SCHEMA_VERSION, ThemePackage, list_css_partials, maybe_merge_css_for_path,
+  merge_css_for_path_in_memory, merge_css_partials_content, merge_css_target, merge_theme_css,
+  merge_theme_css_optional, pack_theme_dir, pack_theme_dir_with_options, resolve_target_css,
+  unpack_package,
 };
 pub use package::{
   ACTIVE_APP_ID, APP_CODEX, APP_WORKBUDDY, CodexThemePeek, THEME_EXTENSION,

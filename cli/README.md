@@ -2,14 +2,12 @@
 
 Thin CLI over shared library **`cdx-theme-core`**.
 
-Pack, unpack, apply, and **verify** multi-app portable theme packages (`.cdxtheme`) over CDP.
+Pack, unpack, apply, restore, adjust appearance, and **verify** multi-app portable theme packages (`.cdxtheme`) over CDP.
 
 | Brand | `format` field | Extension |
 |-------|----------------|-----------|
 | **CDXTheme** (default) | `cdxtheme` | `.cdxtheme` |
-| **CodeDrobe** | `codedrobe-theme` | `.codedrobe-theme` |
 
-Same JSON schema (cloned from [CodeDrobe package.mjs](https://github.com/CodeDrobe/core/blob/main/src/theme/package.mjs)).  
 Legacy single-file formats (`.codex-theme` with top-level `manifest` + `css`) are **not** supported.
 
 ## Install
@@ -27,7 +25,10 @@ Binary: **`cdxtheme`**.
 ```text
 cdxtheme theme pack <SOURCE> [OPTIONS]
 cdxtheme theme unpack <INPUT> <OUTPUT>
+cdxtheme theme merge-css <SOURCE> [-t codex|workbuddy]
 cdxtheme apply --app codex --theme <PACKAGE> [OPTIONS]
+cdxtheme restore [OPTIONS]
+cdxtheme appearance <dark|light|system> [OPTIONS]
 cdxtheme verify inject [-t PACKAGE]
 cdxtheme verify layout [--contexts chat,work]
 cdxtheme probe [--tab chat|work] [--expr JS]
@@ -38,11 +39,11 @@ cdxtheme screenshot -o OUT.jpg [--tab chat|work]
 
 ```bash
 cdxtheme theme pack themes/ferrari
+# → (default) merge partials in memory into package (no root codex.css written)
 # → ferrari-1.0.0.cdxtheme
 
-cdxtheme theme pack themes/ferrari --format codedrobe-theme --pretty --force
-# → ferrari-1.0.0.codedrobe-theme
-
+cdxtheme theme pack themes/ferrari --pretty --force
+cdxtheme theme pack themes/ferrari --no-merge-css   # skip partial merge
 cdxtheme theme pack themes/ferrari/theme.json -o dist/ferrari.cdxtheme
 cdxtheme theme pack themes/ferrari/manifest.json -o dist/ferrari.cdxtheme
 ```
@@ -50,11 +51,10 @@ cdxtheme theme pack themes/ferrari/manifest.json -o dist/ferrari.cdxtheme
 | Flag | Description |
 |------|-------------|
 | `-o`, `--output` | Output path (default `{id}-{version}.cdxtheme`) |
-| `--format` | `cdxtheme` (default) or `codedrobe-theme` |
 | `--pretty` | Pretty-print JSON |
 | `--force` | Overwrite existing file |
+| `--no-merge-css` | Skip in-memory partial merge into the package |
 
-**CSS brand rewrite (automatic):** when packing, every `codedrobe-` token in target CSS is rewritten to `cdxtheme-` (class names, ids, custom properties). Source CSS may still use CodeDrobe tokens; the package always gets CDXTheme-branded CSS.
 
 **Source layout**
 
@@ -97,31 +97,48 @@ cdxtheme theme unpack ferrari-1.0.0.cdxtheme /tmp/ferrari
 # → theme.json + codex/theme.css + images/…
 ```
 
-Accepts both `.cdxtheme` and `.codedrobe-theme`.
+Accepts `.cdxtheme` .
 
-### `theme convert`
+### `theme merge-css`
 
-Convert a **CodeDrobe** package to **CDXTheme** (`.cdxtheme`):
-
-1. Sets `format` to `cdxtheme`
-2. Rewrites every `codedrobe-` token in each target CSS to `cdxtheme-`
-   (e.g. `.codedrobe-codex-skin` → `.cdxtheme-codex-skin`,
-   `--codedrobe-image-hero` → `--cdxtheme-image-hero`)
+Merge split authoring partials into the root CSS files that `theme.json` → `targets.*.css` points at.
 
 ```bash
-cdxtheme theme convert ferrari-1.0.0.codedrobe-theme
-# → ferrari-1.0.0.cdxtheme
+cdxtheme theme merge-css themes/my-theme
+# → themes/my-theme/codex.css from themes/my-theme/codex/*.css
+# → themes/my-theme/workbuddy.css from themes/my-theme/workbuddy/*.css
 
-cdxtheme theme convert ferrari.codedrobe-theme -o dist/ferrari.cdxtheme --pretty --force
+cdxtheme theme merge-css themes/my-theme -t codex
 ```
 
-| Flag | Description |
-|------|-------------|
-| `-o`, `--output` | Output path (default `{id}-{version}.cdxtheme`) |
-| `--pretty` | Pretty-print JSON |
-| `--force` | Overwrite existing file |
+| Convention | Meaning |
+| --- | --- |
+| `{theme}/{target}/*.css` | Partials (alphabetical order; use `00-`, `01-` prefixes) |
+| `{theme}/{target}.css` | Merged output (generated — do not hand-edit) |
 
-Also accepts an existing `.cdxtheme` (re-applies CSS brand rewrite and refreshes `exportedAt`).
+**`theme pack` merges partials in memory** into the `.cdxtheme` (does not write root `codex.css` / `workbuddy.css`). Use `merge-css` only when you want those merged files on disk for inspection or editing.
+
+Typical starter layout:
+
+```text
+src/my-theme/
+  theme.json          # "css": "codex.css"
+  codex/
+    00-tokens.css     # brand colors only
+    01-shell.css
+    02-chrome.css
+    03-home.css
+    04-composer.css
+    05-work.css
+    06-settings.css
+  workbuddy/
+    00-tokens.css
+    01-shell.css
+    02-home.css
+    03-composer.css
+  codex.css           # generated
+  workbuddy.css       # generated
+```
 
 ### `apply`
 
@@ -139,10 +156,52 @@ cdxtheme apply -t themes/doll-sister.cdxtheme --port 9335
 | Flag | Description |
 |------|-------------|
 | `--app` | Host app id (currently only `codex`) |
-| `-t`, `--theme` | Path to `.cdxtheme` / `.codedrobe-theme` |
+| `-t`, `--theme` | Path to `.cdxtheme` |
 | `--port` | CDP port (default `9335`) |
 | `--timeout-ms` | Wait / inject timeout (default `120000`) |
 
+### `restore`
+
+Remove the injected CSS/skin from live Codex renderer targets (inverse of `apply` inject).
+
+1. Probe CDP on the remote-debugging port (default **9335**)
+2. If not connected, launch (or restart) ChatGPT/Codex with `--remote-debugging-port`
+3. Strip injected theme DOM / early scripts from all `app://` page targets
+
+Does **not** rewrite `~/.codex/config.toml` appearance keys (use `appearance` for mode).
+
+```bash
+cdxtheme restore
+cdxtheme restore --port 9335 --timeout-ms 120000
+```
+
+| Flag | Description |
+|------|-------------|
+| `--port` | CDP port (default `9335`) |
+| `--timeout-ms` | Wait / restore timeout (default `120000`) |
+
+### `appearance`
+
+Set ChatGPT / Codex host appearance mode by writing `[desktop].appearanceTheme` in `~/.codex/config.toml`.
+
+Supported modes: **`dark`**, **`light`**, **`system`**.
+
+When the value changes, Codex is restarted with remote debugging so the mode takes effect (unless `--no-restart`).
+
+```bash
+cdxtheme appearance dark
+cdxtheme appearance light
+cdxtheme appearance system
+cdxtheme appearance dark --no-restart
+cdxtheme appearance light --config /path/to/config.toml
+```
+
+| Flag / arg | Description |
+|------------|-------------|
+| `MODE` | `dark`, `light`, or `system` |
+| `--config` | Config path (default `~/.codex/config.toml`) |
+| `--port` | CDP port used when restarting Codex (default `9335`) |
+| `--no-restart` | Only write config; skip Codex restart |
 
 ### `verify`
 

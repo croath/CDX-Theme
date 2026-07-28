@@ -3,14 +3,18 @@
 //! Examples:
 //!   cdxtheme theme pack themes/redbull-racing
 //!   cdxtheme theme unpack ferrari-1.0.0.cdxtheme themes/ferrari
+//!   cdxtheme theme merge-css themes/my-theme
 //!   cdxtheme apply --app codex --theme ferrari-1.0.0.cdxtheme
+//!   cdxtheme restore
+//!   cdxtheme appearance dark
 //!   cdxtheme verify layout
 //!   cdxtheme probe --tab Work
 //!   cdxtheme screenshot -o /tmp/work.jpg --tab Work
 
 use cdx_theme_core::{
-  DEFAULT_CDP_PORT, InjectOptions, apply_theme, layout_default_options, load_theme_package,
-  pack_theme_dir, probe, screenshot, unpack_package, verify_layout, verify_theme,
+  AppearanceTheme, DEFAULT_CDP_PORT, InjectOptions, apply_theme, layout_default_options,
+  load_theme_package, merge_theme_css, pack_theme_dir_with_options, probe, restart_codex_debugging,
+  restore_theme, screenshot, set_appearance_theme, unpack_package, verify_layout, verify_theme,
 };
 use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
@@ -21,7 +25,7 @@ use std::process::ExitCode;
   name = "cdxtheme",
   version,
   about = "CDXTheme CLI",
-  long_about = "Pack, unpack, apply, and verify multi-app theme packages (.cdxtheme)."
+  long_about = "Pack, unpack, apply, restore, and verify multi-app theme packages (.cdxtheme)."
 )]
 struct Cli {
   #[command(subcommand)]
@@ -53,6 +57,39 @@ enum Commands {
     /// Timeout for CDP wait / inject (milliseconds).
     #[arg(long, default_value_t = 120_000)]
     timeout_ms: u64,
+  },
+
+  /// Restore default skin (ensure CDP, then remove injected theme DOM/CSS).
+  Restore {
+    /// CDP remote-debugging port (default 9335).
+    #[arg(long, default_value_t = DEFAULT_CDP_PORT)]
+    port: u16,
+
+    /// Timeout for CDP wait / restore (milliseconds).
+    #[arg(long, default_value_t = 120_000)]
+    timeout_ms: u64,
+  },
+
+  /// Adjust ChatGPT / Codex appearance mode (`dark` / `light` / `system`).
+  ///
+  /// Writes `[desktop].appearanceTheme` in `~/.codex/config.toml`.
+  /// Restarts Codex when the value changes (unless `--no-restart`).
+  Appearance {
+    /// Appearance mode: dark, light, or system.
+    #[arg(value_enum)]
+    mode: AppearanceMode,
+
+    /// Codex config path (default `~/.codex/config.toml`).
+    #[arg(long)]
+    config: Option<PathBuf>,
+
+    /// CDP remote-debugging port used when restarting Codex (default 9335).
+    #[arg(long, default_value_t = DEFAULT_CDP_PORT)]
+    port: u16,
+
+    /// Only write config; do not restart Codex after a mode change.
+    #[arg(long)]
+    no_restart: bool,
   },
 
   /// Verify injected theme and/or Chat/Work layout over CDP.
@@ -115,6 +152,9 @@ enum Commands {
 #[derive(Subcommand, Debug)]
 enum ThemeCommands {
   /// Pack a source theme (directory or theme.json / manifest.json) into a portable package.
+  ///
+  /// By default merges `codex/*.css` / `workbuddy/*.css` **in memory** into the package.
+  /// Does not write root `codex.css` / `workbuddy.css` (use `theme merge-css` for that).
   Pack {
     /// Theme directory (`theme.json` preferred, else `manifest.json`) or path to that file.
     source: PathBuf,
@@ -130,6 +170,11 @@ enum ThemeCommands {
     /// Overwrite existing output file.
     #[arg(long)]
     force: bool,
+
+    /// Skip in-memory merge of CSS partials into the package.
+    /// Default merges `codex/` / `workbuddy/` partials when present (without writing root CSS files).
+    #[arg(long)]
+    no_merge_css: bool,
   },
 
   /// Unpack a portable package into a source theme directory.
@@ -139,6 +184,22 @@ enum ThemeCommands {
 
     /// Destination theme directory (theme.json + per-target css + images).
     output: PathBuf,
+  },
+
+  /// Write merged CSS partials to root files (`codex/*.css` → `codex.css`).
+  ///
+  /// Partials are concatenated in alphabetical order (use numeric prefixes like
+  /// `00-tokens.css`, `01-shell.css`).
+  ///
+  /// `theme pack` embeds partials in memory by default and does **not** write these files.
+  #[command(name = "merge-css")]
+  MergeCss {
+    /// Theme source directory (contains `codex/` and/or `workbuddy/` partial dirs).
+    source: PathBuf,
+
+    /// Only merge this target (`codex` or `workbuddy`). Default: every present partial dir.
+    #[arg(long, short = 't')]
+    target: Option<String>,
   },
 }
 
@@ -206,6 +267,24 @@ impl TabLabel {
   }
 }
 
+/// ChatGPT / Codex `[desktop].appearanceTheme` values.
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum AppearanceMode {
+  Dark,
+  Light,
+  System,
+}
+
+impl AppearanceMode {
+  fn to_core(self) -> AppearanceTheme {
+    match self {
+      AppearanceMode::Dark => AppearanceTheme::Dark,
+      AppearanceMode::Light => AppearanceTheme::Light,
+      AppearanceMode::System => AppearanceTheme::System,
+    }
+  }
+}
+
 fn main() -> ExitCode {
   init_tracing();
   match run() {
@@ -244,13 +323,25 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
         output,
         pretty,
         force,
+        no_merge_css,
       } => {
-        let (path, bytes) = pack_theme_dir(&source, output.as_deref(), pretty, force)?;
+        let result =
+          pack_theme_dir_with_options(&source, output.as_deref(), pretty, force, !no_merge_css)?;
+        for m in &result.merges {
+          println!(
+            "merged {} ({} part{}) → package:{} ({} bytes, in-memory)",
+            m.partials_dir.display(),
+            m.parts.len(),
+            if m.parts.len() == 1 { "" } else { "s" },
+            m.target,
+            m.bytes
+          );
+        }
         println!(
           "packed {} → {} ({} bytes)",
           source.display(),
-          path.display(),
-          bytes
+          result.path.display(),
+          result.bytes
         );
         Ok(ExitCode::SUCCESS)
       }
@@ -258,6 +349,24 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
       ThemeCommands::Unpack { input, output } => {
         let dir = unpack_package(&input, &output)?;
         println!("unpacked {} → {}", input.display(), dir.display());
+        Ok(ExitCode::SUCCESS)
+      }
+
+      ThemeCommands::MergeCss { source, target } => {
+        let results = merge_theme_css(&source, target.as_deref())?;
+        for r in &results {
+          println!(
+            "merged {} ({} part{}) → {} ({} bytes)",
+            r.partials_dir.display(),
+            r.parts.len(),
+            if r.parts.len() == 1 { "" } else { "s" },
+            r.output.display(),
+            r.bytes
+          );
+          for p in &r.parts {
+            println!("  • {p}");
+          }
+        }
         Ok(ExitCode::SUCCESS)
       }
     },
@@ -276,6 +385,48 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
         result.port,
         result.targets.len()
       );
+      Ok(ExitCode::SUCCESS)
+    }
+
+    Commands::Restore { port, timeout_ms } => {
+      let rt = runtime()?;
+      let result = rt.block_on(restore_theme(Some(port), timeout_ms))?;
+      println!(
+        "restored default skin on port {} ({} target(s))",
+        result.port,
+        result.targets.len()
+      );
+      Ok(ExitCode::SUCCESS)
+    }
+
+    Commands::Appearance {
+      mode,
+      config,
+      port,
+      no_restart,
+    } => {
+      let result = set_appearance_theme(mode.to_core(), config.as_deref())?;
+      let prev = result.previous.as_deref().unwrap_or("(unset)");
+      if result.changed {
+        println!(
+          "appearanceTheme: {prev} → {} ({})",
+          result.mode,
+          result.config.display()
+        );
+        if no_restart {
+          println!("config updated; restart Codex/ChatGPT for the mode to take effect");
+        } else {
+          let rt = runtime()?;
+          let msg = rt.block_on(restart_codex_debugging(port))?;
+          println!("{msg}");
+        }
+      } else {
+        println!(
+          "appearanceTheme already `{}` ({})",
+          result.mode,
+          result.config.display()
+        );
+      }
       Ok(ExitCode::SUCCESS)
     }
 
