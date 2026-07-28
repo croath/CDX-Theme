@@ -31,6 +31,18 @@ pub fn user_themes_dir(app: &AppHandle) -> Result<PathBuf, String> {
   Ok(dir)
 }
 
+/// Theme Builder root: `{app_data_dir}/theme_builder/` (sessions.json + workspaces).
+#[allow(dead_code)]
+pub fn theme_builder_dir(app: &AppHandle) -> Result<PathBuf, String> {
+  let dir = app
+    .path()
+    .app_data_dir()
+    .map_err(|e| format!("app data dir: {e}"))?
+    .join("theme_builder");
+  fs::create_dir_all(&dir).map_err(|e| format!("create theme_builder dir: {e}"))?;
+  Ok(dir)
+}
+
 /// Roots to scan for themes (builtin first, then user). Missing builtin is ok.
 pub fn theme_search_dirs(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
   let mut dirs = Vec::new();

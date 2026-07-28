@@ -54,6 +54,14 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::DeDe, "nav.settings") => "Einstellungen",
     (Locale::EsEs, "nav.settings") => "Ajustes",
 
+    (Locale::EnUs, "nav.builder") => "Theme Builder",
+    (Locale::ZhHans, "nav.builder") => "主题构建",
+    (Locale::ZhHant, "nav.builder") => "主題構建",
+    (Locale::JaJp, "nav.builder") => "テーマビルダー",
+    (Locale::KoKr, "nav.builder") => "테마 빌더",
+    (Locale::DeDe, "nav.builder") => "Theme-Builder",
+    (Locale::EsEs, "nav.builder") => "Constructor",
+
     // Brand
     (
       Locale::EnUs
@@ -770,6 +778,481 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::KoKr, "settings.analytics.saved") => "환경설정이 저장되었습니다",
     (Locale::DeDe, "settings.analytics.saved") => "Einstellung gespeichert",
     (Locale::EsEs, "settings.analytics.saved") => "Preferencia guardada",
+
+    // Theme Builder
+    (Locale::EnUs, "builder.title") => "Theme Builder",
+    (Locale::ZhHans, "builder.title") => "主题构建",
+    (Locale::ZhHant, "builder.title") => "主題構建",
+    (Locale::JaJp, "builder.title") => "テーマビルダー",
+    (Locale::KoKr, "builder.title") => "테마 빌더",
+    (Locale::DeDe, "builder.title") => "Theme-Builder",
+    (Locale::EsEs, "builder.title") => "Constructor de temas",
+
+    (Locale::EnUs, "builder.subtitle") => {
+      "Start a build, chat with Codex CLI, and reopen saved sessions"
+    }
+    (Locale::ZhHans, "builder.subtitle") => "开始构建、与 Codex CLI 对话，并打开已保存会话",
+    (Locale::ZhHant, "builder.subtitle") => "開始構建、與 Codex CLI 對話，並開啟已儲存工作階段",
+    (Locale::JaJp, "builder.subtitle") => {
+      "ビルド開始、Codex CLI とチャット、保存済みセッションを再開"
+    }
+    (Locale::KoKr, "builder.subtitle") => "빌드 시작, Codex CLI 채팅, 저장된 세션 다시 열기",
+    (Locale::DeDe, "builder.subtitle") => {
+      "Build starten, mit Codex CLI chatten und gespeicherte Sessions öffnen"
+    }
+    (Locale::EsEs, "builder.subtitle") => {
+      "Inicia una build, chatea con Codex CLI y reabre sesiones guardadas"
+    }
+
+    (Locale::EnUs, "builder.start.title") => "New theme build",
+    (Locale::ZhHans, "builder.start.title") => "新建主题构建",
+    (Locale::ZhHant, "builder.start.title") => "新建主題構建",
+    (Locale::JaJp, "builder.start.title") => "新しいテーマビルド",
+    (Locale::KoKr, "builder.start.title") => "새 테마 빌드",
+    (Locale::DeDe, "builder.start.title") => "Neuer Theme-Build",
+    (Locale::EsEs, "builder.start.title") => "Nueva build de tema",
+
+    (Locale::EnUs, "builder.start.hint") => {
+      "Describe a look, generate with Codex, then apply the packed theme to Codex."
+    }
+    (Locale::ZhHans, "builder.start.hint") => "描述风格，用 Codex 生成主题，再应用到 Codex。",
+    (Locale::ZhHant, "builder.start.hint") => "描述風格，用 Codex 產生主題，再套用到 Codex。",
+    (Locale::JaJp, "builder.start.hint") => {
+      "見た目を説明して Codex で生成し、完成したテーマを適用します。"
+    }
+    (Locale::KoKr, "builder.start.hint") => {
+      "원하는 스타일을 설명하고 Codex로 생성한 뒤 테마를 적용하세요."
+    }
+    (Locale::DeDe, "builder.start.hint") => {
+      "Beschreibe einen Look, generiere mit Codex und wende das Theme an."
+    }
+    (Locale::EsEs, "builder.start.hint") => {
+      "Describe un estilo, genera con Codex y aplica el tema empaquetado."
+    }
+
+    (Locale::EnUs, "builder.start.action") => "New theme build",
+    (Locale::ZhHans, "builder.start.action") => "新建主题构建",
+    (Locale::ZhHant, "builder.start.action") => "新建主題構建",
+    (Locale::JaJp, "builder.start.action") => "新しいテーマビルド",
+    (Locale::KoKr, "builder.start.action") => "새 테마 빌드",
+    (Locale::DeDe, "builder.start.action") => "Neuer Theme-Build",
+    (Locale::EsEs, "builder.start.action") => "Nueva build de tema",
+
+    (Locale::EnUs, "builder.generate") => "Generate",
+    (Locale::ZhHans, "builder.generate") => "生成",
+    (Locale::ZhHant, "builder.generate") => "產生",
+    (Locale::JaJp, "builder.generate") => "生成",
+    (Locale::KoKr, "builder.generate") => "생성",
+    (Locale::DeDe, "builder.generate") => "Generieren",
+    (Locale::EsEs, "builder.generate") => "Generar",
+
+    (Locale::EnUs, "builder.response") => "Codex response",
+    (Locale::ZhHans, "builder.response") => "Codex 回复",
+    (Locale::ZhHant, "builder.response") => "Codex 回覆",
+    (Locale::JaJp, "builder.response") => "Codex の応答",
+    (Locale::KoKr, "builder.response") => "Codex 응답",
+    (Locale::DeDe, "builder.response") => "Codex-Antwort",
+    (Locale::EsEs, "builder.response") => "Respuesta de Codex",
+
+    (Locale::EnUs, "builder.generating") => "Building with Codex…",
+    (Locale::ZhHans, "builder.generating") => "正在通过 Codex 构建…",
+    (Locale::ZhHant, "builder.generating") => "正在透過 Codex 構建…",
+    (Locale::JaJp, "builder.generating") => "Codex でビルド中…",
+    (Locale::KoKr, "builder.generating") => "Codex로 빌드 중…",
+    (Locale::DeDe, "builder.generating") => "Wird mit Codex erstellt…",
+    (Locale::EsEs, "builder.generating") => "Generando con Codex…",
+
+    (Locale::EnUs, "builder.apply") => "Apply theme",
+    (Locale::ZhHans, "builder.apply") => "应用主题",
+    (Locale::ZhHant, "builder.apply") => "套用主題",
+    (Locale::JaJp, "builder.apply") => "テーマを適用",
+    (Locale::KoKr, "builder.apply") => "테마 적용",
+    (Locale::DeDe, "builder.apply") => "Theme anwenden",
+    (Locale::EsEs, "builder.apply") => "Aplicar tema",
+
+    (Locale::EnUs, "builder.applying") => "Installing and applying…",
+    (Locale::ZhHans, "builder.applying") => "正在安装并应用…",
+    (Locale::ZhHant, "builder.applying") => "正在安裝並套用…",
+    (Locale::JaJp, "builder.applying") => "インストールして適用中…",
+    (Locale::KoKr, "builder.applying") => "설치 및 적용 중…",
+    (Locale::DeDe, "builder.applying") => "Installieren und anwenden…",
+    (Locale::EsEs, "builder.applying") => "Instalando y aplicando…",
+
+    (Locale::EnUs, "builder.apply.success") => "Theme installed and applied",
+    (Locale::ZhHans, "builder.apply.success") => "主题已安装并应用",
+    (Locale::ZhHant, "builder.apply.success") => "主題已安裝並套用",
+    (Locale::JaJp, "builder.apply.success") => "テーマをインストールして適用しました",
+    (Locale::KoKr, "builder.apply.success") => "테마가 설치되고 적용되었습니다",
+    (Locale::DeDe, "builder.apply.success") => "Theme installiert und angewendet",
+    (Locale::EsEs, "builder.apply.success") => "Tema instalado y aplicado",
+
+    (Locale::EnUs, "builder.package.ready") => {
+      "Package ready. Apply installs it into your theme library and injects it into Codex."
+    }
+    (Locale::ZhHans, "builder.package.ready") => {
+      "主题包已就绪。点击应用将安装到主题库并注入 Codex。"
+    }
+    (Locale::ZhHant, "builder.package.ready") => {
+      "主題包已就緒。點擊套用會安裝到主題庫並注入 Codex。"
+    }
+    (Locale::JaJp, "builder.package.ready") => {
+      "パッケージ準備完了。適用するとテーマラブラリに入れ、Codex に注入します。"
+    }
+    (Locale::KoKr, "builder.package.ready") => {
+      "패키지 준비됨. 적용하면 테마 라이브러리에 설치하고 Codex에 주입합니다."
+    }
+    (Locale::DeDe, "builder.package.ready") => {
+      "Paket bereit. Anwenden installiert es in die Bibliothek und injiziert es in Codex."
+    }
+    (Locale::EsEs, "builder.package.ready") => {
+      "Paquete listo. Aplicar lo instala en la biblioteca y lo inyecta en Codex."
+    }
+
+    (Locale::EnUs, "builder.package.missing") => {
+      "Build finished, but no .cdxtheme package was found. Try generating again or ask Codex to pack to output/."
+    }
+    (Locale::ZhHans, "builder.package.missing") => {
+      "构建已完成，但未找到 .cdxtheme 包。请重新生成，或让 Codex 打包到 output/。"
+    }
+    (Locale::ZhHant, "builder.package.missing") => {
+      "構建已完成，但找不到 .cdxtheme 包。請重新產生，或讓 Codex 打包到 output/。"
+    }
+    (Locale::JaJp, "builder.package.missing") => {
+      "ビルドは完了しましたが .cdxtheme が見つかりません。再生成するか、output/ へ pack してください。"
+    }
+    (Locale::KoKr, "builder.package.missing") => {
+      "빌드는 끝났지만 .cdxtheme 패키지가 없습니다. 다시 생성하거나 output/에 pack 하세요."
+    }
+    (Locale::DeDe, "builder.package.missing") => {
+      "Build fertig, aber kein .cdxtheme gefunden. Erneut generieren oder nach output/ packen lassen."
+    }
+    (Locale::EsEs, "builder.package.missing") => {
+      "Build listo, pero no hay .cdxtheme. Vuelve a generar o pide a Codex empaquetar en output/."
+    }
+
+    (Locale::EnUs, "builder.generate.hint") => {
+      "Describe colors, mood, and layout. Codex will edit the theme workspace and pack a .cdxtheme."
+    }
+    (Locale::ZhHans, "builder.generate.hint") => {
+      "描述颜色、氛围和布局。Codex 会编辑主题工作区并打包 .cdxtheme。"
+    }
+    (Locale::ZhHant, "builder.generate.hint") => {
+      "描述顏色、氛圍與版面。Codex 會編輯主題工作區並打包 .cdxtheme。"
+    }
+    (Locale::JaJp, "builder.generate.hint") => {
+      "色・雰囲気・レイアウトを説明。Codex がテーマ作業場を編集し .cdxtheme を pack します。"
+    }
+    (Locale::KoKr, "builder.generate.hint") => {
+      "색상·분위기·레이아웃을 설명하세요. Codex가 작업 공간을 수정하고 .cdxtheme을 만듭니다."
+    }
+    (Locale::DeDe, "builder.generate.hint") => {
+      "Farben, Stimmung und Layout beschreiben. Codex bearbeitet den Workspace und packt .cdxtheme."
+    }
+    (Locale::EsEs, "builder.generate.hint") => {
+      "Describe colores, ambiente y layout. Codex edita el workspace y empaqueta un .cdxtheme."
+    }
+
+    (Locale::EnUs, "builder.sessions.title") => "Saved Codex sessions",
+    (Locale::ZhHans, "builder.sessions.title") => "已保存的 Codex 会话",
+    (Locale::ZhHant, "builder.sessions.title") => "已儲存的 Codex 工作階段",
+    (Locale::JaJp, "builder.sessions.title") => "保存済み Codex セッション",
+    (Locale::KoKr, "builder.sessions.title") => "저장된 Codex 세션",
+    (Locale::DeDe, "builder.sessions.title") => "Gespeicherte Codex-Sessions",
+    (Locale::EsEs, "builder.sessions.title") => "Sesiones de Codex guardadas",
+
+    (Locale::EnUs, "builder.sessions.refresh") => "Refresh sessions",
+    (Locale::ZhHans, "builder.sessions.refresh") => "刷新会话列表",
+    (Locale::ZhHant, "builder.sessions.refresh") => "重新整理工作階段",
+    (Locale::JaJp, "builder.sessions.refresh") => "セッションを更新",
+    (Locale::KoKr, "builder.sessions.refresh") => "세션 새로고침",
+    (Locale::DeDe, "builder.sessions.refresh") => "Sessions aktualisieren",
+    (Locale::EsEs, "builder.sessions.refresh") => "Actualizar sesiones",
+
+    (Locale::EnUs, "builder.sessions.loading") => "Loading sessions…",
+    (Locale::ZhHans, "builder.sessions.loading") => "正在加载会话…",
+    (Locale::ZhHant, "builder.sessions.loading") => "正在載入工作階段…",
+    (Locale::JaJp, "builder.sessions.loading") => "セッションを読み込み中…",
+    (Locale::KoKr, "builder.sessions.loading") => "세션 로딩 중…",
+    (Locale::DeDe, "builder.sessions.loading") => "Sessions werden geladen…",
+    (Locale::EsEs, "builder.sessions.loading") => "Cargando sesiones…",
+
+    (Locale::EnUs, "builder.sessions.empty") => {
+      "No Theme Builder sessions yet. Start a build — only sessions saved here and still in Codex history are listed."
+    }
+    (Locale::ZhHans, "builder.sessions.empty") => {
+      "还没有主题构建会话。开始构建后会列出同时存在于本应用与 Codex 历史中的会话。"
+    }
+    (Locale::ZhHant, "builder.sessions.empty") => {
+      "尚無主題構建工作階段。開始構建後會列出同時存在於本應用與 Codex 歷史中的工作階段。"
+    }
+    (Locale::JaJp, "builder.sessions.empty") => {
+      "テーマビルドのセッションはまだありません。開始すると、本アプリと Codex 履歴の両方にあるものだけが表示されます。"
+    }
+    (Locale::KoKr, "builder.sessions.empty") => {
+      "테마 빌더 세션이 없습니다. 빌드를 시작하면 이 앱과 Codex 기록에 모두 있는 세션만 표시됩니다."
+    }
+    (Locale::DeDe, "builder.sessions.empty") => {
+      "Noch keine Theme-Builder-Sessions. Starte einen Build — nur Sessions in App-Daten und Codex-Verlauf erscheinen."
+    }
+    (Locale::EsEs, "builder.sessions.empty") => {
+      "Aún no hay sesiones del constructor. Inicia una build: solo se listan las guardadas aquí y en el historial de Codex."
+    }
+
+    (Locale::EnUs, "builder.sessions.error") => "Could not load sessions.",
+    (Locale::ZhHans, "builder.sessions.error") => "无法加载会话列表。",
+    (Locale::ZhHant, "builder.sessions.error") => "無法載入工作階段列表。",
+    (Locale::JaJp, "builder.sessions.error") => "セッションを読み込めませんでした。",
+    (Locale::KoKr, "builder.sessions.error") => "세션을 불러오지 못했습니다.",
+    (Locale::DeDe, "builder.sessions.error") => "Sessions konnten nicht geladen werden.",
+    (Locale::EsEs, "builder.sessions.error") => "No se pudieron cargar las sesiones.",
+
+    (Locale::EnUs, "builder.sessions.open") => "Open",
+    (Locale::ZhHans, "builder.sessions.open") => "打开",
+    (Locale::ZhHant, "builder.sessions.open") => "開啟",
+    (Locale::JaJp, "builder.sessions.open") => "開く",
+    (Locale::KoKr, "builder.sessions.open") => "열기",
+    (Locale::DeDe, "builder.sessions.open") => "Öffnen",
+    (Locale::EsEs, "builder.sessions.open") => "Abrir",
+
+    (Locale::EnUs, "builder.back") => "Back to sessions",
+    (Locale::ZhHans, "builder.back") => "返回会话列表",
+    (Locale::ZhHant, "builder.back") => "返回工作階段列表",
+    (Locale::JaJp, "builder.back") => "セッション一覧へ",
+    (Locale::KoKr, "builder.back") => "세션 목록으로",
+    (Locale::DeDe, "builder.back") => "Zurück zu Sessions",
+    (Locale::EsEs, "builder.back") => "Volver a sesiones",
+
+    (Locale::EnUs, "builder.chat.new") => "New theme chat",
+    (Locale::ZhHans, "builder.chat.new") => "新主题对话",
+    (Locale::ZhHant, "builder.chat.new") => "新主題對話",
+    (Locale::JaJp, "builder.chat.new") => "新しいテーマチャット",
+    (Locale::KoKr, "builder.chat.new") => "새 테마 채팅",
+    (Locale::DeDe, "builder.chat.new") => "Neuer Theme-Chat",
+    (Locale::EsEs, "builder.chat.new") => "Nuevo chat de tema",
+
+    (Locale::EnUs, "builder.chat.unsaved") => "New session (saved after first reply)",
+    (Locale::ZhHans, "builder.chat.unsaved") => "新会话（首次回复后保存）",
+    (Locale::ZhHant, "builder.chat.unsaved") => "新工作階段（首次回覆後儲存）",
+    (Locale::JaJp, "builder.chat.unsaved") => "新規セッション（最初の返信後に保存）",
+    (Locale::KoKr, "builder.chat.unsaved") => "새 세션 (첫 답변 후 저장)",
+    (Locale::DeDe, "builder.chat.unsaved") => "Neue Session (nach erster Antwort gespeichert)",
+    (Locale::EsEs, "builder.chat.unsaved") => "Nueva sesión (se guarda tras la primera respuesta)",
+
+    (Locale::EnUs, "builder.session.loading") => "Loading session…",
+    (Locale::ZhHans, "builder.session.loading") => "正在加载会话…",
+    (Locale::ZhHant, "builder.session.loading") => "正在載入工作階段…",
+    (Locale::JaJp, "builder.session.loading") => "セッションを読み込み中…",
+    (Locale::KoKr, "builder.session.loading") => "세션 로딩 중…",
+    (Locale::DeDe, "builder.session.loading") => "Session wird geladen…",
+    (Locale::EsEs, "builder.session.loading") => "Cargando sesión…",
+
+    (Locale::EnUs, "builder.session.empty") => {
+      "This session has no chat messages yet. Send a message to continue."
+    }
+    (Locale::ZhHans, "builder.session.empty") => "此会话还没有聊天消息。发送消息以继续。",
+    (Locale::ZhHant, "builder.session.empty") => "此工作階段尚無聊天訊息。傳送訊息以繼續。",
+    (Locale::JaJp, "builder.session.empty") => {
+      "このセッションにはまだメッセージがありません。送信して続けてください。"
+    }
+    (Locale::KoKr, "builder.session.empty") => {
+      "이 세션에 채팅 메시지가 없습니다. 메시지를 보내 이어가세요."
+    }
+    (Locale::DeDe, "builder.session.empty") => {
+      "Diese Session hat noch keine Nachrichten. Sende eine Nachricht zum Fortsetzen."
+    }
+    (Locale::EsEs, "builder.session.empty") => {
+      "Esta sesión aún no tiene mensajes. Envía uno para continuar."
+    }
+
+    (Locale::EnUs, "builder.session.load_error") => "Failed to load session",
+    (Locale::ZhHans, "builder.session.load_error") => "加载会话失败",
+    (Locale::ZhHant, "builder.session.load_error") => "載入工作階段失敗",
+    (Locale::JaJp, "builder.session.load_error") => "セッションの読み込みに失敗",
+    (Locale::KoKr, "builder.session.load_error") => "세션 로드 실패",
+    (Locale::DeDe, "builder.session.load_error") => "Session konnte nicht geladen werden",
+    (Locale::EsEs, "builder.session.load_error") => "Error al cargar la sesión",
+
+    (Locale::EnUs, "builder.welcome") => {
+      "Describe the look you want (colors, vibe, layout). CDXTheme connects to Codex over the Agent Client Protocol (ACP) via codex-acp and streams the reply here. Needs Node/npm for the adapter (or install `codex-acp`), and `codex login` once if needed."
+    }
+    (Locale::ZhHans, "builder.welcome") => {
+      "描述你想要的风格（颜色、氛围、布局）。CDXTheme 通过 Agent Client Protocol（ACP / codex-acp）连接 Codex，并把回复流式显示在这里。需要 Node/npm 运行适配器（或安装 codex-acp）；如需登录请执行一次 codex login。"
+    }
+    (Locale::ZhHant, "builder.welcome") => {
+      "描述你想要的風格（顏色、氛圍、版面）。CDXTheme 透過 Agent Client Protocol（ACP / codex-acp）連接 Codex，並把回覆串流顯示在這裡。需要 Node/npm 執行適配器（或安裝 codex-acp）；如需登入請執行一次 codex login。"
+    }
+    (Locale::JaJp, "builder.welcome") => {
+      "欲しい見た目（色・雰囲気・レイアウト）を書いてください。CDXTheme は Agent Client Protocol（ACP / codex-acp）で Codex に接続し、返信をここにストリーム表示します。アダプタには Node/npm（または codex-acp）が必要。必要なら codex login を一度。"
+    }
+    (Locale::KoKr, "builder.welcome") => {
+      "원하는 분위기(색상, 톤, 레이아웃)를 적어 주세요. CDXTheme이 Agent Client Protocol(ACP / codex-acp)로 Codex에 연결하고 답변을 여기에 스트림합니다. 어댑터에 Node/npm(또는 codex-acp)이 필요하며, 필요하면 codex login을 한 번 하세요."
+    }
+    (Locale::DeDe, "builder.welcome") => {
+      "Beschreibe den Look (Farben, Stimmung, Layout). CDXTheme verbindet sich über das Agent Client Protocol (ACP / codex-acp) mit Codex und streamt die Antwort hierher. Node/npm für den Adapter (oder codex-acp) nötig; bei Bedarf einmal codex login."
+    }
+    (Locale::EsEs, "builder.welcome") => {
+      "Describe el aspecto que quieres (colores, estilo, layout). CDXTheme se conecta a Codex por Agent Client Protocol (ACP / codex-acp) y muestra la respuesta aquí. Hace falta Node/npm para el adaptador (o codex-acp); si hace falta, codex login una vez."
+    }
+
+    (Locale::EnUs, "builder.placeholder") => "Describe a theme idea…",
+    (Locale::ZhHans, "builder.placeholder") => "描述一个主题想法…",
+    (Locale::ZhHant, "builder.placeholder") => "描述一個主題想法…",
+    (Locale::JaJp, "builder.placeholder") => "テーマのアイデアを入力…",
+    (Locale::KoKr, "builder.placeholder") => "테마 아이디어를 입력…",
+    (Locale::DeDe, "builder.placeholder") => "Theme-Idee beschreiben…",
+    (Locale::EsEs, "builder.placeholder") => "Describe una idea de tema…",
+
+    (Locale::EnUs, "builder.send") => "Send to Codex",
+    (Locale::ZhHans, "builder.send") => "发送到 Codex",
+    (Locale::ZhHant, "builder.send") => "傳送到 Codex",
+    (Locale::JaJp, "builder.send") => "Codex に送信",
+    (Locale::KoKr, "builder.send") => "Codex로 보내기",
+    (Locale::DeDe, "builder.send") => "An Codex senden",
+    (Locale::EsEs, "builder.send") => "Enviar a Codex",
+
+    (Locale::EnUs, "builder.thinking") => "Waiting for Codex…",
+    (Locale::ZhHans, "builder.thinking") => "正在等待 Codex…",
+    (Locale::ZhHant, "builder.thinking") => "正在等待 Codex…",
+    (Locale::JaJp, "builder.thinking") => "Codex の応答を待機中…",
+    (Locale::KoKr, "builder.thinking") => "Codex 응답 대기 중…",
+    (Locale::DeDe, "builder.thinking") => "Warte auf Codex…",
+    (Locale::EsEs, "builder.thinking") => "Esperando a Codex…",
+
+    (Locale::EnUs, "builder.hint") => {
+      "Enter to send · Shift+Enter for newline · Codex over ACP (codex-acp)"
+    }
+    (Locale::ZhHans, "builder.hint") => {
+      "Enter 发送 · Shift+Enter 换行 · 通过 ACP（codex-acp）连接 Codex"
+    }
+    (Locale::ZhHant, "builder.hint") => {
+      "Enter 傳送 · Shift+Enter 換行 · 透過 ACP（codex-acp）連接 Codex"
+    }
+    (Locale::JaJp, "builder.hint") => {
+      "Enter で送信 · Shift+Enter で改行 · ACP（codex-acp）経由で Codex"
+    }
+    (Locale::KoKr, "builder.hint") => {
+      "Enter 전송 · Shift+Enter 줄바꿈 · ACP(codex-acp)로 Codex 연결"
+    }
+    (Locale::DeDe, "builder.hint") => {
+      "Enter senden · Shift+Enter neue Zeile · Codex über ACP (codex-acp)"
+    }
+    (Locale::EsEs, "builder.hint") => {
+      "Enter enviar · Shift+Enter nueva línea · Codex por ACP (codex-acp)"
+    }
+
+    (Locale::EnUs, "builder.error") => "Theme Builder",
+    (Locale::ZhHans, "builder.error") => "主题构建",
+    (Locale::ZhHant, "builder.error") => "主題構建",
+    (Locale::JaJp, "builder.error") => "テーマビルダー",
+    (Locale::KoKr, "builder.error") => "테마 빌더",
+    (Locale::DeDe, "builder.error") => "Theme-Builder",
+    (Locale::EsEs, "builder.error") => "Constructor de temas",
+
+    (Locale::EnUs, "builder.install.installed") => "Theme installed",
+    (Locale::ZhHans, "builder.install.installed") => "主题已安装",
+    (Locale::ZhHant, "builder.install.installed") => "主題已安裝",
+    (Locale::JaJp, "builder.install.installed") => "テーマをインストールしました",
+    (Locale::KoKr, "builder.install.installed") => "테마가 설치되었습니다",
+    (Locale::DeDe, "builder.install.installed") => "Theme installiert",
+    (Locale::EsEs, "builder.install.installed") => "Tema instalado",
+
+    (Locale::EnUs, "builder.install.applied") => "Theme installed and applied",
+    (Locale::ZhHans, "builder.install.applied") => "主题已安装并应用",
+    (Locale::ZhHant, "builder.install.applied") => "主題已安裝並套用",
+    (Locale::JaJp, "builder.install.applied") => "テーマをインストールして適用しました",
+    (Locale::KoKr, "builder.install.applied") => "테마가 설치되고 적용되었습니다",
+    (Locale::DeDe, "builder.install.applied") => "Theme installiert und angewendet",
+    (Locale::EsEs, "builder.install.applied") => "Tema instalado y aplicado",
+
+    (Locale::EnUs, "builder.suggest.neon") => "Neon night",
+    (Locale::ZhHans, "builder.suggest.neon") => "霓虹夜色",
+    (Locale::ZhHant, "builder.suggest.neon") => "霓虹夜色",
+    (Locale::JaJp, "builder.suggest.neon") => "ネオンナイト",
+    (Locale::KoKr, "builder.suggest.neon") => "네온 나이트",
+    (Locale::DeDe, "builder.suggest.neon") => "Neon-Nacht",
+    (Locale::EsEs, "builder.suggest.neon") => "Noche neón",
+
+    (Locale::EnUs, "builder.suggest.neon.prompt") => {
+      "Design a dark Codex theme with neon cyan and magenta accents, soft glass sidebar, and a floating composer. Outline theme.json fields, CSS tokens, and key selectors for chat home and conversation."
+    }
+    (Locale::ZhHans, "builder.suggest.neon.prompt") => {
+      "设计一个深色 Codex 主题：霓虹青与品红点缀、半透明侧边栏、悬浮输入框。给出 theme.json 字段、CSS 变量，以及聊天首页与会话页的关键选择器。"
+    }
+    (Locale::ZhHant, "builder.suggest.neon.prompt") => {
+      "設計一個深色 Codex 主題：霓虹青與洋紅點綴、半透明側邊欄、懸浮輸入框。給出 theme.json 欄位、CSS 變數，以及聊天首頁與會話頁的關鍵選擇器。"
+    }
+    (Locale::JaJp, "builder.suggest.neon.prompt") => {
+      "ネオンのシアンとマゼンタをアクセントにしたダーク Codex テーマを設計。ガラス風サイドバーとフローティング composer。theme.json フィールド、CSS トークン、チャットホームと会話の主要セレクタを示して。"
+    }
+    (Locale::KoKr, "builder.suggest.neon.prompt") => {
+      "네온 시안·마젠타 액센트의 다크 Codex 테마를 설계해 줘. 글래스 사이드바와 플로팅 컴포저. theme.json 필드, CSS 토큰, 채팅 홈·대화 주요 셀렉터를 알려줘."
+    }
+    (Locale::DeDe, "builder.suggest.neon.prompt") => {
+      "Entwirf ein dunkles Codex-Theme mit neon-cyan und magenta Akzenten, glasigem Sidebar und schwebendem Composer. Nenne theme.json-Felder, CSS-Tokens und wichtige Selektoren für Chat-Home und Konversation."
+    }
+    (Locale::EsEs, "builder.suggest.neon.prompt") => {
+      "Diseña un tema oscuro de Codex con acentos neón cian y magenta, sidebar de cristal y composer flotante. Resume theme.json, tokens CSS y selectores clave para inicio de chat y conversación."
+    }
+
+    (Locale::EnUs, "builder.suggest.minimal") => "Soft minimal",
+    (Locale::ZhHans, "builder.suggest.minimal") => "柔和极简",
+    (Locale::ZhHant, "builder.suggest.minimal") => "柔和極簡",
+    (Locale::JaJp, "builder.suggest.minimal") => "ソフトミニマル",
+    (Locale::KoKr, "builder.suggest.minimal") => "소프트 미니멀",
+    (Locale::DeDe, "builder.suggest.minimal") => "Sanft minimal",
+    (Locale::EsEs, "builder.suggest.minimal") => "Minimal suave",
+
+    (Locale::EnUs, "builder.suggest.minimal.prompt") => {
+      "Create a light, soft-minimal Codex theme: warm paper background, muted sage accent, clean typography. Give a compact theme.json + codex.css starter focused on readability."
+    }
+    (Locale::ZhHans, "builder.suggest.minimal.prompt") => {
+      "做一个浅色柔和极简 Codex 主题：暖色纸感背景、低饱和鼠尾草绿强调色、清晰排版。给出精简的 theme.json 与 codex.css 起步代码，强调可读性。"
+    }
+    (Locale::ZhHant, "builder.suggest.minimal.prompt") => {
+      "做一個淺色柔和極簡 Codex 主題：暖色紙感背景、低飽和鼠尾草綠強調色、清晰排版。給出精簡的 theme.json 與 codex.css 起步程式碼，強調可讀性。"
+    }
+    (Locale::JaJp, "builder.suggest.minimal.prompt") => {
+      "ライトでソフトなミニマル Codex テーマを。温かみのある紙背景、落ち着いたセージアクセント、読みやすいタイポ。簡潔な theme.json と codex.css スターターを。"
+    }
+    (Locale::KoKr, "builder.suggest.minimal.prompt") => {
+      "라이트·소프트 미니멀 Codex 테마: 따뜻한 종이 배경, 뮤트 세이지 액센트, 가독성 좋은 타이포. 간결한 theme.json과 codex.css 스타터를 줘."
+    }
+    (Locale::DeDe, "builder.suggest.minimal.prompt") => {
+      "Erstelle ein helles, soft-minimales Codex-Theme: warmes Papier-BG, gedämpftes Salbei-Akzent, klare Typografie. Kompaktes theme.json + codex.css Starter mit Fokus Lesbarkeit."
+    }
+    (Locale::EsEs, "builder.suggest.minimal.prompt") => {
+      "Crea un tema Codex claro y minimalista suave: fondo papel cálido, acento salvia apagado, tipografía limpia. Da theme.json + codex.css compactos centrados en legibilidad."
+    }
+
+    (Locale::EnUs, "builder.suggest.composer") => "Fix composer",
+    (Locale::ZhHans, "builder.suggest.composer") => "修输入框",
+    (Locale::ZhHant, "builder.suggest.composer") => "修輸入框",
+    (Locale::JaJp, "builder.suggest.composer") => "Composer 調整",
+    (Locale::KoKr, "builder.suggest.composer") => "컴포저 수정",
+    (Locale::DeDe, "builder.suggest.composer") => "Composer fixen",
+    (Locale::EsEs, "builder.suggest.composer") => "Arreglar composer",
+
+    (Locale::EnUs, "builder.suggest.composer.prompt") => {
+      "My Codex theme breaks the chat composer on home vs conversation. Explain the correct CSS for .composer-surface-chrome (fixed on chat home, relative in thread) under html.cdxtheme-host-codex, with safe overrides."
+    }
+    (Locale::ZhHans, "builder.suggest.composer.prompt") => {
+      "我的 Codex 主题在首页与会话页弄坏了输入框。请说明在 html.cdxtheme-host-codex 下 .composer-surface-chrome 的正确 CSS（聊天首页 fixed、会话 relative），并给出安全覆盖写法。"
+    }
+    (Locale::ZhHant, "builder.suggest.composer.prompt") => {
+      "我的 Codex 主題在首頁與會話頁弄壞了輸入框。請說明在 html.cdxtheme-host-codex 下 .composer-surface-chrome 的正確 CSS（聊天首頁 fixed、會話 relative），並給出安全覆蓋寫法。"
+    }
+    (Locale::JaJp, "builder.suggest.composer.prompt") => {
+      "Codex テーマでホームと会話の composer が壊れます。html.cdxtheme-host-codex 配下の .composer-surface-chrome の正しい CSS（チャットホームは fixed、スレッドは relative）と安全な上書きを説明して。"
+    }
+    (Locale::KoKr, "builder.suggest.composer.prompt") => {
+      "Codex 테마가 홈과 대화에서 컴포저를 깨뜨려. html.cdxtheme-host-codex 아래 .composer-surface-chrome 올바른 CSS(채팅 홈 fixed, 스레드 relative)와 안전한 오버라이드를 설명해 줘."
+    }
+    (Locale::DeDe, "builder.suggest.composer.prompt") => {
+      "Mein Codex-Theme kaputt den Composer auf Home vs. Conversation. Erkläre korrektes CSS für .composer-surface-chrome unter html.cdxtheme-host-codex (fixed auf Chat-Home, relative im Thread) mit sicheren Overrides."
+    }
+    (Locale::EsEs, "builder.suggest.composer.prompt") => {
+      "Mi tema de Codex rompe el composer en inicio vs conversación. Explica el CSS correcto de .composer-surface-chrome bajo html.cdxtheme-host-codex (fixed en chat home, relative en hilo) con overrides seguros."
+    }
 
     _ => "…",
   }

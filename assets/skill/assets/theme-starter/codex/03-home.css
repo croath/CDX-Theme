@@ -1,0 +1,500 @@
+/* codex/03-home.css
+ *
+ * Home layout contracts: flex stack, hero banner (Chat/Work heights), welcome title, tagline, Chat suggestion cards.
+ *
+ * Merge: `/path/to/cdxthemex theme merge-css <theme-dir>` → codex.css
+ * Pack still reads the merged root file declared in theme.json.
+ */
+
+/* —— Home —— */
+html.cdxtheme-host-codex [role="main"],
+html.cdxtheme-codex-skin [role="main"] {
+  background: transparent !important;
+  scrollbar-color: color-mix(in srgb, var(--theme-accent) 50%, transparent) transparent;
+}
+
+/* —— Home layout: hero banner sits just below titlebar —— */
+html.cdxtheme-host-codex .dream-home,
+html.cdxtheme-codex-skin .dream-home {
+  --thread-content-max-width: min(950px, calc(100cqw - 44px)) !important;
+  overflow-x: hidden !important;
+}
+
+/* Home scroll body starts cleanly under the fixed titlebar */
+html.cdxtheme-host-codex [class*="home-main-content"],
+html.cdxtheme-codex-skin [class*="home-main-content"],
+html.cdxtheme-host-codex .dream-home [class*="home-main-content"],
+html.cdxtheme-codex-skin .dream-home [class*="home-main-content"] {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Grid/page shell under titlebar — small top inset only.
+   Native DOM is grid.grid-rows-2 + second child -mt-16 (pulls composer over hero).
+   Current shell classes: min-h-0 w-full flex-1 pt-6 grid grid-rows-2
+   (legacy: min-h-full w-full pt-6). Match both so hero is not mid-grid. */
+html.cdxtheme-host-codex [class*="home-main-content"] > .min-h-full,
+html.cdxtheme-codex-skin [class*="home-main-content"] > .min-h-full,
+html.cdxtheme-host-codex [class*="home-main-content"] > .min-h-0.w-full,
+html.cdxtheme-codex-skin [class*="home-main-content"] > .min-h-0.w-full,
+html.cdxtheme-host-codex [class*="home-main-content"] .min-h-full.w-full.pt-6,
+html.cdxtheme-codex-skin [class*="home-main-content"] .min-h-full.w-full.pt-6,
+html.cdxtheme-host-codex [class*="home-main-content"] .min-h-0.w-full.flex-1.pt-6,
+html.cdxtheme-codex-skin [class*="home-main-content"] .min-h-0.w-full.flex-1.pt-6,
+html.cdxtheme-host-codex [class*="home-main-content"] .grid.grid-rows-2,
+html.cdxtheme-codex-skin [class*="home-main-content"] .grid.grid-rows-2,
+.dream-home .min-h-full.w-full.pt-6,
+.dream-home .min-h-0.w-full.flex-1.pt-6,
+.dream-home .grid.grid-rows-2 {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-rows: none !important;
+  grid-template-columns: none !important;
+  gap: 12px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
+  padding-top: 8px !important;
+  box-sizing: border-box !important;
+}
+
+/* Hero row: pin to top (under titlebar), not items-end / items-center mid-page */
+html.cdxtheme-host-codex [class*="home-main-content"] .flex.grow.basis-0.items-end.justify-center,
+html.cdxtheme-codex-skin [class*="home-main-content"] .flex.grow.basis-0.items-end.justify-center,
+html.cdxtheme-host-codex main.main-surface .flex.grow.basis-0.items-end.justify-center,
+html.cdxtheme-codex-skin main.main-surface .flex.grow.basis-0.items-end.justify-center,
+html.cdxtheme-host-codex .dream-home div.flex.grow.basis-0.items-end.justify-center,
+html.cdxtheme-codex-skin .dream-home div.flex.grow.basis-0.items-end.justify-center,
+.dream-home .flex.grow.basis-0.items-end.justify-center {
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  padding-top: 0 !important;
+  padding-bottom: 12px !important; /* override pb-24 */
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
+}
+
+/* Composer + suggestions column: kill native -mt-16 overlap into hero */
+html.cdxtheme-host-codex [class*="home-main-content"] .flex.min-w-0.shrink-0.grow.basis-0.flex-col,
+html.cdxtheme-codex-skin [class*="home-main-content"] .flex.min-w-0.shrink-0.grow.basis-0.flex-col,
+html.cdxtheme-host-codex main.main-surface .flex.min-w-0.shrink-0.grow.basis-0.flex-col,
+html.cdxtheme-codex-skin main.main-surface .flex.min-w-0.shrink-0.grow.basis-0.flex-col,
+.dream-home .flex.min-w-0.shrink-0.grow.basis-0.flex-col {
+  margin-top: 0 !important;
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+/* Legacy first-child hero rules (when .dream-home is the content root) */
+.dream-home > div:first-child {
+  padding-top: 0 !important;
+  min-height: 0 !important;
+}
+
+.dream-home > div:first-child > div:first-child {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  align-items: flex-start !important;
+  padding-bottom: 0 !important;
+}
+
+/* Hero banner card — prefer :has(title) so it tracks current Codex DOM */
+html.cdxtheme-host-codex main.main-surface div.mx-auto:has(h1.heading-xl),
+html.cdxtheme-codex-skin main.main-surface div.mx-auto:has(h1.heading-xl),
+html.cdxtheme-host-codex main.main-surface div.mx-auto:has([data-feature="game-source"]),
+html.cdxtheme-codex-skin main.main-surface div.mx-auto:has([data-feature="game-source"]),
+html.cdxtheme-host-codex main.main-surface div.mx-auto:has(.text-center.select-none),
+html.cdxtheme-codex-skin main.main-surface div.mx-auto:has(.text-center.select-none),
+.dream-home > div:first-child > div:first-child > div:first-child,
+.dream-home div.mx-auto:has(h1.heading-xl),
+.dream-home div.mx-auto:has([data-feature="game-source"]) {
+  position: relative !important;
+  isolation: isolate;
+  width: calc(100% - 32px) !important;
+  max-width: none !important;
+  flex: 0 0 auto !important;
+  margin-top: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: 0 !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 40%, transparent) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  background-image:
+    linear-gradient(105deg, color-mix(in srgb, var(--theme-bg) 92%, transparent) 0%, color-mix(in srgb, var(--theme-bg) 55%, transparent) 42%, color-mix(in srgb, var(--theme-accent) 15%, transparent) 100%),
+    linear-gradient(180deg, transparent 70%, color-mix(in srgb, var(--theme-bg) 85%, transparent) 100%),
+    var(--cdxtheme-image-hero, var(--dream-art)) !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100%, 100% 100%, cover !important;
+  background-position: center, center, center center !important;
+  box-shadow:
+    0 16px 40px color-mix(in srgb, var(--theme-black) 50%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--theme-accent-2) 12%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--theme-accent) 20%, transparent) !important;
+}
+
+/* Chat home hero height */
+html.cdxtheme-host-codex main.main-surface div.mx-auto:has(h1.heading-xl),
+html.cdxtheme-codex-skin main.main-surface div.mx-auto:has(h1.heading-xl),
+html.cdxtheme-host-codex main.main-surface div.mx-auto:has(.text-center.select-none):not(:has([data-feature="game-source"])),
+html.cdxtheme-codex-skin main.main-surface div.mx-auto:has(.text-center.select-none):not(:has([data-feature="game-source"])),
+.dream-home:not(:has([data-feature="game-source"])) > div:first-child > div:first-child > div:first-child,
+.dream-home div.mx-auto:has(h1.heading-xl) {
+  height: 240px !important;
+  min-height: 240px !important;
+  max-height: none !important;
+}
+
+/* Work hero: shorter so mission list + bottom stack breathe; stays at top of column */
+html.cdxtheme-host-codex main.main-surface div.mx-auto:has([data-feature="game-source"]),
+html.cdxtheme-codex-skin main.main-surface div.mx-auto:has([data-feature="game-source"]),
+.dream-home div.mx-auto:has([data-feature="game-source"]),
+.dream-home:has([data-feature="game-source"]) > div:first-child > div:first-child > div:first-child {
+  height: 168px !important;
+  min-height: 168px !important;
+  max-height: 168px !important;
+}
+
+html.cdxtheme-host-codex main.main-surface div.mx-auto:has(h1.heading-xl)::after,
+html.cdxtheme-codex-skin main.main-surface div.mx-auto:has(h1.heading-xl)::after,
+html.cdxtheme-host-codex main.main-surface div.mx-auto:has([data-feature="game-source"])::after,
+html.cdxtheme-codex-skin main.main-surface div.mx-auto:has([data-feature="game-source"])::after,
+.dream-home > div:first-child > div:first-child > div:first-child::after,
+.dream-home div.mx-auto:has(h1.heading-xl)::after,
+.dream-home div.mx-auto:has([data-feature="game-source"])::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  z-index: 2;
+  background: linear-gradient(90deg, var(--theme-accent), var(--theme-accent-2), var(--theme-accent));
+  pointer-events: none;
+}
+
+html.cdxtheme-host-codex main.main-surface div.mx-auto:has(h1.heading-xl)::before,
+html.cdxtheme-codex-skin main.main-surface div.mx-auto:has(h1.heading-xl)::before,
+html.cdxtheme-host-codex main.main-surface div.mx-auto:has([data-feature="game-source"])::before,
+html.cdxtheme-codex-skin main.main-surface div.mx-auto:has([data-feature="game-source"])::before,
+.dream-home > div:first-child > div:first-child > div:first-child::before,
+.dream-home div.mx-auto:has(h1.heading-xl)::before,
+.dream-home div.mx-auto:has([data-feature="game-source"])::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0 auto 0 0;
+  width: 58%;
+  border-radius: 12px 0 0 12px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--theme-bg) 97%, transparent) 0%,
+    color-mix(in srgb, var(--theme-bg) 88%, transparent) 50%,
+    color-mix(in srgb, var(--theme-bg) 35%, transparent) 82%,
+    transparent 100%
+  );
+}
+
+/* Inner title host fills the banner and keeps title left-center */
+html.cdxtheme-host-codex main.main-surface div.mx-auto:has(h1.heading-xl) > .relative.w-full.min-w-0.text-center.select-none,
+html.cdxtheme-codex-skin main.main-surface div.mx-auto:has(h1.heading-xl) > .relative.w-full.min-w-0.text-center.select-none,
+.dream-home div.mx-auto:has(h1.heading-xl) > .relative.w-full.min-w-0.text-center.select-none,
+.dream-home > div:first-child > div:first-child > div:first-child > div:first-child {
+  position: relative !important;
+  z-index: 1;
+  height: 100% !important;
+  min-height: 100% !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding-left: 0 !important;
+}
+
+.dream-home > div:first-child > div:first-child > div:first-child > div:first-child > div:first-child {
+  width: 56% !important;
+  align-items: flex-start !important;
+  gap: 0 !important;
+}
+
+.dream-home [data-testid="home-icon"] {
+  display: none !important;
+}
+
+/* —— Welcome title ("Ready when you are.") — left-center, fancy —— */
+
+/* Hero title host: pin to left-center of the upper home area */
+html.cdxtheme-host-codex .dream-home div.relative.w-full.min-w-0.text-center.select-none,
+html.cdxtheme-codex-skin .dream-home div.relative.w-full.min-w-0.text-center.select-none,
+html.cdxtheme-host-codex main.main-surface div.relative.w-full.min-w-0.text-center.select-none,
+html.cdxtheme-codex-skin main.main-surface div.relative.w-full.min-w-0.text-center.select-none {
+  text-align: left !important;
+  min-height: 220px !important;
+}
+
+html.cdxtheme-host-codex .dream-home div.absolute.inset-x-0.bottom-0:has(> h1.heading-xl),
+html.cdxtheme-codex-skin .dream-home div.absolute.inset-x-0.bottom-0:has(> h1.heading-xl),
+html.cdxtheme-host-codex main.main-surface div.absolute.inset-x-0.bottom-0:has(> h1.heading-xl),
+html.cdxtheme-codex-skin main.main-surface div.absolute.inset-x-0.bottom-0:has(> h1.heading-xl) {
+  inset: 0 auto 0 0 !important;
+  right: auto !important;
+  bottom: 0 !important;
+  top: 0 !important;
+  width: min(58%, 560px) !important;
+  display: flex !important;
+  align-items: center !important; /* vertical center */
+  justify-content: flex-start !important;
+  padding: 0 0 0 clamp(18px, 3.2vw, 40px) !important;
+  box-sizing: border-box !important;
+  pointer-events: none;
+}
+
+/* Chat only: vertically center title block inside the hero row.
+   Do NOT re-center the whole row on Work (that parks the banner mid-grid). */
+html.cdxtheme-host-codex .dream-home:not(:has([data-feature="game-source"])) div.flex.grow.basis-0.items-end.justify-center,
+html.cdxtheme-codex-skin .dream-home:not(:has([data-feature="game-source"])) div.flex.grow.basis-0.items-end.justify-center,
+html.cdxtheme-host-codex:not(:has([data-feature="game-source"])) main.main-surface div.flex.grow.basis-0.items-end.justify-center,
+html.cdxtheme-codex-skin:not(:has([data-feature="game-source"])) main.main-surface div.flex.grow.basis-0.items-end.justify-center {
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+}
+
+.dream-home h1.heading-xl:not(.invisible),
+html.cdxtheme-host-codex .dream-home h1.heading-xl:not(.invisible),
+html.cdxtheme-codex-skin .dream-home h1.heading-xl:not(.invisible),
+html.cdxtheme-host-codex main.main-surface h1.heading-xl:not(.invisible),
+html.cdxtheme-codex-skin main.main-surface h1.heading-xl:not(.invisible) {
+  position: relative !important;
+  margin: 0 !important;
+  max-width: 12ch;
+  width: max-content;
+  padding: 10px 8px 12px 18px !important;
+  color: var(--theme-text) !important;
+  font-family: "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif !important;
+  font-size: clamp(30px, 3.8vw, 48px) !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.035em !important;
+  text-transform: none !important;
+  text-align: left !important;
+  white-space: normal !important;
+  pointer-events: none;
+  background: none !important;
+  -webkit-text-fill-color: var(--theme-text) !important;
+  background-clip: border-box !important;
+  -webkit-background-clip: border-box !important;
+  text-shadow:
+    0 1px 0 color-mix(in srgb, var(--theme-white) 8%, transparent),
+    0 0 28px color-mix(in srgb, var(--theme-accent) 35%, transparent),
+    0 0 48px color-mix(in srgb, var(--theme-accent-2) 18%, transparent),
+    0 10px 30px color-mix(in srgb, var(--theme-black) 45%, transparent);
+  filter: none;
+  border-left: 3px solid transparent;
+  border-image: linear-gradient(180deg, var(--theme-accent-2), var(--theme-accent), transparent 92%) 1;
+}
+
+/* Eyebrow label above title */
+.dream-home h1.heading-xl:not(.invisible)::before,
+html.cdxtheme-codex-skin main.main-surface h1.heading-xl:not(.invisible)::before {
+  content: var(--theme-eyebrow, "THEME");
+  display: block;
+  margin: 0 0 10px 0;
+  padding: 0;
+  width: max-content;
+  max-width: none;
+  height: auto;
+  font-size: 10px !important;
+  font-weight: 750 !important;
+  font-style: normal !important;
+  letter-spacing: .34em !important;
+  line-height: 1 !important;
+  text-transform: uppercase !important;
+  color: var(--theme-accent-2) !important;
+  -webkit-text-fill-color: var(--theme-accent-2) !important;
+  background: none !important;
+  border: 0 !important;
+  border-image: none !important;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--theme-accent-2) 45%, transparent);
+  opacity: .95;
+}
+
+/* Tagline under title */
+.dream-home h1.heading-xl:not(.invisible)::after,
+html.cdxtheme-codex-skin main.main-surface h1.heading-xl:not(.invisible)::after {
+  content: var(--dream-tagline, "");
+  display: block;
+  width: min(28ch, 100%);
+  max-width: 28ch;
+  height: auto;
+  margin: 14px 0 0 0;
+  padding: 0;
+  border-radius: 0;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  font-style: normal !important;
+  line-height: 1.45 !important;
+  letter-spacing: .04em !important;
+  text-transform: none !important;
+  color: var(--theme-muted) !important;
+  -webkit-text-fill-color: var(--theme-muted) !important;
+  background: none !important;
+  box-shadow: none !important;
+  text-shadow: 0 1px 10px color-mix(in srgb, var(--theme-black) 35%, transparent);
+  opacity: .95;
+}
+
+/* Gradient wash behind the title block for drama */
+.dream-home h1.heading-xl:not(.invisible) {
+  isolation: isolate;
+}
+
+html.cdxtheme-host-codex main.main-surface h1.heading-xl:not(.invisible),
+html.cdxtheme-codex-skin main.main-surface h1.heading-xl:not(.invisible) {
+  /* soft spotlight behind left title */
+  box-shadow:
+    -8px 0 0 -5px color-mix(in srgb, var(--theme-accent-2) 0%, transparent),
+    0 0 0 0 transparent;
+}
+
+/* Sizer twin stays invisible but match metrics so layout doesn't jump */
+.dream-home h1.heading-xl.invisible,
+html.cdxtheme-codex-skin main.main-surface h1.heading-xl.invisible {
+  font-size: clamp(30px, 3.8vw, 48px) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.035em !important;
+  max-width: 12ch;
+  text-align: left !important;
+}
+
+
+.dream-home [data-feature="game-source"] {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  max-width: 100% !important;
+  color: var(--theme-text) !important;
+  font-size: clamp(26px, 3.1vw, 38px) !important;
+  line-height: 1.25 !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.02em !important;
+  text-align: left !important;
+  text-transform: none;
+  text-shadow: 0 2px 16px color-mix(in srgb, var(--theme-black) 55%, transparent);
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.dream-home [data-feature="game-source"]::after {
+  content: none !important;
+  display: block;
+  margin-top: 12px;
+  color: var(--theme-accent-2);
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--theme-accent-2) 25%, transparent);
+}
+
+.dream-home [data-feature="game-source"] button {
+  margin: 0 4px;
+  padding: 3px 10px 4px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 50%, transparent);
+  border-radius: 4px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 35%, transparent), color-mix(in srgb, var(--theme-bg) 80%, transparent));
+  color: var(--theme-text) !important;
+  text-decoration-color: var(--theme-accent-2) !important;
+  text-underline-offset: 5px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--theme-accent-2) 12%, transparent), 0 4px 12px color-mix(in srgb, var(--theme-black) 35%, transparent);
+  font-weight: 700;
+}
+
+.dream-home [data-feature="game-source"] button::before {
+  content: var(--dream-project-prefix, "");
+  font-size: .48em;
+  font-weight: 700;
+  letter-spacing: .12em;
+  vertical-align: middle;
+  opacity: .9;
+  color: var(--theme-accent-2);
+}
+
+/* Chat-only: park suggestion rail under hero (Work has empty absolute slot — do not touch) */
+.dream-home:not(:has([data-feature="game-source"])) > div:first-child > div:first-child > div:first-child > div:nth-child(2) {
+  left: 14px !important;
+  right: 14px !important;
+  top: 100% !important;
+  margin-top: 13px !important;
+}
+
+.dream-home .group\/home-suggestions {
+  overflow: visible !important;
+}
+
+/* Suggestion cards */
+.dream-home .group\/home-suggestions button:not(.group\/home-suggestion-list-item) {
+  position: relative !important;
+  min-height: 126px !important;
+  padding: 14px 13px 12px !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  text-align: center !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
+  border-radius: 12px !important;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-panel) 98%, transparent), var(--theme-bg-elevated)) !important;
+  color: var(--theme-text) !important;
+  font-weight: 650 !important;
+  line-height: 1.45 !important;
+  box-shadow:
+    0 10px 24px color-mix(in srgb, var(--theme-black) 40%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-white) 5%, transparent),
+    inset 0 -3px 0 var(--theme-accent) !important;
+  transform: translateY(0);
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease !important;
+}
+
+.dream-home .group\/home-suggestions button:not(.group\/home-suggestion-list-item):hover {
+  transform: translateY(-3px) !important;
+  border-color: color-mix(in srgb, var(--theme-accent-2) 45%, transparent) !important;
+  box-shadow:
+    0 14px 32px color-mix(in srgb, var(--theme-accent) 22%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--theme-accent-2) 20%, transparent),
+    inset 0 -3px 0 var(--theme-accent-2) !important;
+}
+
+.dream-home .group\/home-suggestions button:not(.group\/home-suggestion-list-item) > span:first-child > span:first-child {
+  width: 38px;
+  height: 38px;
+  display: grid !important;
+  place-items: center;
+  margin: 0 auto;
+  border-radius: 6px;
+  color: var(--theme-white) !important;
+  background: linear-gradient(145deg, var(--theme-accent-hot), var(--theme-accent));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--theme-accent) 25%, transparent),
+    0 6px 14px color-mix(in srgb, var(--theme-black) 40%, transparent);
+}
+
+.dream-home .group\/home-suggestions button:not(.group\/home-suggestion-list-item) svg {
+  width: 20px !important;
+  height: 20px !important;
+  color: var(--theme-white) !important;
+}
+
+.dream-home .group\/home-suggestions button:not(.group\/home-suggestion-list-item) > span:first-child {
+  justify-content: center !important;
+}
+
+.dream-home .group\/home-suggestions button:not(.group\/home-suggestion-list-item) > span:last-child {
+  align-items: center !important;
+  text-align: center !important;
+}
+

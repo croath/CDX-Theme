@@ -185,6 +185,14 @@
     -webkit-touch-callout: default;
   }
 
+  /* Opt-in selectable regions (shell defaults to select-none for window drag UX) */
+  .select-text,
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+
   /* Avoid native image drag ghost / save affordances in the shell */
   img {
     -webkit-user-drag: none;

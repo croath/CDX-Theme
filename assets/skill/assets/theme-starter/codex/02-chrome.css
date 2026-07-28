@@ -1,0 +1,318 @@
+/* codex/02-chrome.css
+ *
+ * Injected dream chrome overlays: brand chip, signature, sparkles, polaroid, ribbon (Chat half-cover + Work clear).
+ *
+ * Merge: `/path/to/cdxthemex theme merge-css <theme-dir>` → codex.css
+ * Pack still reads the merged root file declared in theme.json.
+ */
+
+/* —— Chrome overlays: always-on dream UI —— */
+#cdxtheme-codex-skin-chrome {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  overflow: visible;
+  border-radius: 16px 0 0 0;
+}
+
+/* Brand chip — compact, sits in top chrome strip */
+.dream-brand,
+#cdxtheme-codex-skin-chrome .dream-brand,
+#cdxtheme-codex-skin-chrome.dream-home-shell .dream-brand {
+  position: absolute;
+  left: 12px;
+  top: 2px;
+  height: auto;
+  min-height: 0;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  align-items: center;
+  gap: 7px;
+  z-index: 6;
+  padding: 3px 9px 3px 6px;
+  border-radius: 8px;
+  color: var(--theme-text);
+  background: color-mix(in srgb, var(--theme-bg) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 32%, transparent);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--theme-black) 28%, transparent);
+  backdrop-filter: blur(10px) saturate(1.1);
+  text-shadow: none;
+}
+
+.dream-brand .dream-note {
+  font-size: 12px;
+  line-height: 1;
+  color: var(--theme-accent);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--theme-accent) 70%, transparent));
+  animation: none;
+}
+
+.dream-brand b,
+.dream-brand .dream-brand-title {
+  display: block;
+  font-size: 10px;
+  letter-spacing: .14em;
+  font-weight: 750;
+  line-height: 1.15;
+  text-transform: uppercase;
+  color: var(--theme-text);
+}
+
+.dream-brand small,
+.dream-brand .dream-brand-subtitle {
+  display: block;
+  margin-top: 1px;
+  color: var(--theme-accent-2);
+  font-size: 8px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: .9;
+  line-height: 1.15;
+}
+
+/* Signature — compact top-right */
+.dream-signature,
+#cdxtheme-codex-skin-chrome .dream-signature,
+#cdxtheme-codex-skin-chrome.dream-home-shell .dream-signature {
+  position: absolute;
+  right: 12px;
+  top: 4px;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 6;
+  max-width: min(280px, 38%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: var(--theme-accent-2);
+  font: italic 600 10px/1.2 "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: .04em;
+  text-transform: none;
+  text-align: right;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--theme-accent-2) 30%, transparent);
+  background: color-mix(in srgb, var(--theme-bg) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-accent-2) 28%, transparent);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--theme-black) 25%, transparent);
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ambient motion dashes / sparkles */
+.dream-sparkles,
+#cdxtheme-codex-skin-chrome .dream-sparkles {
+  position: absolute;
+  inset: 36px 0 80px 0;
+  display: block !important;
+  visibility: visible !important;
+  opacity: .82 !important;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.dream-sparkles i {
+  position: absolute;
+  width: 34px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--theme-accent), var(--theme-accent-2));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--theme-accent) 65%, transparent);
+  transform: skewX(-24deg);
+  animation: theme-spark-dash 3.6s ease-in-out infinite;
+}
+
+.dream-sparkles i::before,
+.dream-sparkles i::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: var(--theme-accent-2);
+  box-shadow: 0 0 10px 2px color-mix(in srgb, var(--theme-accent-2) 55%, transparent);
+  display: block !important;
+}
+
+.dream-sparkles i::after {
+  width: 1px;
+  height: 14px;
+  margin: -7px 0 0 -.5px;
+  border-radius: 1px;
+  background: linear-gradient(transparent, color-mix(in srgb, var(--theme-white) 95%, transparent), transparent);
+  box-shadow: none;
+}
+
+.dream-sparkles i:nth-child(1) { left: 6%; top: 12%; width: 42px; animation-delay: 0s; }
+.dream-sparkles i:nth-child(2) { left: 22%; top: 7%; opacity: .55; width: 24px; animation-delay: .4s; }
+.dream-sparkles i:nth-child(3) { left: 40%; top: 16%; opacity: .8; animation-delay: .9s; }
+.dream-sparkles i:nth-child(4) { left: 58%; top: 8%; opacity: .6; width: 48px; animation-delay: 1.3s; }
+.dream-sparkles i:nth-child(5) { left: 74%; top: 20%; opacity: .85; width: 22px; animation-delay: 1.8s; }
+.dream-sparkles i:nth-child(6) { left: 88%; top: 12%; opacity: .7; width: 30px; animation-delay: 2.2s; }
+.dream-sparkles i:nth-child(7) { left: 48%; top: 42%; opacity: .45; width: 36px; animation-delay: .6s; background: linear-gradient(90deg, transparent, var(--theme-accent-2)); }
+.dream-sparkles i:nth-child(8) { left: 14%; top: 48%; opacity: .4; width: 28px; animation-delay: 1.5s; }
+
+@keyframes theme-spark-dash {
+  0%, 100% { opacity: .35; transform: skewX(-24deg) translateX(0); }
+  50% { opacity: 1; transform: skewX(-24deg) translateX(10px); }
+}
+
+@keyframes theme-spark-pulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--theme-accent) 70%, transparent)); }
+  50% { transform: scale(1.12); filter: drop-shadow(0 0 16px var(--theme-accent)); }
+}
+
+@keyframes theme-spark-float {
+  0%, 100% { transform: rotate(-5deg) translateY(0); }
+  50% { transform: rotate(-3deg) translateY(-6px); }
+}
+
+/* Hero polaroid — bottom-right, always on home chrome (above fixed composer) */
+.dream-polaroid,
+#cdxtheme-codex-skin-chrome .dream-polaroid,
+#cdxtheme-codex-skin-chrome.dream-home-shell .dream-polaroid {
+  position: absolute;
+  right: 18px;
+  bottom: calc(var(--theme-composer-bottom, 24px) + 118px);
+  width: 142px;
+  height: 176px;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 6;
+  background-image: var(--cdxtheme-image-hero, var(--dream-art));
+  background-size: cover;
+  background-position: center;
+  border: 2px solid color-mix(in srgb, var(--theme-accent) 65%, transparent);
+  border-bottom-width: 18px;
+  border-bottom-color: var(--theme-bg-elevated);
+  box-shadow:
+    0 18px 40px color-mix(in srgb, var(--theme-black) 60%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--theme-accent-2) 35%, transparent),
+    0 0 28px color-mix(in srgb, var(--theme-accent) 25%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--theme-white) 8%, transparent);
+  transform: rotate(-5deg);
+  border-radius: 6px;
+  animation: theme-spark-float 5.5s ease-in-out infinite;
+}
+
+.dream-polaroid::before {
+  content: var(--theme-badge, "✦");
+  position: absolute;
+  left: -10px;
+  top: -16px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  color: var(--theme-bg);
+  background: linear-gradient(135deg, var(--theme-accent-2), color-mix(in srgb, var(--theme-accent-2) 75%, transparent));
+  padding: 4px 10px;
+  border-radius: 3px;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-black) 45%, transparent), 0 0 12px color-mix(in srgb, var(--theme-accent-2) 35%, transparent);
+}
+
+.dream-polaroid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  pointer-events: none;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-white) 12%, transparent), transparent 42%, color-mix(in srgb, var(--theme-black) 20%, transparent));
+}
+
+/* Ribbon — default (Work / tall shells): sit clear above the bottom stack */
+.dream-ribbon,
+#cdxtheme-codex-skin-chrome .dream-ribbon,
+#cdxtheme-codex-skin-chrome.dream-home-shell .dream-ribbon {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--theme-composer-bottom, 24px) + 118px + 14px);
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  align-items: center;
+  gap: 12px;
+  z-index: 45;
+  padding: 6px 16px;
+  border-radius: 999px;
+  color: var(--theme-accent);
+  font-size: 28px;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--theme-black) 50%, transparent));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 18%, transparent), color-mix(in srgb, var(--theme-black) 40%, transparent));
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 40%, transparent);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--theme-black) 40%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--theme-accent-2) 12%, transparent);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+/*
+  Chat tab: park ribbon on the composer top edge so ~half of it covers the input.
+  bottom = composer-bottom + chat-composer-height - half-ribbon-height
+  Chat single-row shell ≈ 60px; ribbon ≈ 40px → half overlap = 20px.
+  z-index above composer (50) so the badge paints over the shell.
+*/
+html.cdxtheme-host-codex:has(.dream-home):not(:has([data-feature="game-source"])):not(:has(.group\/home-suggestion-list-item)) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has(.dream-home):not(:has([data-feature="game-source"])):not(:has(.group\/home-suggestion-list-item)) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has(.dream-home):not(:has([data-feature="game-source"])):not(:has(.group\/home-suggestion-list-item)) .dream-ribbon,
+html.cdxtheme-codex-skin:has(.dream-home):not(:has([data-feature="game-source"])):not(:has(.group\/home-suggestion-list-item)) .dream-ribbon {
+  bottom: calc(
+    var(--theme-composer-bottom, 24px)
+    + var(--theme-chat-composer-height, 60px)
+    - 20px
+  ) !important; /* ≈ 64px → half of 40px ribbon over the 60px shell */
+  z-index: 55 !important;
+  transform: translateX(-50%) !important;
+}
+
+
+/*
+  Chat conversation (detail, not home): park ribbon on the composer top edge
+  so ~half covers the input — same idea as Chat home half-cover.
+  Detail composer is relative in the sticky footer near the viewport bottom
+  (typical bottom inset ~16px; override via --theme-detail-composer-bottom).
+  Exclude Work (game-source / permissions util) and home.
+*/
+html.cdxtheme-host-codex:not(:has(.dream-home)):not(:has([data-feature="game-source"])):not(:has([data-composer-navigation-target="permissions"])):is(
+  :has([data-message-author-role]),
+  :has(.thread-scroll-container)
+) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:not(:has(.dream-home)):not(:has([data-feature="game-source"])):not(:has([data-composer-navigation-target="permissions"])):is(
+  :has([data-message-author-role]),
+  :has(.thread-scroll-container)
+) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:not(:has(.dream-home)):not(:has([data-feature="game-source"])):not(:has([data-composer-navigation-target="permissions"])):is(
+  :has([data-message-author-role]),
+  :has(.thread-scroll-container)
+) .dream-ribbon,
+html.cdxtheme-codex-skin:not(:has(.dream-home)):not(:has([data-feature="game-source"])):not(:has([data-composer-navigation-target="permissions"])):is(
+  :has([data-message-author-role]),
+  :has(.thread-scroll-container)
+) .dream-ribbon {
+  bottom: calc(
+    var(--theme-detail-composer-bottom, 16px)
+    + var(--theme-chat-composer-height, 60px)
+    - 20px
+  ) !important; /* half of ~40px ribbon over the composer shell */
+  z-index: 55 !important;
+  transform: translateX(-50%) !important;
+}
+
+.dream-ribbon span {
+  font-size: 12px;
+  color: var(--theme-accent-2);
+  font-weight: 800;
+  letter-spacing: .22em;
+}
+
+.dream-ribbon .dream-ribbon-emoji {
+  font-size: 26px;
+  line-height: 1;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--theme-accent-2) 55%, transparent));
+}
+

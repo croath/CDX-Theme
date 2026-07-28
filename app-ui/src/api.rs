@@ -323,6 +323,166 @@ pub async fn track_page_viewed(page: &str) {
   crate::posthog::capture_pageview(page);
 }
 
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexChatResult {
+  pub submitted: bool,
+  pub reply: String,
+  pub assistant_count: usize,
+  pub stable: bool,
+  pub message: String,
+  #[serde(default)]
+  pub binary: Option<String>,
+  #[serde(default)]
+  pub session_id: Option<String>,
+  #[serde(default)]
+  pub stop_reason: Option<String>,
+  /// Packed `.cdxtheme` path in the workspace (ready for Apply).
+  #[serde(default)]
+  pub package_path: Option<String>,
+  #[serde(default)]
+  pub installed_theme_id: Option<String>,
+  #[serde(default)]
+  pub installed_theme_name: Option<String>,
+  #[serde(default)]
+  pub applied: bool,
+}
+
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplyBuiltThemeResult {
+  pub theme_id: String,
+  pub theme_name: String,
+  pub package_path: String,
+  pub applied: bool,
+}
+
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexSessionSummary {
+  pub id: String,
+  pub title: String,
+  pub updated_at: String,
+  #[serde(default)]
+  pub path: Option<String>,
+  #[serde(default)]
+  pub workspace_path: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexSessionMessage {
+  pub role: String,
+  pub content: String,
+}
+
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexSessionDetail {
+  pub id: String,
+  pub title: String,
+  pub updated_at: String,
+  pub messages: Vec<CodexSessionMessage>,
+  #[serde(default)]
+  pub workspace_path: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PreparedWorkspace {
+  pub workspace_id: String,
+  pub workspace_path: String,
+}
+
+/// Create `{app_data_dir}/theme_builder/{id}` with bundled skill + theme scaffold.
+pub async fn start_theme_build() -> Result<PreparedWorkspace, String> {
+  invoke_cmd_with_args::<PreparedWorkspace>("start_theme_build", empty_args()).await
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+struct CodexChatArgs {
+  prompt: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  session_id: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  workspace_path: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  workspace_id: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  wait_ms: Option<u64>,
+}
+
+/// Theme Builder: prompt Codex over ACP (`session/new|load` + `session/prompt`).
+pub async fn codex_chat(
+  prompt: impl Into<String>,
+  session_id: Option<String>,
+  workspace_path: Option<String>,
+  workspace_id: Option<String>,
+  wait_ms: Option<u64>,
+) -> Result<CodexChatResult, String> {
+  let args = to_value(&CodexChatArgs {
+    prompt: prompt.into(),
+    session_id,
+    workspace_path,
+    workspace_id,
+    wait_ms,
+  })
+  .map_err(|e| e.to_string())?;
+  invoke_cmd_with_args::<CodexChatResult>("codex_chat", args).await
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+struct ApplyBuiltThemeArgs {
+  workspace_path: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  package_path: Option<String>,
+}
+
+/// Install the workspace `.cdxtheme` into `app_data_dir/themes` and apply it.
+pub async fn apply_built_theme(
+  workspace_path: impl Into<String>,
+  package_path: Option<String>,
+) -> Result<ApplyBuiltThemeResult, String> {
+  let args = to_value(&ApplyBuiltThemeArgs {
+    workspace_path: workspace_path.into(),
+    package_path,
+  })
+  .map_err(|e| e.to_string())?;
+  invoke_cmd_with_args::<ApplyBuiltThemeResult>("apply_built_theme", args).await
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+struct ListCodexSessionsArgs {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  limit: Option<usize>,
+}
+
+/// Theme Builder: list saved Codex CLI sessions.
+pub async fn list_codex_sessions(limit: Option<usize>) -> Result<Vec<CodexSessionSummary>, String> {
+  let args = to_value(&ListCodexSessionsArgs { limit }).map_err(|e| e.to_string())?;
+  invoke_cmd_with_args::<Vec<CodexSessionSummary>>("list_codex_sessions", args).await
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+struct GetCodexSessionArgs {
+  session_id: String,
+}
+
+/// Theme Builder: load a session transcript for the chat view.
+pub async fn get_codex_session(
+  session_id: impl Into<String>,
+) -> Result<CodexSessionDetail, String> {
+  let args = to_value(&GetCodexSessionArgs {
+    session_id: session_id.into(),
+  })
+  .map_err(|e| e.to_string())?;
+  invoke_cmd_with_args::<CodexSessionDetail>("get_codex_session", args).await
+}
+
 /// Explicit `$pageleave` (e.g. app hide). Usually handled inside `capture_pageview`.
 #[allow(dead_code)]
 pub async fn track_page_leave(page: Option<&str>) {

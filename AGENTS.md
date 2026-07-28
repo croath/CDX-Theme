@@ -13,6 +13,7 @@ It:
 3. Packs/unpacks portable **`.cdxtheme`** packages (schema v1, max ~30 MB; no remote `@import` / `url(http…)`).
 4. Restores managed keys from a one-time backup (`config.before.toml`) and removes injected DOM.
 5. Ships auto-updates via Tauri updater metadata on `s3.cdxtheme.com`.
+6. **Theme Builder**: chat UI that designs themes by talking to **Codex over ACP** (Agent Client Protocol), not CDP.
 
 Primary targets today: **macOS 12+ (Apple Silicon)** and **Windows x64**. Linux is not a focus.
 
@@ -26,22 +27,24 @@ Cargo workspace (`edition = "2024"`, version `0.1.3`, Rust **1.96.0** via `rust-
 | --- | --- |
 | `app-ui/` | Leptos **CSR** frontend (`cdx-theme`) → WASM via Trunk |
 | `app-tauri/` | Tauri 2 shell, commands, plugins, bundling (`cdx-theme-app`, binary `CDXTheme`) |
-| `core/` | Shared lib `cdx-theme-core`: pack/unpack, CDP inject, launch, apply, restore |
+| `core/` | Shared lib `cdx-theme-core`: pack/unpack, CDP inject, launch, apply, restore, **ACP Theme Builder** |
 | `types/` | Shared types `cdx-theme-types` (theme metadata, loaded theme, verification) |
 | `cli/` | `cdxtheme` CLI over core (pack/unpack/apply/**verify layout**/probe/screenshot) |
 | `assets/renderer-inject.js` | Script injected into the host renderer |
 | `public/` | Marketing assets / screenshots (not the WASM public dir) |
 | `scripts/build.sh`, `scripts/build.ps1` | Release/debug/check builds |
-| `skills/rust/` | Optional Rust agent skill notes |
+| `skills/rust/` | Project skill: Rust / Tauri / Leptos notes (`SKILLS.md`) |
+| `.agnets/skills/agent-client-protocol/` | Project skill: ACP + Theme Builder (`SKILL.md`) |
 
 **Do not** put app UI under a root `src/` — frontend lives in `app-ui/`, backend in `app-tauri/`. Shared logic belongs in `core/` or `types/`, not duplicated in both hosts.
 
 ```text
 CDXTheme (Tauri)
   ├── app-ui (Leptos WASM)  ──invoke──►  app-tauri commands
-  └── app-tauri  ──uses──►  cdx-theme-core  ──CDP──►  Codex/ChatGPT
-                              │
-                              └── config.toml appearance + backup/restore
+  └── app-tauri  ──uses──►  cdx-theme-core
+                              ├── CDP ──► Codex/ChatGPT (theme inject / apply / restore)
+                              ├── config.toml appearance + backup/restore
+                              └── ACP ──► codex-acp ──► Codex CLI (Theme Builder chat)
 ```
 
 ## Runtime model (important)
@@ -102,7 +105,7 @@ Notable modules:
 
 ### IPC commands (keep UI + backend aligned)
 
-`retrieve_local_theme_list`, `fetch_remote_theme_catalog`, `resolve_cached_image`, `cdp_status`, `set_window_appearance`, `get_cdp_port`, `set_cdp_port`, `apply_theme`, `restore_theme`, `download_theme`, `install_theme`, `delete_theme`, `get_analytics_enabled`, `get_analytics_state`, `set_analytics_enabled`, `track_event`.
+`retrieve_local_theme_list`, `fetch_remote_theme_catalog`, `resolve_cached_image`, `cdp_status`, `set_window_appearance`, `get_cdp_port`, `set_cdp_port`, `apply_theme`, `restore_theme`, `download_theme`, `install_theme`, `delete_theme`, `get_analytics_enabled`, `get_analytics_state`, `set_analytics_enabled`, `track_event`, **Theme Builder:** `codex_chat`, `list_codex_sessions`, `get_codex_session`.
 
 Capabilities: `app-tauri/capabilities/default.json` (window drag/minimize/close/set-background-color, opener, log, updater). New privileged APIs need capability + command registration.
 
@@ -188,5 +191,185 @@ Bundles land under `target/release/bundle/`. Release CI: `.github/workflows/rele
 | Theme list / remote catalog | `app-tauri/src/theme_catalog.rs` |
 | Host process launch | `core/src/launch.rs`, `app-tauri/src/codex_launch.rs` |
 | Injected DOM/CSS runtime | `assets/renderer-inject.js`, `core/src/inject/` |
+| Theme Builder (ACP / Codex chat) | `core/src/codex_chat.rs`, `app-ui/src/pages/theme_builder.rs` |
 | CLI authoring | `cli/`, `cli/README.md` |
 | Build / CI | `scripts/`, `.github/workflows/release.yml` |
+| Project agent skills | See **[Agent skills](#agent-skills-english)** below |
+
+---
+
+## Agent skills (English)
+
+Project-local skills for AI agents. Prefer these over inventing ad-hoc workflows.
+
+| Skill | Path | When to use |
+| --- | --- | --- |
+| **Rust / Tauri / Leptos** | `skills/rust/SKILLS.md` | Frontend/backend Rust changes, WASM, Tauri IPC, formatting |
+| **Agent Client Protocol** | `.agnets/skills/agent-client-protocol/SKILL.md` | Theme Builder, Codex chat, ACP sessions, `codex-acp` |
+
+All skill documentation in this repository is written in **English**.
+
+### Skill: Rust / Tauri / Leptos
+
+**Path:** `skills/rust/SKILLS.md`
+
+#### Stack
+
+- Workspace: Rust **edition 2024**, pin via `rust-toolchain.toml` (see root).
+- Frontend: **Leptos 0.8 CSR**, Trunk (`app-ui/`), Tailwind 4.
+- Backend: **Tauri 2** (`app-tauri/`), shared logic in **`cdx-theme-core`**.
+- Types: **`cdx-theme-types`** — package schema and UI-facing metadata.
+
+#### Conventions (must follow)
+
+1. **2-space indent**, `max_width = 100` (`rustfmt.toml`); do not reformat unrelated files.
+2. Workspace dependency **versions** only in root `Cargo.toml`; enable features in member crates.
+3. Tauri command args with `rename_all = "snake_case"` must match `app-ui/src/api.rs`.
+4. IPC boundary: `Result<T, String>` for user-visible errors; structured errors inside core.
+5. New UI strings go through **`app-ui/src/i18n.rs`** (all supported locales).
+6. Prefer implementing pack/load/CDP/apply/ACP once in **`core/`**, then call from Tauri and CLI.
+7. `cargo check` targets: native for Tauri/core; `wasm32-unknown-unknown` for `cdx-theme` UI.
+
+#### Useful commands
+
+```bash
+cargo check --manifest-path app-tauri/Cargo.toml
+cargo check -p cdx-theme --target wasm32-unknown-unknown
+cargo check -p cdx-theme-core
+./scripts/build.sh --check
+```
+
+#### Layout reminders
+
+- Pages: `app-ui/src/pages/` · components: `app-ui/src/components/`
+- Commands: `app-tauri/src/commands.rs` · capabilities: `app-tauri/capabilities/`
+- Shared: `core/src/`, `types/`
+
+---
+
+### Skill: Agent Client Protocol (ACP)
+
+**Path:** `.agnets/skills/agent-client-protocol/SKILL.md` (full detail)  
+**Implementation:** `core/src/codex_chat.rs`  
+**UI:** Theme Builder (`app-ui/src/pages/theme_builder.rs`)  
+**Crate:** `agent-client-protocol = "2.0.0"` (in `core/`)
+
+#### What ACP is
+
+ACP standardizes **client ↔ coding agent** communication (sessions, prompts, streaming, permissions). It is to agents what **LSP** is to language servers.
+
+| Protocol | Purpose |
+| --- | --- |
+| **ACP** | Client ↔ coding agent |
+| **MCP** | Agent ↔ external tools/servers |
+| **CDP** | CDXTheme ↔ ChatGPT renderer (theme **inject only**; not Theme Builder chat) |
+
+- Spec: https://agentclientprotocol.com  
+- Rust SDK: https://github.com/agentclientprotocol/rust-sdk  
+- docs.rs: https://docs.rs/agent-client-protocol  
+
+#### Local architecture
+
+```text
+Client (CDXTheme)  ──JSON-RPC over stdio──►  Agent process (codex-acp)
+                                                    │
+                                                    ▼
+                                              Codex CLI
+```
+
+Client spawns the agent; messages go over **stdio**. Dropping the connection tears down the process group (including `npx` wrappers on Unix).
+
+#### CDXTheme Theme Builder path
+
+```text
+Theme Builder UI
+  ──invoke──►  codex_chat / list_codex_sessions / get_codex_session
+  ──core──►  agent-client-protocol Client
+  ──stdio──►  codex-acp  (PATH binary, or npx @agentclientprotocol/codex-acp)
+  ──►  Codex CLI (ChatGPT-bundled `…/Resources/codex` preferred on PATH)
+```
+
+**Not CDP.** Theme inject/apply still uses CDP; chat uses ACP only.
+
+#### Lifecycle
+
+1. Spawn / connect agent  
+2. `initialize` (protocol version + capabilities)  
+3. `session/new` or `session/load` (`cwd` must be absolute)  
+4. `session/prompt` (content blocks; text baseline)  
+5. Stream `session/update` notifications (`agent_message_chunk` → assistant text)  
+6. Answer **permission** requests if the agent asks (Theme Builder auto-approves first option)  
+7. Close connection  
+
+#### Session ops
+
+| Op | Direction | Use |
+| --- | --- | --- |
+| `session/new` | Client → Agent | First message of a new Theme Builder chat |
+| `session/load` | Client → Agent | Continue with stored `session_id` |
+| `session/list` | Client → Agent | Optional; fall back to `~/.codex/session_index.jsonl` |
+| `session/prompt` | Client → Agent | User turn |
+| `session/update` | Agent → Client | Streaming chunks, tool calls, plan |
+
+#### Agent resolution (order)
+
+1. `codex-acp` on `PATH`  
+2. `npx -y @agentclientprotocol/codex-acp@latest`  
+3. Prepend ChatGPT-bundled `codex` directory onto the agent’s `PATH`  
+
+#### Runtime requirements
+
+- **Node/npm** if using the default npx adapter (or install `codex-acp` yourself).  
+- **Codex CLI** (bundled with ChatGPT and/or on PATH).  
+- **Auth:** `codex login` when needed (`~/.codex/auth.json`).  
+- Theme Builder workspace cwd: temp `…/cdxtheme-theme-builder` (absolute).  
+- Prompt timeout budget: long (e.g. ~180s); inject/CDP is separate.
+
+#### IPC (Theme Builder)
+
+| Command | Role |
+| --- | --- |
+| `codex_chat` | `prompt` + optional `session_id` + optional `wait_ms` → ACP turn |
+| `list_codex_sessions` | ACP list when available, else disk index |
+| `get_codex_session` | Load transcript from `~/.codex` rollout JSONL |
+
+#### Practical rules
+
+1. Always pass **absolute** `cwd` into `session/new` and `session/load`.  
+2. Persist **session ids** from `session/new` for multi-turn UI.  
+3. Build the assistant bubble from **`agent_message_chunk`**, not only the prompt RPC result.  
+4. Prefer ACP over scraping Codex TUI or brittle `codex exec` for host-app chat.  
+5. Keep disk fallbacks for list/transcript when the adapter lacks APIs.  
+6. Auto-approve permissions is a product shortcut — do not treat as safe for untrusted agents.
+
+#### Minimal Rust client sketch
+
+```rust
+use agent_client_protocol::schema::{ProtocolVersion, v1::*};
+use agent_client_protocol::{AcpAgent, Agent, Client, ConnectionTo};
+
+Client.builder()
+  .on_receive_notification(/* SessionNotification: append AgentMessageChunk text */, …)
+  .on_receive_request(/* RequestPermissionRequest: respond Selected/Cancelled */, …)
+  .connect_with(AcpAgent::codex() /* or codex-acp config */, |cx: ConnectionTo<Agent>| async move {
+    cx.send_request(InitializeRequest::new(ProtocolVersion::V1)).block_task().await?;
+    let s = cx.send_request(NewSessionRequest::new(cwd)).block_task().await?;
+    // or LoadSessionRequest::new(session_id, cwd)
+    cx.send_request(PromptRequest::new(
+      s.session_id,
+      vec![ContentBlock::Text(TextContent::new(prompt))],
+    )).block_task().await?;
+    Ok(())
+  })
+  .await?;
+```
+
+#### References
+
+| Resource | URL / path |
+| --- | --- |
+| ACP intro | https://agentclientprotocol.com/get-started/introduction |
+| Rust SDK | https://github.com/agentclientprotocol/rust-sdk |
+| Codex ACP adapter | `@agentclientprotocol/codex-acp` / agentclientprotocol/codex-acp |
+| Core implementation | `core/src/codex_chat.rs` |
+| Full skill file | `.agnets/skills/agent-client-protocol/SKILL.md` |

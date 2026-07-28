@@ -1,4 +1,4 @@
-use icons::{Library, PackagePlus, RotateCcw, Settings, Sparkles};
+use icons::{Library, PackagePlus, RotateCcw, Settings, Sparkles, WandSparkles};
 use leptos::prelude::*;
 
 use crate::i18n::I18n;
@@ -51,6 +51,7 @@ pub fn Sidebar() -> impl IntoView {
         <NavItem page=Page::Recommend icon=NavIcon::Recommend label_key="nav.recommend" />
         <NavItem page=Page::Library icon=NavIcon::Library label_key="nav.library" />
         <NavItem page=Page::Install icon=NavIcon::Install label_key="nav.install" />
+        <NavItem page=Page::ThemeBuilder icon=NavIcon::ThemeBuilder label_key="nav.builder" />
         <NavItem page=Page::Restore icon=NavIcon::Restore label_key="nav.restore" />
         <NavItem page=Page::Settings icon=NavIcon::Settings label_key="nav.settings" />
       </nav>
@@ -63,6 +64,7 @@ enum NavIcon {
   Recommend,
   Library,
   Install,
+  ThemeBuilder,
   Restore,
   Settings,
 }
@@ -98,6 +100,7 @@ fn NavItem(page: Page, icon: NavIcon, label_key: &'static str) -> impl IntoView 
           NavIcon::Recommend => view! { <Sparkles class="size-4" /> }.into_any(),
           NavIcon::Library => view! { <Library class="size-4" /> }.into_any(),
           NavIcon::Install => view! { <PackagePlus class="size-4" /> }.into_any(),
+          NavIcon::ThemeBuilder => view! { <WandSparkles class="size-4" /> }.into_any(),
           NavIcon::Restore => view! { <RotateCcw class="size-4" /> }.into_any(),
           NavIcon::Settings => view! { <Settings class="size-4" /> }.into_any(),
         }}

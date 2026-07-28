@@ -4,6 +4,7 @@
 pub mod appearance;
 pub mod apply;
 pub mod cdp;
+pub mod codex_chat;
 pub mod error;
 pub mod inject;
 pub mod launch;
@@ -52,4 +53,11 @@ pub use cdx_theme_types::{
 pub use layout::{
   LayoutVerifyReport, click_tab, default_options as layout_default_options, probe, probe_layout,
   screenshot, verify_layout,
+};
+
+pub use codex_chat::{
+  CodexChatOptions, CodexChatResult, CodexSessionDetail, CodexSessionMessage, CodexSessionSummary,
+  find_codex_cli, list_sessions as list_codex_sessions,
+  list_sessions_async as list_codex_sessions_async, load_session as load_codex_session,
+  send_and_wait as codex_chat_send_and_wait, send_and_wait_with as codex_chat_send_and_wait_with,
 };

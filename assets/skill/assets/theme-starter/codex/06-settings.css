@@ -1,0 +1,246 @@
+/* codex/06-settings.css
+ *
+ * Settings: hide dream chrome except sparkles ([data-settings-panel-slug]).
+ * Settings + Scheduled + Plugins: hide dream-ribbon + dream-polaroid (sparkles stay).
+ *
+ * Merge: `/path/to/cdxthemex theme merge-css <theme-dir>` → codex.css
+ * Pack still reads the merged root file declared in theme.json.
+ */
+
+/* —— Settings: hide dream chrome except sparkles ——
+   Settings surface exposes [data-settings-panel-slug].
+   Keep dream-sparkles visible; hide brand/signature/ribbon/polaroid/note.
+   Runtime inject may force visibility inline — collapse offscreen. */
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .dream-brand,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .dream-brand,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .dream-signature,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .dream-signature,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .dream-ribbon,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .dream-ribbon,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .dream-polaroid,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .dream-polaroid,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .dream-note,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .dream-note,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-brand,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-brand,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-signature,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-signature,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-note,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-note,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji
+{
+  position: fixed !important;
+  left: -10000px !important;
+  top: -10000px !important;
+  width: 0 !important;
+  height: 0 !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  transform: scale(0) !important;
+  filter: none !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+  animation: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+
+/* —— Settings + Scheduled + Plugins: hide dream-ribbon + dream-polaroid ——
+   Keep dream-sparkles on all of these surfaces.
+   Locale-robust: data-settings-panel-slug, sidebar icon paths, EN/zh placeholders. */
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .dream-ribbon,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .dream-polaroid,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) .dream-ribbon,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) .dream-polaroid,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) .dream-ribbon,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) .dream-polaroid,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="Search scheduled tasks"]) .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="Search scheduled tasks"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="Search scheduled tasks"]) .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="Search scheduled tasks"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="Search scheduled tasks"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="Search scheduled tasks"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="Search plugins"]) .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="Search plugins"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="Search plugins"]) .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="Search plugins"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="Search plugins"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="Search plugins"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has([aria-label="Browse plugins or skills"]) .dream-ribbon,
+html.cdxtheme-host-codex:has([aria-label="Browse plugins or skills"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has([aria-label="Browse plugins or skills"]) .dream-polaroid,
+html.cdxtheme-host-codex:has([aria-label="Browse plugins or skills"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has([aria-label="Browse plugins or skills"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has([aria-label="Browse plugins or skills"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has([aria-label="Plugin directory"]) .dream-ribbon,
+html.cdxtheme-host-codex:has([aria-label="Plugin directory"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has([aria-label="Plugin directory"]) .dream-polaroid,
+html.cdxtheme-host-codex:has([aria-label="Plugin directory"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has([aria-label="Plugin directory"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has([aria-label="Plugin directory"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="搜索计划任务"]) .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="搜索计划任务"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="搜索计划任务"]) .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="搜索计划任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="搜索计划任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="搜索计划任务"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="搜索定时任务"]) .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="搜索定时任务"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="搜索定时任务"]) .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="搜索定时任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="搜索定时任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="搜索定时任务"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="搜索排程任务"]) .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="搜索排程任务"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="搜索排程任务"]) .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="搜索排程任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="搜索排程任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="搜索排程任务"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="搜索插件"]) .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="搜索插件"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="搜索插件"]) .dream-polaroid,
+html.cdxtheme-host-codex:has(input[placeholder="搜索插件"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has(input[placeholder="搜索插件"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has(input[placeholder="搜索插件"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has([aria-label="浏览插件或技能"]) .dream-ribbon,
+html.cdxtheme-host-codex:has([aria-label="浏览插件或技能"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has([aria-label="浏览插件或技能"]) .dream-polaroid,
+html.cdxtheme-host-codex:has([aria-label="浏览插件或技能"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has([aria-label="浏览插件或技能"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has([aria-label="浏览插件或技能"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-host-codex:has([aria-label="插件目录"]) .dream-ribbon,
+html.cdxtheme-host-codex:has([aria-label="插件目录"]) .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has([aria-label="插件目录"]) .dream-polaroid,
+html.cdxtheme-host-codex:has([aria-label="插件目录"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-host-codex:has([aria-label="插件目录"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-host-codex:has([aria-label="插件目录"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .dream-ribbon,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .dream-polaroid,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8 4.2168"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(aside button[aria-current="page"] path[d^="M8.25031 1.46094"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="Search scheduled tasks"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="Search scheduled tasks"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="Search scheduled tasks"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="Search scheduled tasks"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="Search scheduled tasks"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="Search scheduled tasks"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="Search plugins"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="Search plugins"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="Search plugins"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="Search plugins"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="Search plugins"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="Search plugins"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has([aria-label="Browse plugins or skills"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has([aria-label="Browse plugins or skills"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([aria-label="Browse plugins or skills"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has([aria-label="Browse plugins or skills"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has([aria-label="Browse plugins or skills"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([aria-label="Browse plugins or skills"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has([aria-label="Plugin directory"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has([aria-label="Plugin directory"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([aria-label="Plugin directory"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has([aria-label="Plugin directory"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has([aria-label="Plugin directory"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([aria-label="Plugin directory"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索计划任务"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索计划任务"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索计划任务"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索计划任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索计划任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索计划任务"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索定时任务"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索定时任务"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索定时任务"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索定时任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索定时任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索定时任务"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索排程任务"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索排程任务"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索排程任务"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索排程任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索排程任务"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索排程任务"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索插件"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索插件"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索插件"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索插件"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索插件"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has(input[placeholder="搜索插件"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has([aria-label="浏览插件或技能"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has([aria-label="浏览插件或技能"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([aria-label="浏览插件或技能"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has([aria-label="浏览插件或技能"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has([aria-label="浏览插件或技能"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([aria-label="浏览插件或技能"]) #cdxtheme-codex-skin-chrome .dream-polaroid,
+html.cdxtheme-codex-skin:has([aria-label="插件目录"]) .dream-ribbon,
+html.cdxtheme-codex-skin:has([aria-label="插件目录"]) .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([aria-label="插件目录"]) .dream-polaroid,
+html.cdxtheme-codex-skin:has([aria-label="插件目录"]) #cdxtheme-codex-skin-chrome .dream-ribbon,
+html.cdxtheme-codex-skin:has([aria-label="插件目录"]) #cdxtheme-codex-skin-chrome .dream-ribbon-emoji,
+html.cdxtheme-codex-skin:has([aria-label="插件目录"]) #cdxtheme-codex-skin-chrome .dream-polaroid
+{
+  position: fixed !important;
+  left: -10000px !important;
+  top: -10000px !important;
+  width: 0 !important;
+  height: 0 !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  transform: scale(0) !important;
+  filter: none !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+  animation: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
