@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Build the `cdxtheme` CLI and stage it for Tauri `bundle.externalBin`.
+# Build the `cdxthemex` CLI and stage it for Tauri `bundle.externalBin`.
 #
-# Output: app-tauri/binaries/cdxthemex-<target-triple>[.exe]
+# Cargo bin name is `cdxthemex` (cli/Cargo.toml). Staged as:
+#   app-tauri/binaries/cdxthemex-<target-triple>[.exe]
 #
-# IMPORTANT: The staged name must NOT case-collide with the app main binary
+# IMPORTANT: The binary must NOT case-collide with the app main binary
 # (`CDXTheme`). macOS/Windows default filesystems are case-insensitive, so
 # bundling as plain `cdxtheme` overwrites `CDXTheme` and breaks notarization
-# ("The signature of the binary is invalid").
+# ("The signature of the binary is invalid"). Hence `cdxthemex`, not `cdxtheme`.
 #
 # Honors:
 #   TAURI_ENV_TARGET_TRIPLE  — set by `cargo tauri` during build/dev
@@ -19,6 +20,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN_DIR="$ROOT/app-tauri/binaries"
 mkdir -p "$BIN_DIR"
+
+CLI_BIN="cdxthemex"
 
 host_triple() {
   if rustc --print host-tuple >/dev/null 2>&1; then
@@ -60,7 +63,7 @@ if [[ "$TRIPLE" != "$HOST" ]] || [[ -n "${CLI_SIDECAR_TARGET:-}" ]]; then
   USE_TARGET=1
 fi
 
-echo "==> Building cdxtheme CLI ($PROFILE / $TRIPLE)…"
+echo "==> Building $CLI_BIN CLI ($PROFILE / $TRIPLE)…"
 
 CARGO_ARGS=(build -p cdx-theme-cli --manifest-path "$ROOT/Cargo.toml")
 if [[ "$PROFILE" == "release" ]]; then
@@ -68,16 +71,16 @@ if [[ "$PROFILE" == "release" ]]; then
 fi
 if [[ "$USE_TARGET" -eq 1 ]]; then
   CARGO_ARGS+=(--target "$TRIPLE")
-  SRC="$ROOT/target/$TRIPLE/$PROFILE/cdxtheme$EXT"
+  SRC="$ROOT/target/$TRIPLE/$PROFILE/${CLI_BIN}${EXT}"
 else
-  SRC="$ROOT/target/$PROFILE/cdxtheme$EXT"
+  SRC="$ROOT/target/$PROFILE/${CLI_BIN}${EXT}"
 fi
 
 cargo "${CARGO_ARGS[@]}"
 
 if [[ ! -f "$SRC" ]]; then
   # Host builds sometimes still land under target/<triple>/ when RUSTUP_TOOLCHAIN forces it.
-  ALT="$ROOT/target/$TRIPLE/$PROFILE/cdxtheme$EXT"
+  ALT="$ROOT/target/$TRIPLE/$PROFILE/${CLI_BIN}${EXT}"
   if [[ -f "$ALT" ]]; then
     SRC="$ALT"
   else
@@ -86,9 +89,8 @@ if [[ ! -f "$SRC" ]]; then
   fi
 fi
 
-# Stage as cdxthemex (not cdxtheme) — see header comment about case collision.
-DEST="$BIN_DIR/cdxthemex-${TRIPLE}${EXT}"
-# Remove legacy staged names (case-collision with CDXTheme, or old cdxtheme-cli).
+DEST="$BIN_DIR/${CLI_BIN}-${TRIPLE}${EXT}"
+# Remove legacy staged names (case-collision with CDXTheme, or old names).
 rm -f "$BIN_DIR/cdxtheme-${TRIPLE}${EXT}" "$BIN_DIR/cdxtheme-cli-${TRIPLE}${EXT}"
 cp -f "$SRC" "$DEST"
 chmod +x "$DEST" 2>/dev/null || true
