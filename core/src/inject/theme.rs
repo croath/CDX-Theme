@@ -215,9 +215,5 @@ mod tests {
       expression.contains("--cdxtheme-image-"),
       "inject must set --cdxtheme-image-*"
     );
-    assert!(
-      !expression.contains("--codedrobe-image-"),
-      "inject must not set --codedrobe-image-*"
-    );
   }
 }

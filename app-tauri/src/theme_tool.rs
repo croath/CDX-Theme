@@ -38,7 +38,6 @@ pub fn config_backup_path(app: &AppHandle) -> Result<PathBuf, String> {
 #[serde(rename_all = "camelCase")]
 pub struct ApplyResult {
   /// False when the package has no `targets.codex.options.baseTheme`
-  /// (CodeDrobe `applyCodexBaseTheme` no-op).
   pub applied: bool,
   /// True when `[desktop].appearanceTheme` (light/dark) changed.
   /// Only this key requires a ChatGPT restart; chrome/code theme can update live.
@@ -66,8 +65,6 @@ pub fn apply(app: &AppHandle, theme_package: impl AsRef<Path>) -> Result<ApplyRe
   apply_loaded(&theme, &codex_config_path(), &config_backup_path(app)?)
 }
 
-/// Port of CodeDrobe [`applyCodexBaseTheme`](https://github.com/CodeDrobe/core/blob/main/src/host/codex-settings.mjs):
-///
 /// ```text
 /// const baseTheme = targetTheme?.options?.baseTheme;
 /// if (!baseTheme) return { applied: false, changed: false, restartRequired: false };
@@ -79,7 +76,6 @@ pub fn apply_loaded(
   config_path: &Path,
   backup_path: &Path,
 ) -> Result<ApplyResult, String> {
-  // CodeDrobe L165–166: no baseTheme → skip host settings (CSS inject may still run).
   if theme.active_base_theme().is_none() {
     return Ok(ApplyResult {
       applied: false,
@@ -100,7 +96,6 @@ pub fn apply_loaded(
       .map_err(|e| format!("failed to create state dir {}: {e}", parent.display()))?;
   }
 
-  // First-apply only backup (never overwrite — CodeDrobe COPYFILE_EXCL).
   if !backup_path.exists() {
     fs::copy(config_path, backup_path)
       .map_err(|e| format!("failed to backup config to {}: {e}", backup_path.display()))?;
@@ -150,7 +145,6 @@ pub fn restore_paths(config_path: &Path, backup_path: &Path) -> Result<RestoreRe
   let backup = fs::read_to_string(backup_path)
     .map_err(|e| format!("failed to read backup {}: {e}", backup_path.display()))?;
   let updated = restore_settings(&current, &backup, MANAGED_SETTINGS_KEYS);
-  // CodeDrobe: changed = restored !== current
   let appearance_changed = current != updated;
   if appearance_changed {
     fs::write(config_path, &updated)

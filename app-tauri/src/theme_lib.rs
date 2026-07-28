@@ -236,7 +236,6 @@ fn remove_managed_chrome_tables(content: &str) -> String {
 }
 
 /// Capture nested `[desktop.appearanceLightChromeTheme…]` tables for restore.
-/// Matches CodeDrobe `extractManagedChromeTables`.
 fn extract_managed_chrome_tables(content: &str) -> String {
   split_sections(content)
     .into_iter()
@@ -256,8 +255,6 @@ fn extract_managed_chrome_tables(content: &str) -> String {
 }
 
 /// Remove managed keys only from the **root** (before the first `[table]`).
-/// Matches CodeDrobe `removeMisplacedRootSettings` — does **not** strip keys
-/// already living under `[desktop]` (those are replaced in-place later).
 fn remove_misplaced_root_settings(content: &str, keys: &[&str]) -> String {
   static FIRST_TABLE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^\[").expect("first table regex"));
@@ -343,7 +340,6 @@ where
 }
 
 /// Apply managed appearance settings into a Codex config.toml string.
-/// Pipeline matches CodeDrobe `applyCodexSettings`:
 /// remove nested chrome tables → strip root misplaced keys → merge `[desktop]` → upsert lines.
 pub fn apply_settings(content: &str, settings: &BTreeMap<String, String>) -> String {
   let keys: Vec<&str> = settings.keys().map(|s| s.as_str()).collect();
@@ -361,7 +357,6 @@ pub fn apply_settings(content: &str, settings: &BTreeMap<String, String>) -> Str
 }
 
 /// Restore managed appearance keys from a pre-apply backup into the current config.
-/// Matches CodeDrobe `restoreCodexSettings` (including nested chrome tables from backup).
 pub fn restore_settings(current: &str, backup: &str, keys: &[&str]) -> String {
   let saved_chrome_tables = extract_managed_chrome_tables(backup);
   let cleaned = merge_desktop_sections(&remove_misplaced_root_settings(
@@ -603,7 +598,6 @@ appearanceLightChromeTheme = { accent = "#B85F6C", contrast = 78, fonts = { code
 
   #[test]
   fn remove_misplaced_only_touches_root_not_desktop() {
-    // CodeDrobe removeMisplacedRootSettings: root key gone, desktop key kept for upsert.
     let content = r##"appearanceTheme = "dark"
 foo = 1
 [desktop]

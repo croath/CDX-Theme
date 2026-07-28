@@ -160,7 +160,7 @@ pub async fn apply_theme(
   }
   // }
 
-  // 3) Inject live CSS skin via CDP (use already-loaded theme; CodeDrobe applyTheme pattern).
+  // 3) Inject live CSS skin via CDP (use already-loaded theme).
   let opts = inject_options(&state);
   if let Err(e) = injector::apply_loaded_theme(&theme, opts).await {
     tracing::error!("CDP inject failed: {e}");
