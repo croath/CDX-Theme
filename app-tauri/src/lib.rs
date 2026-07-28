@@ -197,7 +197,9 @@ pub fn run() {
       commands::track_event,
       commands::codex_chat,
       commands::apply_built_theme,
+      commands::save_theme_builder_hero,
       commands::list_codex_sessions,
+      commands::delete_theme_builder_session,
       commands::get_codex_session,
       commands::start_theme_build,
     ])

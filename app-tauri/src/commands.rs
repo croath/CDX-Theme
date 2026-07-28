@@ -9,7 +9,7 @@ use crate::theme_tool;
 use cdx_theme_types::ThemeMetadata;
 use serde_json::Value;
 use std::collections::HashMap;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 fn inject_options(state: &AppState) -> InjectOptions {
   InjectOptions {
@@ -349,6 +349,24 @@ pub async fn list_codex_sessions(
   crate::theme_builder_store::list_intersection(&app, codex, limit)
 }
 
+/// Theme Builder: delete a tracked session (app data registry + workspace folder).
+#[tauri::command(rename_all = "snake_case")]
+pub async fn delete_theme_builder_session(
+  session_id: String,
+  app: AppHandle,
+) -> Result<bool, String> {
+  let session_id = session_id.trim().to_string();
+  if session_id.is_empty() {
+    return Err("session id is empty".into());
+  }
+  tokio::task::spawn_blocking(move || {
+    crate::theme_builder_store::delete_session(&app, &session_id)
+  })
+  .await
+  .map_err(|e| format!("delete session task failed: {e}"))??;
+  Ok(true)
+}
+
 /// Theme Builder: load a Codex session transcript for the chat view.
 /// Only sessions tracked in app data (and still present in Codex) are allowed.
 #[tauri::command(rename_all = "snake_case")]
@@ -442,6 +460,7 @@ pub async fn codex_chat(
     .ok_or_else(|| "cdxthemex parent dir missing".to_string())?;
 
   // First turn: wrap with skill bootstrap so Codex uses the bundled skill + CLI.
+  // Follow-ups: keep messages short — only a brief summary in the chat reply.
   let wire = if resume_id.is_none() {
     crate::theme_builder_store::skill_bootstrap_prompt(
       &prompt,
@@ -449,7 +468,11 @@ pub async fn codex_chat(
       &cdxthemex,
     )
   } else {
-    prompt.clone()
+    format!(
+      "{prompt}\n\n\
+       [Reply style] Keep the reply short — brief summary only (a few bullets). \
+       No long explanations, no full CSS dumps unless the user asks."
+    )
   };
 
   let wid = workspace_id.filter(|s| !s.trim().is_empty()).or_else(|| {
@@ -468,6 +491,16 @@ pub async fn codex_chat(
     "theme builder → ACP session/prompt"
   );
 
+  // Live ACP transcript → frontend via Tauri event.
+  let app_stream = app.clone();
+  let on_stream: cdx_theme_core::CodexStreamCallback = std::sync::Arc::new(move |text: String| {
+    let payload = serde_json::json!({
+      "text": text,
+      "done": false,
+    });
+    let _ = app_stream.emit("theme-builder-acp-stream", payload);
+  });
+
   let mut result = cdx_theme_core::codex_chat_send_and_wait_with(
     &wire,
     cdx_theme_core::CodexChatOptions {
@@ -479,9 +512,19 @@ pub async fn codex_chat(
         ("CDXTHEME".into(), cdxthemex.to_string_lossy().into_owned()),
         ("CDXTHEMEX".into(), cdxthemex.to_string_lossy().into_owned()),
       ],
+      on_stream: Some(on_stream),
     },
   )
   .await?;
+
+  // Final stream tick so the UI can mark the turn complete if needed.
+  let _ = app.emit(
+    "theme-builder-acp-stream",
+    serde_json::json!({
+      "text": result.reply,
+      "done": true,
+    }),
+  );
 
   if let Some(ref sid) = result.session_id {
     let title = crate::theme_builder_store::title_from_prompt(&prompt);
@@ -578,4 +621,27 @@ pub async fn apply_built_theme(
     package_path: pkg.to_string_lossy().into_owned(),
     applied: true,
   })
+}
+
+/// Save a user-uploaded hero image into a Theme Builder workspace (`theme/assets/hero.*`).
+#[tauri::command(rename_all = "snake_case")]
+pub async fn save_theme_builder_hero(
+  workspace_path: String,
+  file_name: String,
+  content_base64: String,
+) -> Result<crate::theme_builder_store::SavedHeroImage, String> {
+  let workspace_path = workspace_path.trim().to_string();
+  if workspace_path.is_empty() {
+    return Err("workspace_path is empty".into());
+  }
+  let cwd = std::path::PathBuf::from(&workspace_path);
+  let file_name = file_name.trim().to_string();
+  if file_name.is_empty() {
+    return Err("file_name is empty".into());
+  }
+  tokio::task::spawn_blocking(move || {
+    crate::theme_builder_store::save_hero_image(&cwd, &file_name, &content_base64)
+  })
+  .await
+  .map_err(|e| format!("save hero task failed: {e}"))?
 }

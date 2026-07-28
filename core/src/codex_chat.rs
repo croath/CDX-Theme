@@ -739,8 +739,11 @@ fn auto_approve_permission(
   }
 }
 
+/// Callback for live ACP transcript text (agent message + tool summary).
+pub type CodexStreamCallback = Arc<dyn Fn(String) + Send + Sync + 'static>;
+
 /// Options for a Theme Builder ACP turn.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct CodexChatOptions {
   pub session_id: Option<String>,
   pub cwd: Option<PathBuf>,
@@ -749,6 +752,21 @@ pub struct CodexChatOptions {
   pub path_prepend: Vec<PathBuf>,
   /// Extra env vars for the agent process (e.g. `CDXTHEME=/abs/path/cdxthemex`).
   pub extra_env: Vec<(String, String)>,
+  /// Invoked whenever the turn transcript changes (for live UI streaming).
+  pub on_stream: Option<CodexStreamCallback>,
+}
+
+impl std::fmt::Debug for CodexChatOptions {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("CodexChatOptions")
+      .field("session_id", &self.session_id)
+      .field("cwd", &self.cwd)
+      .field("wait_ms", &self.wait_ms)
+      .field("path_prepend", &self.path_prepend)
+      .field("extra_env", &self.extra_env)
+      .field("on_stream", &self.on_stream.as_ref().map(|_| "<callback>"))
+      .finish()
+  }
 }
 
 /// Run one Theme Builder turn over ACP against Codex.
@@ -816,6 +834,9 @@ pub async fn send_and_wait_with(
   // Collect streamed agent text + tool activity for the chat UI.
   let transcript = Arc::new(Mutex::new(TurnTranscript::default()));
   let transcript_for_handler = transcript.clone();
+  let on_stream = options.on_stream.clone();
+  let last_streamed = Arc::new(Mutex::new(String::new()));
+  let last_streamed_handler = last_streamed.clone();
   let prompt_owned = prompt.to_string();
   let resume_owned = resume.map(|s| s.to_string());
 
@@ -823,8 +844,24 @@ pub async fn send_and_wait_with(
     .builder()
     .on_receive_notification(
       async move |n: SessionNotification, _cx| {
-        if let Ok(mut t) = transcript_for_handler.lock() {
-          t.ingest_update(n.update);
+        let rendered = {
+          if let Ok(mut t) = transcript_for_handler.lock() {
+            t.ingest_update(n.update);
+            t.render()
+          } else {
+            String::new()
+          }
+        };
+        if !rendered.is_empty() {
+          if let Some(cb) = on_stream.as_ref() {
+            let mut last = last_streamed_handler
+              .lock()
+              .unwrap_or_else(|e| e.into_inner());
+            if *last != rendered {
+              *last = rendered.clone();
+              cb(rendered);
+            }
+          }
         }
         Ok(())
       },

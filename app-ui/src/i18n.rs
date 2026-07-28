@@ -854,6 +854,28 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::DeDe, "builder.response") => "Codex-Antwort",
     (Locale::EsEs, "builder.response") => "Respuesta de Codex",
 
+    (Locale::EnUs, "builder.stream.empty") => {
+      "Upload a hero, describe your theme, then Generate — Codex output streams here live."
+    }
+    (Locale::ZhHans, "builder.stream.empty") => {
+      "上传主视觉并描述主题，点击生成后，Codex 输出会实时显示在这里。"
+    }
+    (Locale::ZhHant, "builder.stream.empty") => {
+      "上傳主視覺並描述主題，點擊產生後，Codex 輸出會即時顯示在這裡。"
+    }
+    (Locale::JaJp, "builder.stream.empty") => {
+      "ヒーローと説明を入れて生成すると、Codex の出力がここにライブ表示されます。"
+    }
+    (Locale::KoKr, "builder.stream.empty") => {
+      "히어로와 설명을 입력하고 생성하면 Codex 출력이 여기에 실시간으로 표시됩니다."
+    }
+    (Locale::DeDe, "builder.stream.empty") => {
+      "Hero hochladen, Theme beschreiben, Generieren — Codex-Ausgabe streamt hier live."
+    }
+    (Locale::EsEs, "builder.stream.empty") => {
+      "Sube un hero, describe el tema y genera: la salida de Codex se muestra aquí en vivo."
+    }
+
     (Locale::EnUs, "builder.generating") => "Building with Codex…",
     (Locale::ZhHans, "builder.generating") => "正在通过 Codex 构建…",
     (Locale::ZhHant, "builder.generating") => "正在透過 Codex 構建…",
@@ -931,26 +953,108 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     }
 
     (Locale::EnUs, "builder.generate.hint") => {
-      "Describe colors, mood, and layout. Codex will edit the theme workspace and pack a .cdxtheme."
+      "Upload a hero image and describe the look. Codex builds and packs a .cdxtheme from both."
     }
     (Locale::ZhHans, "builder.generate.hint") => {
-      "描述颜色、氛围和布局。Codex 会编辑主题工作区并打包 .cdxtheme。"
+      "上传主视觉图并描述风格。Codex 会据此构建并打包 .cdxtheme。"
     }
     (Locale::ZhHant, "builder.generate.hint") => {
-      "描述顏色、氛圍與版面。Codex 會編輯主題工作區並打包 .cdxtheme。"
+      "上傳主視覺圖並描述風格。Codex 會據此構建並打包 .cdxtheme。"
     }
     (Locale::JaJp, "builder.generate.hint") => {
-      "色・雰囲気・レイアウトを説明。Codex がテーマ作業場を編集し .cdxtheme を pack します。"
+      "ヒーロー画像をアップロードし見た目を説明。Codex が .cdxtheme を生成・pack します。"
     }
     (Locale::KoKr, "builder.generate.hint") => {
-      "색상·분위기·레이아웃을 설명하세요. Codex가 작업 공간을 수정하고 .cdxtheme을 만듭니다."
+      "히어로 이미지를 업로드하고 스타일을 설명하세요. Codex가 .cdxtheme을 만들고 패키징합니다."
     }
     (Locale::DeDe, "builder.generate.hint") => {
-      "Farben, Stimmung und Layout beschreiben. Codex bearbeitet den Workspace und packt .cdxtheme."
+      "Hero-Bild hochladen und Look beschreiben. Codex baut und packt ein .cdxtheme."
     }
     (Locale::EsEs, "builder.generate.hint") => {
-      "Describe colores, ambiente y layout. Codex edita el workspace y empaqueta un .cdxtheme."
+      "Sube una imagen hero y describe el estilo. Codex genera y empaqueta un .cdxtheme."
     }
+
+    (Locale::EnUs, "builder.hero.title") => "Hero image",
+    (Locale::ZhHans, "builder.hero.title") => "主视觉图",
+    (Locale::ZhHant, "builder.hero.title") => "主視覺圖",
+    (Locale::JaJp, "builder.hero.title") => "ヒーロー画像",
+    (Locale::KoKr, "builder.hero.title") => "히어로 이미지",
+    (Locale::DeDe, "builder.hero.title") => "Hero-Bild",
+    (Locale::EsEs, "builder.hero.title") => "Imagen hero",
+
+    (Locale::EnUs, "builder.hero.hint") => {
+      "Required. JPEG, PNG, WebP, or GIF · max 8MB. Used as the theme home hero."
+    }
+    (Locale::ZhHans, "builder.hero.hint") => {
+      "必填。JPEG / PNG / WebP / GIF · 最大 8MB。用作主题首页主视觉。"
+    }
+    (Locale::ZhHant, "builder.hero.hint") => {
+      "必填。JPEG / PNG / WebP / GIF · 最大 8MB。用作主題首頁主視覺。"
+    }
+    (Locale::JaJp, "builder.hero.hint") => {
+      "必須。JPEG / PNG / WebP / GIF · 最大 8MB。ホームのヒーローに使います。"
+    }
+    (Locale::KoKr, "builder.hero.hint") => {
+      "필수. JPEG / PNG / WebP / GIF · 최대 8MB. 홈 히어로로 사용됩니다."
+    }
+    (Locale::DeDe, "builder.hero.hint") => {
+      "Erforderlich. JPEG / PNG / WebP / GIF · max. 8 MB. Für den Home-Hero."
+    }
+    (Locale::EsEs, "builder.hero.hint") => {
+      "Obligatorio. JPEG / PNG / WebP / GIF · máx. 8 MB. Se usa como hero de inicio."
+    }
+
+    (Locale::EnUs, "builder.hero.upload") => "Upload hero image",
+    (Locale::ZhHans, "builder.hero.upload") => "上传主视觉图",
+    (Locale::ZhHant, "builder.hero.upload") => "上傳主視覺圖",
+    (Locale::JaJp, "builder.hero.upload") => "ヒーロー画像をアップロード",
+    (Locale::KoKr, "builder.hero.upload") => "히어로 이미지 업로드",
+    (Locale::DeDe, "builder.hero.upload") => "Hero-Bild hochladen",
+    (Locale::EsEs, "builder.hero.upload") => "Subir imagen hero",
+
+    (Locale::EnUs, "builder.hero.change") => "Change image",
+    (Locale::ZhHans, "builder.hero.change") => "更换图片",
+    (Locale::ZhHant, "builder.hero.change") => "更換圖片",
+    (Locale::JaJp, "builder.hero.change") => "画像を変更",
+    (Locale::KoKr, "builder.hero.change") => "이미지 변경",
+    (Locale::DeDe, "builder.hero.change") => "Bild ändern",
+    (Locale::EsEs, "builder.hero.change") => "Cambiar imagen",
+
+    (Locale::EnUs, "builder.hero.required") => "Please upload a hero image first.",
+    (Locale::ZhHans, "builder.hero.required") => "请先上传主视觉图。",
+    (Locale::ZhHant, "builder.hero.required") => "請先上傳主視覺圖。",
+    (Locale::JaJp, "builder.hero.required") => "先にヒーロー画像をアップロードしてください。",
+    (Locale::KoKr, "builder.hero.required") => "먼저 히어로 이미지를 업로드하세요.",
+    (Locale::DeDe, "builder.hero.required") => "Bitte zuerst ein Hero-Bild hochladen.",
+    (Locale::EsEs, "builder.hero.required") => "Sube primero una imagen hero.",
+
+    (Locale::EnUs, "builder.hero.invalid") => "Use a JPEG, PNG, WebP, or GIF image (max 8MB).",
+    (Locale::ZhHans, "builder.hero.invalid") => "请使用 JPEG / PNG / WebP / GIF 图片（最大 8MB）。",
+    (Locale::ZhHant, "builder.hero.invalid") => "請使用 JPEG / PNG / WebP / GIF 圖片（最大 8MB）。",
+    (Locale::JaJp, "builder.hero.invalid") => {
+      "JPEG / PNG / WebP / GIF（最大 8MB）を指定してください。"
+    }
+    (Locale::KoKr, "builder.hero.invalid") => {
+      "JPEG / PNG / WebP / GIF 이미지(최대 8MB)를 사용하세요."
+    }
+    (Locale::DeDe, "builder.hero.invalid") => "JPEG / PNG / WebP / GIF (max. 8 MB) verwenden.",
+    (Locale::EsEs, "builder.hero.invalid") => "Usa JPEG / PNG / WebP / GIF (máx. 8 MB).",
+
+    (Locale::EnUs, "builder.desc.title") => "Description",
+    (Locale::ZhHans, "builder.desc.title") => "描述",
+    (Locale::ZhHant, "builder.desc.title") => "描述",
+    (Locale::JaJp, "builder.desc.title") => "説明",
+    (Locale::KoKr, "builder.desc.title") => "설명",
+    (Locale::DeDe, "builder.desc.title") => "Beschreibung",
+    (Locale::EsEs, "builder.desc.title") => "Descripción",
+
+    (Locale::EnUs, "builder.desc.required") => "Please enter a short description for the theme.",
+    (Locale::ZhHans, "builder.desc.required") => "请输入主题描述。",
+    (Locale::ZhHant, "builder.desc.required") => "請輸入主題描述。",
+    (Locale::JaJp, "builder.desc.required") => "テーマの説明を入力してください。",
+    (Locale::KoKr, "builder.desc.required") => "테마 설명을 입력하세요.",
+    (Locale::DeDe, "builder.desc.required") => "Bitte eine kurze Theme-Beschreibung eingeben.",
+    (Locale::EsEs, "builder.desc.required") => "Introduce una descripción breve del tema.",
 
     (Locale::EnUs, "builder.sessions.title") => "Saved Codex sessions",
     (Locale::ZhHans, "builder.sessions.title") => "已保存的 Codex 会话",
@@ -1013,6 +1117,40 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::KoKr, "builder.sessions.open") => "열기",
     (Locale::DeDe, "builder.sessions.open") => "Öffnen",
     (Locale::EsEs, "builder.sessions.open") => "Abrir",
+
+    (Locale::EnUs, "builder.sessions.delete") => "Delete session",
+    (Locale::ZhHans, "builder.sessions.delete") => "删除会话",
+    (Locale::ZhHant, "builder.sessions.delete") => "刪除工作階段",
+    (Locale::JaJp, "builder.sessions.delete") => "セッションを削除",
+    (Locale::KoKr, "builder.sessions.delete") => "세션 삭제",
+    (Locale::DeDe, "builder.sessions.delete") => "Session löschen",
+    (Locale::EsEs, "builder.sessions.delete") => "Eliminar sesión",
+
+    (Locale::EnUs, "builder.sessions.delete.confirm") => {
+      "Delete this Theme Builder session and its workspace files?"
+    }
+    (Locale::ZhHans, "builder.sessions.delete.confirm") => "删除此主题构建会话及其工作区文件？",
+    (Locale::ZhHant, "builder.sessions.delete.confirm") => "刪除此主題構建工作階段及其工作區檔案？",
+    (Locale::JaJp, "builder.sessions.delete.confirm") => {
+      "この Theme Builder セッションと作業フォルダを削除しますか？"
+    }
+    (Locale::KoKr, "builder.sessions.delete.confirm") => {
+      "이 Theme Builder 세션과 작업 공간 파일을 삭제할까요?"
+    }
+    (Locale::DeDe, "builder.sessions.delete.confirm") => {
+      "Diese Theme-Builder-Session und den Workspace löschen?"
+    }
+    (Locale::EsEs, "builder.sessions.delete.confirm") => {
+      "¿Eliminar esta sesión de Theme Builder y su workspace?"
+    }
+
+    (Locale::EnUs, "builder.sessions.delete.success") => "Session deleted",
+    (Locale::ZhHans, "builder.sessions.delete.success") => "会话已删除",
+    (Locale::ZhHant, "builder.sessions.delete.success") => "工作階段已刪除",
+    (Locale::JaJp, "builder.sessions.delete.success") => "セッションを削除しました",
+    (Locale::KoKr, "builder.sessions.delete.success") => "세션이 삭제되었습니다",
+    (Locale::DeDe, "builder.sessions.delete.success") => "Session gelöscht",
+    (Locale::EsEs, "builder.sessions.delete.success") => "Sesión eliminada",
 
     (Locale::EnUs, "builder.back") => "Back to sessions",
     (Locale::ZhHans, "builder.back") => "返回会话列表",

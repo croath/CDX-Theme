@@ -52,6 +52,19 @@ pub struct PreparedWorkspace {
   pub workspace_path: String,
 }
 
+/// Result of saving a user-uploaded hero image into a Theme Builder workspace.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedHeroImage {
+  /// Path relative to workspace root, e.g. `theme/assets/hero.jpg`.
+  pub relative_path: String,
+  /// Path for theme.json `images.hero`, e.g. `assets/hero.jpg`.
+  pub theme_asset_path: String,
+  pub file_name: String,
+}
+
+const MAX_HERO_BYTES: usize = 8 * 1024 * 1024;
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct StoreFile {
@@ -295,6 +308,12 @@ export CDXTHEME="{cli}"
    ```
 5. Keep packages declaration-only (no remote CSS, no theme JS).
 
+## Reply style
+
+Keep chat replies **short**. Prefer tools and file edits over long explanations.
+Do not dump full CSS or long step-by-step monologues.
+When finished, send a **brief summary only** (a few bullets): theme name, palette, what changed, pack path, blockers.
+
 ## User request
 
 The user will describe the look they want in chat. Apply their intent using the skill.
@@ -411,9 +430,131 @@ pub fn skill_bootstrap_prompt(user_text: &str, workspace_path: &str, cdxthemex: 
        \"{cli}\" apply -t ./output/theme.cdxtheme\n\
        export CDXTHEME=\"{cli}\" && .agents/skills/cdxtheme-theme/scripts/probe/run.sh chat-layout\n\
      Keep packages declaration-only (no remote CSS / theme JS).\n\
-     When finished, leave a packed `.cdxtheme` under `output/` and summarize what you built.\n\n\
+     When finished, leave a packed `.cdxtheme` under `output/`.\n\
+     \n\
+     ## Reply style (important)\n\
+     Keep chat messages **short**. Prefer tools/edits over long explanations.\n\
+     Do **not** dump full CSS, long plans, or step-by-step monologues.\n\
+     At the end, reply with a **brief summary only** (about 3–8 short bullets or ~5–10 lines):\n\
+     - theme id / display name\n\
+     - palette (accent / surface / ink)\n\
+     - what changed (hero, tokens, key screens)\n\
+     - pack path if created (e.g. output/theme.cdxtheme)\n\
+     - any blockers (one line)\n\
+     No more than that unless the user asks for detail.\n\n\
      User:\n{user_text}"
   )
+}
+
+/// Write a user-uploaded hero image into `{workspace}/theme/assets/hero.<ext>`.
+///
+/// `content_base64` may be raw base64 or a `data:*;base64,...` URL.
+pub fn save_hero_image(
+  workspace: &Path,
+  original_name: &str,
+  content_base64: &str,
+) -> Result<SavedHeroImage, String> {
+  if !workspace.is_absolute() {
+    return Err(format!(
+      "workspace_path must be absolute: {}",
+      workspace.display()
+    ));
+  }
+  if !workspace.is_dir() {
+    return Err(format!("workspace not found: {}", workspace.display()));
+  }
+
+  let b64 = strip_data_url_base64(content_base64)?;
+  use base64::Engine;
+  let bytes = base64::engine::general_purpose::STANDARD
+    .decode(b64.trim())
+    .map_err(|e| format!("invalid base64 hero image: {e}"))?;
+  if bytes.is_empty() {
+    return Err("hero image is empty".into());
+  }
+  if bytes.len() > MAX_HERO_BYTES {
+    return Err(format!(
+      "hero image exceeds {}MB limit",
+      MAX_HERO_BYTES / (1024 * 1024)
+    ));
+  }
+
+  let ext = hero_extension(original_name, &bytes)?;
+  let assets = workspace.join(THEME_DIR_NAME).join("assets");
+  fs::create_dir_all(&assets).map_err(|e| format!("create theme assets dir: {e}"))?;
+
+  // Remove prior hero.* so we don't leave stale formats behind.
+  if let Ok(entries) = fs::read_dir(&assets) {
+    for entry in entries.flatten() {
+      let name = entry.file_name();
+      let name = name.to_string_lossy();
+      if name.starts_with("hero.") {
+        let _ = fs::remove_file(entry.path());
+      }
+    }
+  }
+
+  let file_name = format!("hero.{ext}");
+  let dest = assets.join(&file_name);
+  fs::write(&dest, &bytes).map_err(|e| format!("write hero image: {e}"))?;
+
+  tracing::info!(
+    path = %dest.display(),
+    bytes = bytes.len(),
+    "theme builder hero image saved"
+  );
+
+  Ok(SavedHeroImage {
+    relative_path: format!("{THEME_DIR_NAME}/assets/{file_name}"),
+    theme_asset_path: format!("assets/{file_name}"),
+    file_name,
+  })
+}
+
+fn strip_data_url_base64(input: &str) -> Result<&str, String> {
+  let s = input.trim();
+  if s.is_empty() {
+    return Err("hero image payload is empty".into());
+  }
+  if let Some(rest) = s.strip_prefix("data:") {
+    let (_, b64) = rest
+      .split_once(',')
+      .ok_or_else(|| "invalid data URL for hero image".to_string())?;
+    if b64.is_empty() {
+      return Err("hero image data URL has empty payload".into());
+    }
+    Ok(b64)
+  } else {
+    Ok(s)
+  }
+}
+
+fn hero_extension(original_name: &str, bytes: &[u8]) -> Result<&'static str, String> {
+  let from_name = Path::new(original_name)
+    .extension()
+    .and_then(|e| e.to_str())
+    .map(|e| e.to_ascii_lowercase());
+  let from_magic = match bytes {
+    [0xFF, 0xD8, 0xFF, ..] => Some("jpg"),
+    [0x89, b'P', b'N', b'G', ..] => Some("png"),
+    [b'R', b'I', b'F', b'F', ..] if bytes.len() > 11 && &bytes[8..12] == b"WEBP" => Some("webp"),
+    [b'G', b'I', b'F', b'8', ..] => Some("gif"),
+    _ => None,
+  };
+
+  let ext = from_magic
+    .or_else(|| {
+      from_name.as_deref().and_then(|e| match e {
+        "jpg" | "jpeg" => Some("jpg"),
+        "png" => Some("png"),
+        "webp" => Some("webp"),
+        "gif" => Some("gif"),
+        _ => None,
+      })
+    })
+    .ok_or_else(|| "unsupported hero image type (use JPEG, PNG, WebP, or GIF)".to_string())?;
+
+  Ok(ext)
 }
 
 /// Upsert a session after a successful Theme Builder ↔ Codex turn.
@@ -484,6 +625,114 @@ pub fn workspace_path_for(app: &AppHandle, session_id: &str) -> Option<String> {
     .find(|s| s.id == id)
     .map(|s| s.workspace_path)
     .filter(|p| !p.is_empty())
+}
+
+/// Remove a Theme Builder session from app data and delete its workspace folder.
+///
+/// Does not delete Codex's own history files — the session simply stops appearing
+/// in Theme Builder (intersection requires app-data tracking).
+pub fn delete_session(app: &AppHandle, session_id: &str) -> Result<(), String> {
+  let session_id = session_id.trim();
+  if session_id.is_empty() {
+    return Err("session id is empty".into());
+  }
+
+  let mut store = load_file(app);
+  let idx = store
+    .sessions
+    .iter()
+    .position(|s| s.id == session_id)
+    .or_else(|| {
+      // Prefix match for shortened ids shown in the UI (e.g. first 8 chars).
+      if session_id.len() >= 8 {
+        let matches: Vec<usize> = store
+          .sessions
+          .iter()
+          .enumerate()
+          .filter(|(_, s)| s.id.starts_with(session_id) || session_id.starts_with(&s.id))
+          .map(|(i, _)| i)
+          .collect();
+        if matches.len() == 1 {
+          Some(matches[0])
+        } else {
+          None
+        }
+      } else {
+        None
+      }
+    });
+  let Some(idx) = idx else {
+    // Already gone — treat as success so the UI can drop the row.
+    tracing::info!(session = %session_id, "theme builder session already absent");
+    return Ok(());
+  };
+  let removed = store.sessions.remove(idx);
+  save_file(app, &store)?;
+
+  // Best-effort workspace cleanup (must stay under theme_builder root).
+  if let Err(e) = remove_workspace_dir(
+    app,
+    removed.workspace_path.as_str(),
+    removed.workspace_id.as_str(),
+  ) {
+    tracing::warn!(
+      session = %session_id,
+      error = %e,
+      "theme builder session removed from registry but workspace cleanup failed"
+    );
+  } else {
+    tracing::info!(
+      session = %removed.id,
+      "theme builder session deleted"
+    );
+  }
+
+  Ok(())
+}
+
+fn remove_workspace_dir(
+  app: &AppHandle,
+  workspace_path: &str,
+  workspace_id: &str,
+) -> Result<(), String> {
+  let root = root_dir(app)?;
+  let root_canon = root.canonicalize().unwrap_or_else(|_| root.clone());
+
+  let candidates: Vec<PathBuf> = {
+    let mut out = Vec::new();
+    let wp = workspace_path.trim();
+    if !wp.is_empty() {
+      out.push(PathBuf::from(wp));
+    }
+    let wid = workspace_id.trim();
+    if !wid.is_empty() {
+      out.push(root.join(wid));
+    }
+    out
+  };
+
+  for cand in candidates {
+    if !cand.exists() {
+      continue;
+    }
+    let canon = cand.canonicalize().unwrap_or_else(|_| cand.clone());
+    if !canon.starts_with(&root_canon) {
+      return Err(format!(
+        "refusing to delete workspace outside theme_builder: {}",
+        canon.display()
+      ));
+    }
+    // Never delete the root itself.
+    if canon == root_canon {
+      return Err("refusing to delete theme_builder root".into());
+    }
+    if canon.is_dir() {
+      fs::remove_dir_all(&canon)
+        .map_err(|e| format!("delete workspace {}: {e}", canon.display()))?;
+      tracing::info!(path = %canon.display(), "theme builder workspace deleted");
+    }
+  }
+  Ok(())
 }
 
 /// Find the newest `.cdxtheme` package under a Theme Builder workspace.

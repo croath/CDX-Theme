@@ -1,12 +1,80 @@
 use cdx_theme_types::ThemeMetadata;
 use serde::Serialize;
 use serde_wasm_bindgen::{from_value, to_value};
+use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
   #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], catch)]
   async fn invoke(cmd: &str, args: JsValue) -> Result<JsValue, JsValue>;
+
+  #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"], catch)]
+  async fn listen(event: &str, handler: &js_sys::Function) -> Result<JsValue, JsValue>;
+}
+
+/// Payload of `theme-builder-acp-stream` events from the host.
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpStreamEvent {
+  #[serde(default)]
+  pub text: String,
+  #[serde(default)]
+  pub done: bool,
+}
+
+/// Handle returned by [`listen_theme_builder_acp_stream`]; drops to stop listening.
+pub struct EventUnlisten {
+  unlisten: Option<js_sys::Function>,
+  _handler: Option<Closure<dyn FnMut(JsValue)>>,
+}
+
+impl EventUnlisten {
+  pub fn unlisten(mut self) {
+    if let Some(f) = self.unlisten.take() {
+      let _ = f.call0(&JsValue::NULL);
+    }
+    self._handler = None;
+  }
+}
+
+impl Drop for EventUnlisten {
+  fn drop(&mut self) {
+    if let Some(f) = self.unlisten.take() {
+      let _ = f.call0(&JsValue::NULL);
+    }
+  }
+}
+
+/// Subscribe to live ACP transcript chunks while Theme Builder generates.
+///
+/// `on_event` is invoked on the browser event loop for each partial/final update.
+pub async fn listen_theme_builder_acp_stream(
+  on_event: impl Fn(AcpStreamEvent) + 'static,
+) -> Result<EventUnlisten, String> {
+  let cb = Closure::wrap(Box::new(move |event: JsValue| {
+    // Tauri event shape: { event, id, payload }
+    let payload = js_sys::Reflect::get(&event, &JsValue::from_str("payload")).unwrap_or(event);
+    match from_value::<AcpStreamEvent>(payload.clone()) {
+      Ok(ev) => on_event(ev),
+      Err(_) => {
+        if let Some(text) = payload.as_string() {
+          on_event(AcpStreamEvent { text, done: false });
+        }
+      }
+    }
+  }) as Box<dyn FnMut(JsValue)>);
+
+  let unlisten_val = listen("theme-builder-acp-stream", cb.as_ref().unchecked_ref())
+    .await
+    .map_err(js_err_to_string)?;
+
+  let unlisten = unlisten_val.dyn_into::<js_sys::Function>().ok();
+
+  Ok(EventUnlisten {
+    unlisten,
+    _handler: Some(cb),
+  })
 }
 
 fn js_err_to_string(err: JsValue) -> String {
@@ -453,6 +521,37 @@ pub async fn apply_built_theme(
   invoke_cmd_with_args::<ApplyBuiltThemeResult>("apply_built_theme", args).await
 }
 
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedHeroImage {
+  pub relative_path: String,
+  pub theme_asset_path: String,
+  pub file_name: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+struct SaveThemeBuilderHeroArgs {
+  workspace_path: String,
+  file_name: String,
+  content_base64: String,
+}
+
+/// Write a hero image into `{workspace}/theme/assets/hero.*` for Theme Builder.
+pub async fn save_theme_builder_hero(
+  workspace_path: impl Into<String>,
+  file_name: impl Into<String>,
+  content_base64: impl Into<String>,
+) -> Result<SavedHeroImage, String> {
+  let args = to_value(&SaveThemeBuilderHeroArgs {
+    workspace_path: workspace_path.into(),
+    file_name: file_name.into(),
+    content_base64: content_base64.into(),
+  })
+  .map_err(|e| e.to_string())?;
+  invoke_cmd_with_args::<SavedHeroImage>("save_theme_builder_hero", args).await
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
 struct ListCodexSessionsArgs {
@@ -464,6 +563,28 @@ struct ListCodexSessionsArgs {
 pub async fn list_codex_sessions(limit: Option<usize>) -> Result<Vec<CodexSessionSummary>, String> {
   let args = to_value(&ListCodexSessionsArgs { limit }).map_err(|e| e.to_string())?;
   invoke_cmd_with_args::<Vec<CodexSessionSummary>>("list_codex_sessions", args).await
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+struct DeleteThemeBuilderSessionArgs {
+  session_id: String,
+}
+
+/// Theme Builder: delete a tracked session and its workspace.
+pub async fn delete_theme_builder_session(session_id: impl Into<String>) -> Result<bool, String> {
+  let args = to_value(&DeleteThemeBuilderSessionArgs {
+    session_id: session_id.into(),
+  })
+  .map_err(|e| e.to_string())?;
+  // Accept bool or null/empty payload from Tauri.
+  match invoke_cmd_with_args::<bool>("delete_theme_builder_session", args).await {
+    Ok(v) => Ok(v),
+    Err(e) if e.contains("invalid type") || e.contains("null") || e.contains("undefined") => {
+      Ok(true)
+    }
+    Err(e) => Err(e),
+  }
 }
 
 #[derive(Serialize)]

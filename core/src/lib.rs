@@ -57,7 +57,7 @@ pub use layout::{
 
 pub use codex_chat::{
   CodexChatOptions, CodexChatResult, CodexSessionDetail, CodexSessionMessage, CodexSessionSummary,
-  find_codex_cli, list_sessions as list_codex_sessions,
+  CodexStreamCallback, find_codex_cli, list_sessions as list_codex_sessions,
   list_sessions_async as list_codex_sessions_async, load_session as load_codex_session,
   send_and_wait as codex_chat_send_and_wait, send_and_wait_with as codex_chat_send_and_wait_with,
 };
