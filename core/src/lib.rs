@@ -30,9 +30,10 @@ pub use launch::{
 };
 pub use pack::{
   CSS_PARTIAL_TARGETS, CssMergeResult, EXT_CDXTHEME, FORMAT_CDXTHEME, MAX_THEME_PACKAGE_BYTES,
-  PackThemeResult, THEME_SCHEMA_VERSION, ThemePackage, list_css_partials,
-  merge_css_partials_content, merge_css_for_path_in_memory, merge_css_target, merge_theme_css, merge_theme_css_optional,
-  maybe_merge_css_for_path, pack_theme_dir, pack_theme_dir_with_options, resolve_target_css, unpack_package,
+  PackThemeResult, THEME_SCHEMA_VERSION, ThemePackage, list_css_partials, maybe_merge_css_for_path,
+  merge_css_for_path_in_memory, merge_css_partials_content, merge_css_target, merge_theme_css,
+  merge_theme_css_optional, pack_theme_dir, pack_theme_dir_with_options, resolve_target_css,
+  unpack_package,
 };
 pub use package::{
   ACTIVE_APP_ID, APP_CODEX, APP_WORKBUDDY, CodexThemePeek, THEME_EXTENSION,
