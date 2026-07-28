@@ -308,11 +308,15 @@ export CDXTHEME="{cli}"
    ```
 5. Keep packages declaration-only (no remote CSS, no theme JS).
 
-## Reply style
+## Reply style (UI-facing)
 
-Keep chat replies **short**. Prefer tools and file edits over long explanations.
-Do not dump full CSS or long step-by-step monologues.
-When finished, send a **brief summary only** (a few bullets): theme name, palette, what changed, pack path, blockers.
+Chat replies are shown to end users. **Be extremely terse.**
+
+- Final reply: **plain-language summary only** (about 2–5 short lines or bullets).
+- Include only: theme name, mood/palette in words, what changed.
+- **Do not** paste code, CSS, JSON, shell commands, or file trees.
+- **Do not** list tool/actions, file paths, absolute paths, or workspace paths.
+- **Do not** narrate every step. Work silently via tools; then one short summary.
 
 ## User request
 
@@ -432,16 +436,15 @@ pub fn skill_bootstrap_prompt(user_text: &str, workspace_path: &str, cdxthemex: 
      Keep packages declaration-only (no remote CSS / theme JS).\n\
      When finished, leave a packed `.cdxtheme` under `output/`.\n\
      \n\
-     ## Reply style (important)\n\
-     Keep chat messages **short**. Prefer tools/edits over long explanations.\n\
-     Do **not** dump full CSS, long plans, or step-by-step monologues.\n\
-     At the end, reply with a **brief summary only** (about 3–8 short bullets or ~5–10 lines):\n\
-     - theme id / display name\n\
-     - palette (accent / surface / ink)\n\
-     - what changed (hero, tokens, key screens)\n\
-     - pack path if created (e.g. output/theme.cdxtheme)\n\
-     - any blockers (one line)\n\
-     No more than that unless the user asks for detail.\n\n\
+     ## Reply style (critical — user-facing UI)\n\
+     Your chat reply is shown in the CDXTheme app. Output **only a short plain-text summary**.\n\
+     Rules:\n\
+     - Prefer tools/edits; almost no narration while working.\n\
+     - Final message: **2–5 short lines or bullets max** (theme name, mood/colors, what changed).\n\
+     - **Never** include: code, CSS, JSON, shell commands, file trees, tool/action lists.\n\
+     - **Never** include: absolute paths, relative paths, workspace paths, package paths.\n\
+     - No markdown code fences. No step-by-step monologue.\n\
+     If something failed, one plain sentence — still no paths or code.\n\n\
      User:\n{user_text}"
   )
 }

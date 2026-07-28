@@ -470,8 +470,8 @@ pub async fn codex_chat(
   } else {
     format!(
       "{prompt}\n\n\
-       [Reply style] Keep the reply short — brief summary only (a few bullets). \
-       No long explanations, no full CSS dumps unless the user asks."
+       [Reply style] User-facing UI: reply with a short plain-text summary only \
+       (2–5 lines). No code, no CSS, no actions/tool lists, no file paths."
     )
   };
 

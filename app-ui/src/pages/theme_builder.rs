@@ -762,12 +762,14 @@ fn BuilderNewBuild(
            - use var(--cdxtheme-image-hero) for Chat/Work home hero backgrounds\n\
            - derive accent/surface/ink colors that complement the image\n\n\
            Description:\n{text}\n\n\
-           Reply with a brief summary only when done (no long explanations or full CSS dumps).",
+           When done, reply with a short plain-text summary only (theme name, mood/colors, what changed). \
+           No code, no CSS, no actions, no file paths.",
           asset = h.theme_asset_path,
           text = text
         ),
         None => format!(
-          "{text}\n\nReply with a brief summary only when done (no long explanations or full CSS dumps)."
+          "{text}\n\nWhen done, reply with a short plain-text summary only. \
+           No code, no CSS, no actions, no file paths."
         ),
       };
 

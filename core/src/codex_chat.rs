@@ -1,7 +1,8 @@
 //! Theme Builder → Codex via the **Agent Client Protocol** (ACP).
 //!
-//! Spawns the Codex ACP adapter (`codex-acp`, or `npx @agentclientprotocol/codex-acp`)
-//! and talks to it with the official [`agent-client-protocol`] Rust SDK:
+//! Spawns the Codex ACP adapter (`codex-acp`, or `bunx` / `npx` of
+//! `@agentclientprotocol/codex-acp`) and talks to it with the official
+//! [`agent-client-protocol`] Rust SDK:
 //! `initialize` → `session/new` | `session/load` → `session/prompt`.
 //!
 //! Session list / transcript still fall back to `~/.codex` on disk when the
@@ -261,11 +262,15 @@ fn prepend_path_env(path_env: &mut String, dir: &Path) {
   }
 }
 
+const CODEX_ACP_PKG: &str = "@agentclientprotocol/codex-acp@latest";
+
 /// Build the ACP agent process config (Codex adapter).
 ///
 /// Preference order:
 /// 1. `codex-acp` on PATH
-/// 2. `npx -y @agentclientprotocol/codex-acp@latest` (official SDK helper)
+/// 2. `bunx` / `bun x` (user-installed Bun)
+/// 3. `npx -y` (user-installed Node/npm)
+/// 4. If neither Bun nor npx/node is available: install Bun, then `bunx`
 ///
 /// `path_prepend` directories (e.g. folder of bundled `cdxthemex`) are put first on PATH.
 /// `extra_env` is merged into the agent process environment.
@@ -284,26 +289,222 @@ fn build_acp_agent(
       prepend_path_env(&mut path_env, dir);
     }
   }
-
-  let apply_env = |cfg: AcpAgentConfig| -> AcpAgentConfig {
-    let mut cfg = cfg.env("PATH", &path_env);
-    for (k, v) in extra_env {
-      cfg = cfg.env(k, v);
-    }
-    cfg
-  };
-
-  if let Some(local) = which("codex-acp") {
-    let label = local.display().to_string();
-    let agent = AcpAgent::new(apply_env(AcpAgentConfig::new(&local)));
-    return Ok((agent, label));
+  // Prefer known Bun install dir if present (even when not yet on PATH).
+  if let Some(dir) = bun_bin_dir() {
+    prepend_path_env(&mut path_env, &dir);
   }
 
-  let label = "npx -y @agentclientprotocol/codex-acp@latest".to_string();
-  let agent = AcpAgent::new(apply_env(
-    AcpAgentConfig::new("npx").args(["-y", "@agentclientprotocol/codex-acp@latest"]),
-  ));
-  Ok((agent, label))
+  if let Some(local) = which("codex-acp") {
+    return make_acp_agent(
+      AcpAgentConfig::new(&local),
+      local.display().to_string(),
+      &path_env,
+      extra_env,
+    );
+  }
+
+  // Detect user-installed runners: bun / npx / node.
+  let has_bun = resolve_bun().is_some() || resolve_bunx().is_some();
+  let has_npx = resolve_npx().is_some();
+  let has_node = resolve_node().is_some();
+
+  if has_bun {
+    return acp_via_bunx(&path_env, extra_env);
+  }
+  if has_npx {
+    return acp_via_npx(&path_env, extra_env);
+  }
+  // Node alone without npx is not enough for the package runner — fall through
+  // and install Bun (same as when nothing is installed).
+  if !has_node {
+    tracing::info!("no bun/npx/node on PATH — installing Bun to run codex-acp");
+  } else {
+    tracing::info!("node found but no npx/bun — installing Bun to run codex-acp");
+  }
+
+  ensure_bun_installed(&mut path_env)?;
+  acp_via_bunx(&path_env, extra_env)
+}
+
+fn make_acp_agent(
+  cfg: AcpAgentConfig,
+  label: String,
+  path_env: &str,
+  extra_env: &[(String, String)],
+) -> Result<(AcpAgent, String), String> {
+  let mut cfg = cfg.env("PATH", path_env);
+  for (k, v) in extra_env {
+    cfg = cfg.env(k, v);
+  }
+  Ok((AcpAgent::new(cfg), label))
+}
+
+fn bun_bin_dir() -> Option<PathBuf> {
+  dirs_home()
+    .map(|h| h.join(".bun").join("bin"))
+    .filter(|p| p.is_dir())
+}
+
+fn resolve_bun() -> Option<PathBuf> {
+  which("bun").or_else(|| {
+    dirs_home()
+      .map(|h| h.join(".bun").join("bin").join(bun_exe_name()))
+      .filter(|p| p.is_file())
+  })
+}
+
+fn resolve_bunx() -> Option<PathBuf> {
+  which("bunx").or_else(|| {
+    dirs_home()
+      .map(|h| h.join(".bun").join("bin").join(bunx_exe_name()))
+      .filter(|p| p.is_file())
+  })
+}
+
+fn resolve_npx() -> Option<PathBuf> {
+  which("npx")
+}
+
+fn resolve_node() -> Option<PathBuf> {
+  which("node")
+}
+
+#[cfg(windows)]
+fn bun_exe_name() -> &'static str {
+  "bun.exe"
+}
+#[cfg(not(windows))]
+fn bun_exe_name() -> &'static str {
+  "bun"
+}
+
+#[cfg(windows)]
+fn bunx_exe_name() -> &'static str {
+  "bunx.exe"
+}
+#[cfg(not(windows))]
+fn bunx_exe_name() -> &'static str {
+  "bunx"
+}
+
+/// Install Bun via the official installer when missing.
+fn ensure_bun_installed(path_env: &mut String) -> Result<PathBuf, String> {
+  if let Some(bun) = resolve_bun() {
+    if let Some(dir) = bun.parent() {
+      prepend_path_env(path_env, dir);
+    }
+    return Ok(bun);
+  }
+
+  tracing::info!("installing Bun (required to run codex-acp)…");
+  install_bun()?;
+
+  // Official installer puts binaries under ~/.bun/bin
+  if let Some(dir) = bun_bin_dir() {
+    prepend_path_env(path_env, &dir);
+  }
+
+  let bun = resolve_bun().ok_or_else(|| {
+    "Bun installer finished but `bun` was not found. Install from https://bun.sh \
+     then restart CDXTheme."
+      .to_string()
+  })?;
+  if let Some(dir) = bun.parent() {
+    prepend_path_env(path_env, dir);
+  }
+  tracing::info!(bun = %bun.display(), "Bun installed");
+  Ok(bun)
+}
+
+fn install_bun() -> Result<(), String> {
+  #[cfg(windows)]
+  {
+    let status = std::process::Command::new("powershell")
+      .args([
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "irm https://bun.sh/install.ps1 | iex",
+      ])
+      .status()
+      .map_err(|e| {
+        format!(
+          "failed to start Bun installer (powershell): {e}. \
+           Install Bun from https://bun.sh then retry."
+        )
+      })?;
+    if !status.success() {
+      return Err(format!(
+        "Bun installer exited with {status}. Install Bun from https://bun.sh then retry."
+      ));
+    }
+    return Ok(());
+  }
+
+  #[cfg(not(windows))]
+  {
+    // curl -fsSL https://bun.sh/install | bash
+    let status = std::process::Command::new("bash")
+      .args(["-lc", "curl -fsSL https://bun.sh/install | bash"])
+      .status()
+      .map_err(|e| {
+        format!(
+          "failed to start Bun installer (bash/curl): {e}. \
+           Install Bun from https://bun.sh then retry."
+        )
+      })?;
+    if !status.success() {
+      return Err(format!(
+        "Bun installer exited with {status}. Install Bun from https://bun.sh then retry."
+      ));
+    }
+    Ok(())
+  }
+}
+
+fn acp_via_bunx(
+  path_env: &str,
+  extra_env: &[(String, String)],
+) -> Result<(AcpAgent, String), String> {
+  // Prefer bunx; fall back to `bun x` when bunx shim is missing.
+  if let Some(bunx) = resolve_bunx() {
+    let label = format!("{} {}", bunx.display(), CODEX_ACP_PKG);
+    return make_acp_agent(
+      AcpAgentConfig::new(&bunx).args([CODEX_ACP_PKG]),
+      label,
+      path_env,
+      extra_env,
+    );
+  }
+  if let Some(bun) = resolve_bun() {
+    let label = format!("{} x {}", bun.display(), CODEX_ACP_PKG);
+    return make_acp_agent(
+      AcpAgentConfig::new(&bun).args(["x", CODEX_ACP_PKG]),
+      label,
+      path_env,
+      extra_env,
+    );
+  }
+  Err(
+    "Bun is required to run codex-acp but was not found after install. \
+     Install from https://bun.sh and restart CDXTheme."
+      .into(),
+  )
+}
+
+fn acp_via_npx(
+  path_env: &str,
+  extra_env: &[(String, String)],
+) -> Result<(AcpAgent, String), String> {
+  let npx = resolve_npx().ok_or_else(|| "npx not found".to_string())?;
+  let label = format!("{} -y {CODEX_ACP_PKG}", npx.display());
+  make_acp_agent(
+    AcpAgentConfig::new(&npx).args(["-y", CODEX_ACP_PKG]),
+    label,
+    path_env,
+    extra_env,
+  )
 }
 
 /// List saved sessions (ACP `session/list` when available, else `~/.codex`).
@@ -933,7 +1134,7 @@ pub async fn send_and_wait_with(
         });
       }
       return Err(format!(
-        "ACP error: {e}. Ensure Node/npm is available for codex-acp, or install `codex-acp` on PATH. \
+        "ACP error: {e}. Install Bun (https://bun.sh) or put `codex-acp` / `npx` on PATH. \
          Sign in with `codex login` if needed."
       ));
     }
@@ -976,17 +1177,15 @@ pub async fn send_and_wait_with(
         .rev()
         .find(|m| m.role == "assistant" && !m.content.trim().is_empty())
       {
-        reply = last.content.clone();
+        reply = summarize_for_ui(&last.content);
       }
     }
   }
 
   if reply.trim().is_empty() {
-    reply = format!(
-      "(No assistant text was streamed. Stop reason: {stop_reason}. \
-       The agent may have only run tools — check the workspace files.)"
-    );
+    reply = "Done.".into();
   }
+  tracing::debug!(%stop_reason, "ACP turn finished");
 
   Ok(CodexChatResult {
     submitted: true,
@@ -1004,11 +1203,12 @@ pub async fn send_and_wait_with(
   })
 }
 
-/// Accumulates ACP `session/update` traffic into a user-visible transcript.
+/// Accumulates ACP `session/update` traffic into a user-visible summary.
+///
+/// Only agent message text is shown — no tools/actions/plans (those stay internal).
 #[derive(Default)]
 struct TurnTranscript {
   agent_text: String,
-  tools: Vec<String>,
 }
 
 impl TurnTranscript {
@@ -1019,58 +1219,144 @@ impl TurnTranscript {
           self.agent_text.push_str(&text);
         }
       }
-      SessionUpdate::AgentThoughtChunk(chunk) => {
-        // Keep thoughts out of the main reply body (often noisy).
-        let _ = chunk;
-      }
-      SessionUpdate::ToolCall(call) => {
-        let title = call.title.trim();
-        if !title.is_empty() {
-          self.tools.push(format!("• {title}"));
-        }
-      }
-      SessionUpdate::ToolCallUpdate(update) => {
-        // Prefer title from fields when present.
-        let title = update
-          .fields
-          .title
-          .as_ref()
-          .map(|s| s.trim().to_string())
-          .filter(|s| !s.is_empty());
-        if let Some(t) = title {
-          let line = format!("• {t}");
-          if !self.tools.iter().any(|x| x == &line) {
-            self.tools.push(line);
-          }
-        }
-      }
-      SessionUpdate::Plan(plan) => {
-        // Summarize plan entries if present.
-        for entry in plan.entries.iter().take(8) {
-          let content = entry.content.trim();
-          if !content.is_empty() {
-            let line = format!("◇ {content}");
-            if !self.tools.iter().any(|x| x == &line) {
-              self.tools.push(line);
-            }
-          }
-        }
-      }
+      // Thoughts, tools, and plans are intentionally omitted from the UI stream.
+      SessionUpdate::AgentThoughtChunk(_)
+      | SessionUpdate::ToolCall(_)
+      | SessionUpdate::ToolCallUpdate(_)
+      | SessionUpdate::Plan(_) => {}
       _ => {}
     }
   }
 
   fn render(&self) -> String {
-    let mut out = self.agent_text.trim().to_string();
-    if !self.tools.is_empty() {
-      if !out.is_empty() {
-        out.push_str("\n\n");
-      }
-      out.push_str("**Actions**\n");
-      out.push_str(&self.tools.join("\n"));
-    }
-    out
+    summarize_for_ui(&self.agent_text)
   }
+}
+
+/// Strip code, paths, and noise so the Theme Builder UI only shows a short summary.
+fn summarize_for_ui(raw: &str) -> String {
+  let without_code = strip_fenced_code(raw);
+  let without_paths = redact_paths(&without_code);
+  // Drop lines that look like shell, code, or action logs.
+  let mut lines: Vec<String> = without_paths
+    .lines()
+    .map(str::trim)
+    .filter(|line| !line.is_empty())
+    .filter(|line| !is_noisy_summary_line(line))
+    .map(|s| s.to_string())
+    .collect();
+
+  // Cap length for the UI.
+  if lines.len() > 8 {
+    lines.truncate(8);
+  }
+  let mut out = lines.join("\n");
+  if out.chars().count() > 800 {
+    out = out.chars().take(800).collect::<String>() + "…";
+  }
+  out.trim().to_string()
+}
+
+fn strip_fenced_code(text: &str) -> String {
+  let mut out = String::with_capacity(text.len());
+  let mut in_fence = false;
+  for line in text.lines() {
+    let trimmed = line.trim_start();
+    if trimmed.starts_with("```") {
+      in_fence = !in_fence;
+      continue;
+    }
+    if in_fence {
+      continue;
+    }
+    out.push_str(line);
+    out.push('\n');
+  }
+  out
+}
+
+fn redact_paths(text: &str) -> String {
+  text
+    .lines()
+    .map(|line| {
+      line
+        .split_whitespace()
+        .map(|tok| {
+          if token_looks_like_path(tok) {
+            "…"
+          } else {
+            tok
+          }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+    })
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
+fn token_looks_like_path(tok: &str) -> bool {
+  let t =
+    tok.trim_matches(|c: char| matches!(c, '`' | '"' | '\'' | ',' | '.' | ';' | ':' | ')' | '('));
+  if t.is_empty() {
+    return false;
+  }
+  let lower = t.to_ascii_lowercase();
+  // Absolute paths
+  if t.starts_with('/') || t.starts_with("~/") {
+    return true;
+  }
+  if t.len() > 2 && t.as_bytes()[1] == b':' && (t.as_bytes()[2] == b'\\' || t.as_bytes()[2] == b'/')
+  {
+    return true;
+  }
+  if t.starts_with("\\\\") {
+    return true;
+  }
+  // Relative path-ish tokens
+  if t.contains('/') || t.contains('\\') {
+    return true;
+  }
+  lower.ends_with(".cdxtheme")
+    || lower.ends_with(".css")
+    || lower.ends_with(".json")
+    || lower.ends_with(".sh")
+    || lower.ends_with(".js")
+    || lower.ends_with(".ts")
+}
+
+fn is_noisy_summary_line(line: &str) -> bool {
+  let t = line.trim();
+  if t.is_empty() {
+    return true;
+  }
+  // Action / tool style lines we used to inject
+  if t.starts_with("**Actions**") || t.starts_with("• ") || t.starts_with("◇ ") {
+    return true;
+  }
+  // Shell-ish / CLI
+  if t.starts_with('$') || t.starts_with("# ") || t.starts_with("export ") {
+    return true;
+  }
+  if t.starts_with("cdxthemex")
+    || t.starts_with("bunx ")
+    || t.starts_with("npx ")
+    || t.starts_with("bun ")
+  {
+    return true;
+  }
+  // Code-ish
+  if t.contains('{') && t.contains('}') && (t.contains(':') || t.contains(';')) {
+    return true;
+  }
+  if t.starts_with("```") {
+    return true;
+  }
+  // Whole line is only a path / filename
+  if token_looks_like_path(t) {
+    return true;
+  }
+  false
 }
 
 fn content_block_text(block: &ContentBlock) -> Option<String> {
