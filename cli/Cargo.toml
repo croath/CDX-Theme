@@ -7,7 +7,7 @@ authors = ["CDXTheme"]
 license = "MIT"
 
 [[bin]]
-name = "cdxtheme"
+name = "cdxthemex"
 path = "src/main.rs"
 
 [dependencies]
