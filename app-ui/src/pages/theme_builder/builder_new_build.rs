@@ -12,7 +12,11 @@ use crate::i18n::I18n;
 use crate::state::AppCtx;
 use crate::types::Locale;
 
-use super::{is_allowed_hero_file, path_basename, read_file_data_url, short_id};
+use crate::api::CodexModelOption;
+
+use super::{
+  BuilderModelSelect, is_allowed_hero_file, path_basename, read_file_data_url, short_id,
+};
 
 /// New theme build: hero image + description → Generate → reply + Apply.
 #[component]
@@ -29,6 +33,8 @@ pub(super) fn BuilderNewBuild(
   build_reply: RwSignal<Option<String>>,
   package_path: RwSignal<Option<String>>,
   applied_name: RwSignal<Option<String>>,
+  models: RwSignal<Vec<CodexModelOption>>,
+  selected_model: RwSignal<String>,
   on_back: Callback<()>,
 ) -> impl IntoView {
   let ctx = AppCtx::use_ctx();
@@ -209,8 +215,13 @@ pub(super) fn BuilderNewBuild(
 
       let resume = session_id.get_untracked();
       let ws_id = workspace_id.get_untracked();
+      let model = {
+        let m = selected_model.get_untracked();
+        let m = m.trim().to_string();
+        if m.is_empty() { None } else { Some(m) }
+      };
 
-      match api::codex_chat(prompt, resume, Some(ws_path), ws_id, Some(180_000)).await {
+      match api::codex_chat(prompt, resume, Some(ws_path), ws_id, Some(180_000), model).await {
         Ok(result) => {
           if let Some(sid) = result.session_id.filter(|s| !s.is_empty()) {
             session_id.set(Some(sid));
@@ -343,6 +354,11 @@ pub(super) fn BuilderNewBuild(
             }}
           </p>
         </div>
+        <BuilderModelSelect
+          models=models
+          selected_model=selected_model
+          disabled=Signal::derive(move || generating.get() || applying.get())
+        />
       </header>
 
       // Step pills

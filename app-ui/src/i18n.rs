@@ -1241,6 +1241,14 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::DeDe, "builder.back") => "Zurück zu Sessions",
     (Locale::EsEs, "builder.back") => "Volver a sesiones",
 
+    (Locale::EnUs, "builder.model.label") => "Model",
+    (Locale::ZhHans, "builder.model.label") => "模型",
+    (Locale::ZhHant, "builder.model.label") => "模型",
+    (Locale::JaJp, "builder.model.label") => "モデル",
+    (Locale::KoKr, "builder.model.label") => "모델",
+    (Locale::DeDe, "builder.model.label") => "Modell",
+    (Locale::EsEs, "builder.model.label") => "Modelo",
+
     (Locale::EnUs, "builder.chat.new") => "New theme chat",
     (Locale::ZhHans, "builder.chat.new") => "新主题对话",
     (Locale::ZhHant, "builder.chat.new") => "新主題對話",

@@ -441,6 +441,7 @@ pub fn run() {
       commands::apply_built_theme,
       commands::save_theme_builder_hero,
       commands::list_codex_sessions,
+      commands::list_codex_models,
       commands::delete_theme_builder_session,
       commands::get_codex_session,
       commands::start_theme_build,

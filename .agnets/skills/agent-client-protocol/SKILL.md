@@ -2,8 +2,10 @@
 name: agent-client-protocol
 description: >
   Summary of the Agent Client Protocol (ACP) and how CDXTheme Theme Builder
-  uses the Rust SDK with Codex. Use when working on Theme Builder chat, ACP
-  sessions, codex-acp, or agent-client-protocol integration.
+  uses the Rust SDK with Codex — including sessions, streaming, permissions,
+  and model selection via session config options. Use when working on Theme
+  Builder chat, ACP sessions, codex-acp, model select menus, or
+  agent-client-protocol integration.
 ---
 
 # Agent Client Protocol (ACP)
@@ -109,9 +111,64 @@ A **session** is one conversation context (history, cwd, modes, optional MCP ser
 | `session/load` | Client → Agent | Resume by `sessionId` (if agent supports it) |
 | `session/list` | Client → Agent | List known sessions (optional capability) |
 | `session/prompt` | Client → Agent | Send a user turn |
+| `session/set_config_option` | Client → Agent | Set session config (model, reasoning, …) |
+| `session/set_mode` | Client → Agent | Switch agent mode (ask / code / …) when advertised |
 | `session/update` | Agent → Client | Stream progress (text chunks, tool calls, plan, …) |
 
 User-facing text defaults to **Markdown**.
+
+### Session config options (model, reasoning, …)
+
+ACP does **not** have a dedicated `session/set_model` method in the modern
+protocol. Model (and related knobs) use the generic **session config option**
+mechanism:
+
+1. On `session/new` / `session/load` / `session/resume`, the agent may return
+   `configOptions: SessionConfigOption[]`.
+2. The client renders selectors (model, thought level, …) from those options.
+3. The client calls `session/set_config_option` with `configId` + value.
+4. The agent may also push `config_option_update` notifications when options
+   change mid-session.
+
+#### `SessionConfigOption` shape (conceptual)
+
+| Field | Role |
+| --- | --- |
+| `id` | Stable option id (e.g. `"model"`, `"reasoning_effort"`) |
+| `name` / `description` | UI labels |
+| `category` | UX hint only — not required for correctness |
+| `type` | `"select"` (value id) or `"boolean"` |
+| `currentValue` | Current selection |
+| `options` | Select choices (`value` + `name` + optional description) |
+
+#### Categories (UX only)
+
+| `category` | Typical use |
+| --- | --- |
+| `model` | Primary model selector |
+| `model_config` | Model-adjacent params (speed/quality, context, …) |
+| `thought_level` | Reasoning / thought effort |
+| `mode` | Session mode (overlaps with `session/set_mode` for some agents) |
+
+Clients **must** handle missing or unknown categories gracefully. Do not hard-code
+agent-specific option ids without a fallback; prefer matching
+`category == "model"` when available, then fall back to known ids.
+
+#### `session/set_config_option` value wire shape
+
+```json
+// Select / value-id (default when type omitted)
+{ "sessionId": "…", "configId": "model", "value": "gpt-5.6-luna" }
+
+// Explicit value_id form used by some SDKs
+{ "sessionId": "…", "configId": "model", "type": "value_id", "value": "gpt-5.6-luna" }
+
+// Boolean
+{ "sessionId": "…", "configId": "fast_mode", "type": "boolean", "value": true }
+```
+
+Rust SDK types (schema v1): `SetSessionConfigOptionRequest`,
+`SessionConfigOptionValue::value_id(...)` / `::boolean(...)`.
 
 ### Content blocks
 
@@ -138,6 +195,8 @@ Agents can send **request permission** RPCs so the client can show UI or auto-ap
 | `session/load` | Load existing session by id |
 | `session/list` | List sessions (optional) |
 | `session/prompt` | User message (content blocks) |
+| `session/set_config_option` | Set model / reasoning / other session options |
+| `session/set_mode` | Set agent operating mode |
 | mode / config helpers | Optional session configuration |
 
 ### Agent → Client
@@ -204,6 +263,14 @@ Client.builder()
         .block_task()
         .await?;
       // or: LoadSessionRequest::new(session_id, cwd)
+      // new.config_options may list model / reasoning selectors
+
+      // 4b) Optional: set model before the first prompt
+      // connection.send_request(SetSessionConfigOptionRequest::new(
+      //   new.session_id.clone(),
+      //   "model",
+      //   SessionConfigOptionValue::value_id("gpt-5.6-luna"),
+      // )).block_task().await?;
 
       // 5) Prompt
       connection
@@ -250,34 +317,136 @@ AcpAgent::claude_agent();
 ## How CDXTheme uses ACP
 
 Implementation: `core/src/codex_chat.rs`  
-UI: Theme Builder page (`app-ui` home list + chat)  
-IPC: Tauri `codex_chat`, `list_codex_sessions`, `get_codex_session`
+UI: Theme Builder (`app-ui/src/pages/theme_builder/`)  
+IPC: Tauri `codex_chat`, `list_codex_sessions`, `list_codex_models`, `get_codex_session`
 
 ### Turn model
 
-| UI action | ACP |
+| UI action | ACP / host |
 | --- | --- |
-| Start theme build → first message | `session/new` + `session/prompt` |
-| Follow-up message with `session_id` | `session/load` + `session/prompt` |
+| Start theme build → first message | `session/new` → optional `session/set_config_option(model)` → `session/prompt` |
+| Follow-up message with `session_id` | `session/load` → optional set model → `session/prompt` |
 | List sessions | Prefer ACP `session/list` when available; else `~/.codex/session_index.jsonl` |
 | Open saved session transcript | Load rollout JSONL under `~/.codex/sessions` (disk fallback) |
+| Populate model menu | Disk: `list_codex_models` (no ACP spawn); apply model on next turn via ACP |
+
+**Important:** Theme Builder currently spawns a **fresh ACP connection per turn**
+(connect → initialize → new/load → set model → prompt → drop). Model must be
+re-applied after every `session/new` or `session/load`, not only on first open.
 
 ### Agent resolution (order)
 
 1. `codex-acp` on `PATH`
-2. `npx -y @agentclientprotocol/codex-acp@latest`
+2. `bunx` / `npx -y @agentclientprotocol/codex-acp@latest`
 3. Prepend ChatGPT-bundled `codex` directory onto agent `PATH`
 
 ### Runtime requirements
 
-- **Node/npm** if using the default npx adapter (or install `codex-acp` yourself).
+- **Bun/Node** if using the default bunx/npx adapter (or install `codex-acp` yourself).
 - **Codex CLI** (bundled with ChatGPT app and/or on PATH).
 - **Auth**: `codex login` (or existing `~/.codex/auth.json`) when the adapter/CLI needs it.
-- Theme Builder workspace cwd: temp dir `…/cdxtheme-theme-builder` (absolute path for `session/new|load`).
+- Theme Builder workspace cwd: app data `…/theme_builder/{id}` (absolute path for `session/new|load`).
 
 ### Security note
 
 Theme Builder auto-approves permission requests for UX. Do not treat that as safe for untrusted agents or full-access sandboxes without an explicit product decision.
+
+---
+
+## Codex-acp model selection (CDXTheme)
+
+### How codex-acp exposes models
+
+`@agentclientprotocol/codex-acp` advertises session config options after
+`session/new` / `session/load`, including:
+
+| Option `id` | Category | Meaning |
+| --- | --- | --- |
+| `model` | `model` | Base model slug (e.g. `gpt-5.6-luna`) |
+| `reasoning_effort` | `thought_level` | low / medium / high / … (when model supports it) |
+| `fast_mode` | (boolean) | Fast mode when supported |
+| (+ mode / collaboration options) | — | Agent-specific |
+
+Internal constants in the adapter (for orientation):
+
+- `MODEL_CONFIG_ID = "model"`
+- `REASONING_EFFORT_CONFIG_ID = "reasoning_effort"`
+
+Legacy `session/set_model` may still exist in older adapters; prefer
+`session/set_config_option` with id `"model"`.
+
+### Listing models without spawning ACP
+
+Spawning the agent only to fetch the model list is slow and fragile. CDXTheme
+reads local Codex files instead:
+
+| File | Role |
+| --- | --- |
+| `~/.codex/models_cache.json` | Cached catalog (`models[]` with `slug`, `display_name`, `description`, `visibility`, …). Written by Codex CLI. |
+| `~/.codex/config.toml` | Preferred default: top-level `model = "…"` |
+| `CODEX_HOME` | Override for the Codex home directory (else `~/.codex`) |
+
+Filter cache entries with `visibility == "list"` (or include when visibility is
+absent). Ensure the configured `model` appears even if missing from the cache.
+Keep a small hard-coded fallback list so the UI still renders offline.
+
+Core API: `cdx_theme_core::list_codex_models()` → `CodexModelsList { models, current }`.  
+IPC: `list_codex_models`. UI: `api::list_codex_models()`.
+
+### Applying the selected model on a turn
+
+In `send_and_wait_with` / `CodexChatOptions.model`:
+
+```text
+initialize
+  → session/new | session/load
+  → session/set_config_option { configId: "model", value: <id> }   // best-effort
+  → session/prompt
+```
+
+Rules:
+
+1. Treat set-model failure as **non-fatal** (log + continue with agent default).
+2. Pass model from UI → `api::codex_chat(..., model)` → Tauri `codex_chat` →
+   `CodexChatOptions.model`.
+3. Show the model menu only on surfaces that **send prompts** (New Build + Chat),
+   not on the session list Home page.
+4. Share one `selected_model` signal across New Build and Chat so switching views
+   keeps the same choice for the Theme Builder session.
+5. Disable the menu while generate/send/apply is in flight.
+
+### UI map
+
+| Piece | Path |
+| --- | --- |
+| Shared state + `BuilderModelSelect` | `app-ui/src/pages/theme_builder/mod.rs` |
+| New build (generate) | `builder_new_build.rs` — header model menu + `codex_chat` model arg |
+| Resume chat | `builder_chat.rs` — header model menu + `codex_chat` model arg |
+| i18n label | `builder.model.label` in `app-ui/src/i18n.rs` |
+| Set model in ACP turn | `core/src/codex_chat.rs` (`SetSessionConfigOptionRequest`) |
+| List models from disk | `core/src/codex_chat.rs` (`list_models`) |
+| IPC | `list_codex_models`, `codex_chat` (`model` optional) in `app-tauri` + `api.rs` |
+
+### codex-acp env notes (optional)
+
+The adapter also accepts env such as:
+
+- `CODEX_CONFIG` — JSON merged into Codex session config  
+- `MODEL_PROVIDER` — provider for new sessions  
+
+Theme Builder does **not** rely on these for the primary model picker; ACP
+`set_config_option` is the session-scoped path.
+
+### Common pitfalls
+
+| Pitfall | Fix |
+| --- | --- |
+| Expect a dedicated `session/set_model` | Use `session/set_config_option` + id `model` |
+| Only set model on first UI open | Re-set after every `session/new` / `session/load` (per-turn connect) |
+| Spawn ACP just to fill the dropdown | Prefer `models_cache.json` + `config.toml` |
+| Fail the whole turn if set-model errors | Best-effort; log and prompt anyway |
+| Hard-code only agent option ids | Prefer `category == "model"` when parsing live `configOptions` |
+| Show model menu on session list | Only on pages that call `codex_chat` |
 
 ---
 
@@ -289,19 +458,25 @@ Theme Builder auto-approves permission requests for UX. Do not treat that as saf
 4. **Timeouts** around the whole `connect_with` future; long agent turns need generous budgets (Theme Builder defaults ~3 minutes).
 5. **Disk fallback** for list/transcript remains useful when the adapter omits `session/list` or history APIs.
 6. Prefer **structured ACP** over scraping interactive TUI or brittle `codex exec` JSONL when you need multi-turn chat from a host app.
+7. **Model select:** list from disk, apply via `session/set_config_option` after session setup, non-fatal on failure, re-apply every turn when connections are short-lived.
 
 ---
 
 ## References
 
-| Resource | URL |
+| Resource | URL / path |
 | --- | --- |
 | ACP intro | https://agentclientprotocol.com/get-started/introduction |
+| ACP schema (incl. set_config_option) | https://agentclientprotocol.com/protocol/v1/schema |
+| Session config / model category | https://agentclientprotocol.com/protocol/v1/session-config-options (and announcements on model_config category) |
 | Agents list | https://agentclientprotocol.com/get-started/agents |
 | Rust SDK | https://github.com/agentclientprotocol/rust-sdk |
 | docs.rs | https://docs.rs/agent-client-protocol |
-| Codex ACP adapter | https://github.com/agentclientprotocol/codex-acp (and/or `@agentclientprotocol/codex-acp`) |
+| Codex ACP adapter | https://github.com/agentclientprotocol/codex-acp / `@agentclientprotocol/codex-acp` |
 | CDXTheme core | `core/src/codex_chat.rs` |
+| Theme Builder UI | `app-ui/src/pages/theme_builder/` |
+| Local model cache | `~/.codex/models_cache.json` |
+| Local Codex config | `~/.codex/config.toml` |
 
 ---
 
@@ -309,5 +484,6 @@ Theme Builder auto-approves permission requests for UX. Do not treat that as saf
 
 - Extending Theme Builder chat, sessions, or Codex connectivity  
 - Debugging ACP initialize / session / prompt failures  
+- Adding or changing the **model select** menu / `list_codex_models` / set-model path  
 - Choosing between `codex exec`, app-server, and ACP  
-- Adding streaming, permissions, or MCP attachment on the ACP path  
+- Adding streaming, permissions, session config options, or MCP attachment on the ACP path  

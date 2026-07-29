@@ -5,7 +5,7 @@ mod builder_home;
 mod builder_new_build;
 mod builder_runtime_setup;
 
-use icons::{LoaderCircle, WandSparkles};
+use icons::{Check, ChevronDown, LoaderCircle, WandSparkles};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::JsCast;
@@ -13,7 +13,7 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::File;
 
-use crate::api::{self, CodexSessionSummary, ThemeBuilderRuntimeStatus};
+use crate::api::{self, CodexModelOption, CodexSessionSummary, ThemeBuilderRuntimeStatus};
 use crate::components::ui::sonner::toast_error;
 use crate::i18n::I18n;
 use crate::state::AppCtx;
@@ -91,6 +91,10 @@ pub fn ThemeBuilderPage() -> impl IntoView {
   let chat_loading = RwSignal::new(false);
   let list_ref = NodeRef::<leptos::html::Div>::new();
 
+  // Shared Codex model selection (NewBuild + Chat).
+  let models = RwSignal::new(Vec::<CodexModelOption>::new());
+  let selected_model = RwSignal::new(String::new());
+
   let apply_runtime_status = move |status: ThemeBuilderRuntimeStatus| {
     let ready = status.ready;
     runtime_status.set(Some(status));
@@ -163,6 +167,35 @@ pub fn ThemeBuilderPage() -> impl IntoView {
     if runtime_gate.get() == RuntimeGate::Ready && view.get() == BuilderView::Home {
       refresh_sessions();
     }
+  });
+
+  // Load Codex model list once the host runtime is ready.
+  Effect::new(move |_| {
+    if runtime_gate.get() != RuntimeGate::Ready {
+      return;
+    }
+    if !models.get_untracked().is_empty() {
+      return;
+    }
+    spawn_local(async move {
+      match api::list_codex_models().await {
+        Ok(list) => {
+          models.set(list.models);
+          if selected_model.get_untracked().trim().is_empty() {
+            if let Some(cur) = list.current.filter(|s| !s.trim().is_empty()) {
+              selected_model.set(cur);
+            } else if let Some(first) = models.get_untracked().first() {
+              selected_model.set(first.id.clone());
+            }
+          }
+        }
+        Err(e) => {
+          web_sys::console::warn_1(&wasm_bindgen::JsValue::from_str(&format!(
+            "list_codex_models failed: {e}"
+          )));
+        }
+      }
+    });
   });
 
   let open_new_build = move || {
@@ -341,6 +374,8 @@ pub fn ThemeBuilderPage() -> impl IntoView {
               build_reply=build_reply
               package_path=package_path
               applied_name=applied_name
+              models=models
+              selected_model=selected_model
               on_back=Callback::new(move |_| back_home())
             />
           }.into_any(),
@@ -358,12 +393,134 @@ pub fn ThemeBuilderPage() -> impl IntoView {
               package_path=package_path
               applying=applying
               applied_name=applied_name
+              models=models
+              selected_model=selected_model
               list_ref=list_ref
               on_back=Callback::new(move |_| back_home())
             />
           }.into_any(),
         },
       }}
+    </div>
+  }
+}
+
+/// Compact model dropdown used on every Codex chat surface.
+#[component]
+pub(super) fn BuilderModelSelect(
+  models: RwSignal<Vec<CodexModelOption>>,
+  selected_model: RwSignal<String>,
+  /// When true, the menu is non-interactive (generate / send in flight).
+  disabled: Signal<bool>,
+) -> impl IntoView {
+  let ctx = AppCtx::use_ctx();
+  let open = RwSignal::new(false);
+
+  view! {
+    <div class="relative shrink-0">
+      <Show when=move || open.get()>
+        <div
+          class="fixed inset-0 z-20 cursor-default"
+          on:click=move |_| open.set(false)
+        />
+      </Show>
+
+      <button
+        type="button"
+        class="no-drag group relative z-30 inline-flex h-9 max-w-[11rem] items-center gap-1.5 rounded-xl border border-border/70 bg-card/90 px-2.5 text-left text-xs font-medium text-foreground shadow-sm backdrop-blur transition-all hover:border-primary/35 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 sm:max-w-[14rem]"
+        prop:disabled=move || disabled.get() || models.get().is_empty()
+        aria-haspopup="listbox"
+        prop:aria-expanded=move || open.get()
+        aria-label=move || {
+          let i18n = I18n { locale: ctx.locale.get() };
+          i18n.t("builder.model.label")
+        }
+        on:click=move |_| {
+          if disabled.get_untracked() || models.get_untracked().is_empty() {
+            return;
+          }
+          open.update(|v| *v = !*v);
+        }
+      >
+        <span class="min-w-0 flex-1 truncate">
+          {move || {
+            let id = selected_model.get();
+            let list = models.get();
+            if let Some(m) = list.iter().find(|m| m.id == id) {
+              m.name.clone()
+            } else if !id.is_empty() {
+              id
+            } else {
+              let i18n = I18n { locale: ctx.locale.get() };
+              i18n.t("builder.model.label").to_string()
+            }
+          }}
+        </span>
+        <span class=move || {
+          if open.get() {
+            "inline-flex shrink-0 text-muted-foreground transition-transform duration-200 rotate-180"
+          } else {
+            "inline-flex shrink-0 text-muted-foreground transition-transform duration-200"
+          }
+        }>
+          <ChevronDown class="size-3.5" />
+        </span>
+      </button>
+
+      <Show when=move || open.get() && !models.get().is_empty()>
+        <ul
+          class="absolute right-0 top-full z-40 mt-1.5 max-h-64 w-56 list-none overflow-y-auto rounded-2xl border border-border/70 bg-popover p-1.5 shadow-2xl shadow-black/25 ring-1 ring-border/40 sm:w-64"
+          role="listbox"
+        >
+          <For
+            each=move || models.get()
+            key=|m| m.id.clone()
+            children=move |m| {
+              let id = m.id.clone();
+              let name = m.name.clone();
+              let desc = m.description.clone().unwrap_or_default();
+              let has_desc = !desc.is_empty();
+              let id_for_active = id.clone();
+              let id_for_class = id.clone();
+              let id_for_click = id.clone();
+              let id_for_check = id;
+              view! {
+                <li>
+                  <button
+                    type="button"
+                    role="option"
+                    prop:aria-selected=move || selected_model.get() == id_for_active
+                    class=move || {
+                      let active = selected_model.get() == id_for_class;
+                      if active {
+                        "flex w-full items-start justify-between gap-2 rounded-xl bg-primary/12 px-2.5 py-2 text-left transition-colors"
+                      } else {
+                        "flex w-full items-start justify-between gap-2 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-accent/60"
+                      }
+                    }
+                    on:click=move |_| {
+                      selected_model.set(id_for_click.clone());
+                      open.set(false);
+                    }
+                  >
+                    <div class="min-w-0">
+                      <div class="truncate text-xs font-medium text-foreground">{name}</div>
+                      <Show when=move || has_desc>
+                        <div class="mt-0.5 line-clamp-2 text-[10px] leading-snug text-muted-foreground">
+                          {desc.clone()}
+                        </div>
+                      </Show>
+                    </div>
+                    <Show when=move || selected_model.get() == id_for_check>
+                      <Check class="mt-0.5 size-3.5 shrink-0 text-primary" />
+                    </Show>
+                  </button>
+                </li>
+              }
+            }
+          />
+        </ul>
+      </Show>
     </div>
   }
 }
