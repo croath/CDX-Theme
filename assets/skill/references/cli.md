@@ -147,7 +147,7 @@ Under [scripts/probe/](../scripts/probe/README.md):
 | --- | --- |
 | `work-layout` | Work home hero/missions/util/composer geometry + gaps |
 | `chat-layout` | Chat home hero + fixed composer |
-| `go-work-home` | Open Work landing (新建任务 / New task) — not just mode toggle |
+| `go-work-home` | Open Work landing (New task / locale equivalents) — not just mode toggle |
 | `set-mode` | `/path/to/run.sh set-mode chat\|work` header toggle |
 | `hero-row-tree` | Debug mid-page hero (grid-rows / parent chain) |
 | `discover-nav` | Dump mode group + useful buttons |

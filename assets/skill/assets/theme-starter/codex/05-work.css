@@ -294,13 +294,13 @@ html.cdxtheme-codex-skin:has([data-feature="game-source"]) #cdxtheme-codex-skin-
   box-shadow:
     0 0 0 3px color-mix(in srgb, var(--theme-accent) 22%, transparent),
     0 6px 14px color-mix(in srgb, var(--theme-black) 35%, transparent) !important;
-  color: var(--theme-var(--theme-white)) !important;
+  color: var(--theme-white) !important;
 }
 
 .dream-home .group\/home-suggestions button.group\/home-suggestion-list-item > span:first-child svg {
   width: 18px !important;
   height: 18px !important;
-  color: var(--theme-var(--theme-white)) !important;
+  color: var(--theme-white) !important;
   stroke: currentColor !important;
 }
 
@@ -404,7 +404,7 @@ html.cdxtheme-codex-skin header.app-header-tint [role="group"][aria-label="Compo
 
 html.cdxtheme-host-codex header.app-header-tint [role="group"][aria-label="Composer mode"] button[aria-pressed="true"],
 html.cdxtheme-codex-skin header.app-header-tint [role="group"][aria-label="Composer mode"] button[aria-pressed="true"] {
-  color: var(--theme-var(--theme-white)) !important;
+  color: var(--theme-white) !important;
   text-shadow: 0 1px 8px color-mix(in srgb, var(--theme-black) 35%, transparent);
   transform: scale(1.02);
 }

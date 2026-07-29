@@ -1,0 +1,81 @@
+/* codex/00-palette.css
+ *
+ * PRIMARY PALETTE ONLY (--theme-accent, text, bg, panel, …).
+ * Edit this file when recoloring / generating a brand.
+ * Keep in sync with workbuddy/00-palette.css.
+ *
+ * Default = light. Dark overrides when host marks dark
+ * (.electron-dark) or prefers-color-scheme: dark (unless .electron-light).
+ *
+ * Merge order: 00-palette → 00-tokens → 01-shell …
+ */
+
+/* —— Light (default) —— */
+:root.cdxtheme-host-codex,
+:root.cdxtheme-codex-skin {
+  color-scheme: light !important;
+
+  --theme-accent: #7867a8;              /* primary brand */
+  --theme-accent-hot: #9b8bc9;          /* lighter / highlight */
+  --theme-accent-deep: #5c4d8a;         /* darker gradient end */
+  --theme-accent-2: #9a93a8;            /* secondary (metal / silver role) */
+  --theme-accent-2-hot: #c8c2d4;        /* secondary highlight */
+  --theme-accent-3: #c45c8a;            /* tertiary stripe / badge accent */
+  --theme-text: #2f2b3a;                /* primary ink */
+  --theme-muted: #756f82;               /* secondary ink */
+  --theme-bg: #f0eef6;                  /* deepest page bg */
+  --theme-bg-elevated: #f8f7fc;         /* elevated surface */
+  --theme-panel: #ffffff;               /* cards / solid panels */
+  --theme-panel-mid: #f4f1fa;           /* mid panel / chips */
+  --theme-on-accent: #ffffff;           /* text/icons on accent fills */
+  --theme-white: #ffffff;
+  --theme-black: #2f2b3a;               /* shadows / ink base in light mode */
+}
+
+/* —— Dark (host class) —— */
+:root.cdxtheme-host-codex.electron-dark,
+:root.cdxtheme-codex-skin.electron-dark,
+:root.cdxtheme-host-codex[data-color-scheme="dark"],
+:root.cdxtheme-codex-skin[data-color-scheme="dark"] {
+  color-scheme: dark !important;
+
+  --theme-accent: #9b8bc9;
+  --theme-accent-hot: #c4b5e8;
+  --theme-accent-deep: #7a6aad;
+  --theme-accent-2: #8a8498;
+  --theme-accent-2-hot: #c8c2d4;
+  --theme-accent-3: #d47a9e;
+  --theme-text: #f0eef6;
+  --theme-muted: #a8a2b5;
+  --theme-bg: #121018;
+  --theme-bg-elevated: #1a1722;
+  --theme-panel: #221e2c;
+  --theme-panel-mid: #2a2536;
+  --theme-on-accent: #121018;
+  --theme-white: #ffffff;
+  --theme-black: #000000;
+}
+
+/* —— Dark (OS preference; skip when host forces light) —— */
+@media (prefers-color-scheme: dark) {
+  :root.cdxtheme-host-codex:not(.electron-light):not([data-color-scheme="light"]),
+  :root.cdxtheme-codex-skin:not(.electron-light):not([data-color-scheme="light"]) {
+    color-scheme: dark !important;
+
+    --theme-accent: #9b8bc9;
+    --theme-accent-hot: #c4b5e8;
+    --theme-accent-deep: #7a6aad;
+    --theme-accent-2: #8a8498;
+    --theme-accent-2-hot: #c8c2d4;
+    --theme-accent-3: #d47a9e;
+    --theme-text: #f0eef6;
+    --theme-muted: #a8a2b5;
+    --theme-bg: #121018;
+    --theme-bg-elevated: #1a1722;
+    --theme-panel: #221e2c;
+    --theme-panel-mid: #2a2536;
+    --theme-on-accent: #121018;
+    --theme-white: #ffffff;
+    --theme-black: #000000;
+  }
+}

@@ -1,0 +1,87 @@
+/* codex/01-host-bridges.css
+ *
+ * Host VS Code / color-token bridges → --theme-*.
+ * Driven by 00-palette + 00-tokens (semantic vars).
+ * Usually leave as-is when recoloring; edit only if host surfaces misbehave.
+ *
+ * Merge after 00-tokens, before 01-shell (alphabetical: host-bridges < shell).
+ */
+
+:root.cdxtheme-host-codex,
+:root.cdxtheme-codex-skin {
+  /* Codex keeps many dark-theme defaults. Bridge so light + dark palettes stay readable. */
+  --vscode-foreground: var(--theme-text) !important;
+  --vscode-sideBar-foreground: var(--theme-text) !important;
+  --vscode-sideBarTitle-foreground: var(--theme-text) !important;
+  --vscode-sideBarSectionHeader-foreground: var(--theme-text) !important;
+  --vscode-icon-foreground: var(--theme-text) !important;
+  --vscode-input-foreground: var(--theme-text) !important;
+  --vscode-input-placeholderForeground: var(--theme-muted) !important;
+  --vscode-disabledForeground: color-mix(in srgb, var(--theme-muted) 70%, transparent) !important;
+  --vscode-descriptionForeground: var(--theme-muted) !important;
+  --vscode-dropdown-foreground: var(--theme-text) !important;
+  --vscode-menu-foreground: var(--theme-text) !important;
+  --vscode-list-activeSelectionForeground: var(--theme-text) !important;
+
+  --color-text-foreground: var(--theme-text) !important;
+  --color-text-foreground-secondary: var(--theme-muted) !important;
+  --color-text-foreground-tertiary: var(--theme-muted) !important;
+  --color-icon-secondary: var(--theme-muted) !important;
+  --color-icon-tertiary: var(--theme-muted) !important;
+  --color-text-button-secondary: var(--theme-text) !important;
+  --color-text-button-tertiary: var(--theme-muted) !important;
+
+  /* Host surface tokens (settings cards / elevated chrome) */
+  --color-background-surface: var(--theme-bg) !important;
+  --color-background-surface-under: var(--theme-bg) !important;
+  --color-background-panel: var(--theme-panel) !important;
+  --color-background-elevated-primary: var(--theme-panel) !important;
+  --color-background-elevated-primary-opaque: var(--theme-panel) !important;
+  --color-background-elevated-secondary: var(--theme-panel-mid) !important;
+  --color-background-elevated-secondary-opaque: var(--theme-panel-mid) !important;
+  --color-background-button-secondary: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-panel)) !important;
+  --color-background-button-secondary-hover: color-mix(in srgb, var(--theme-accent) 16%, var(--theme-panel)) !important;
+  --color-background-button-secondary-active: color-mix(in srgb, var(--theme-accent) 20%, var(--theme-panel)) !important;
+  --color-background-button-secondary-inactive: color-mix(in srgb, var(--theme-muted) 8%, var(--theme-panel)) !important;
+  --color-background-button-tertiary: transparent !important;
+  --color-background-button-tertiary-hover: color-mix(in srgb, var(--theme-accent) 10%, transparent) !important;
+  --color-background-button-tertiary-active: color-mix(in srgb, var(--theme-accent) 16%, transparent) !important;
+
+  --color-token-bg-primary: var(--theme-bg) !important;
+  --color-token-bg-secondary: var(--theme-surface) !important;
+  --color-token-bg-tertiary: var(--theme-surface-strong) !important;
+  --color-token-main-surface-primary: var(--theme-surface) !important;
+  --color-token-side-bar-background: var(--theme-sidebar) !important;
+  --color-token-foreground: var(--theme-text) !important;
+  --color-token-text-primary: var(--theme-text) !important;
+  --color-token-text-secondary: var(--theme-muted) !important;
+  --color-token-text-tertiary: var(--theme-muted) !important;
+  --color-token-icon-foreground: var(--theme-text) !important;
+  --color-token-description-foreground: var(--theme-muted) !important;
+  --color-token-disabled-foreground: color-mix(in srgb, var(--theme-muted) 72%, transparent) !important;
+  --color-token-border: var(--theme-border) !important;
+  --color-token-border-default: color-mix(in srgb, var(--theme-black) 12%, transparent) !important;
+  --color-token-border-light: color-mix(in srgb, var(--theme-black) 8%, transparent) !important;
+  --color-token-border-heavy: color-mix(in srgb, var(--theme-black) 18%, transparent) !important;
+  --color-token-input-background: var(--theme-bg-elevated) !important;
+  --color-token-input-border: color-mix(in srgb, var(--theme-accent) 30%, transparent) !important;
+  --color-token-input-foreground: var(--theme-text) !important;
+  --color-token-input-placeholder-foreground: var(--theme-muted) !important;
+  --color-token-list-hover-background: var(--theme-accent-soft) !important;
+  --color-token-list-active-selection-background: color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
+  --color-token-list-active-selection-foreground: var(--theme-text) !important;
+  --color-token-list-active-selection-icon-foreground: var(--theme-text) !important;
+  --color-token-link: var(--theme-accent) !important;
+  --color-token-text-link-foreground: var(--theme-accent) !important;
+  --color-token-text-link-active-foreground: var(--theme-accent-deep) !important;
+  --color-token-primary: var(--theme-accent) !important;
+  --color-token-focus-border: color-mix(in srgb, var(--theme-accent) 60%, transparent) !important;
+  --color-token-dropdown-background: var(--theme-surface-strong) !important;
+  --color-token-dropdown-foreground: var(--theme-text) !important;
+  --color-token-composer-surface: var(--theme-surface-strong) !important;
+  --color-token-badge-foreground: var(--theme-muted) !important;
+  --color-token-button-foreground: var(--theme-text) !important;
+  --color-token-button-background: var(--theme-panel) !important;
+  --color-token-button-border: color-mix(in srgb, var(--theme-black) 12%, transparent) !important;
+  scrollbar-color: color-mix(in srgb, var(--theme-accent) 38%, transparent) transparent;
+}

@@ -81,7 +81,7 @@ Starter CSS is **split by region/function** so agents edit only the relevant fil
 ### Rules
 
 1. **Edit partials** under `codex/` and `workbuddy/` — never hand-edit generated root `codex.css` / `workbuddy.css`.
-2. **Recolor / new brand:** only open `codex/00-tokens.css` and `workbuddy/00-tokens.css` (keep primary `--theme-*` in sync). Light skins: also bridge host surfaces/foregrounds — see [Light-skin verify order](#b-light-skin-verify-order-ink--surfaces).
+2. **Recolor / new brand:** only open `codex/00-palette.css` and `workbuddy/00-palette.css` (primary `--theme-*`, light + dark). Keep both apps in sync. Host bridges live in `01-host-bridges.css` (usually leave). After light recolors: [Light-skin verify order](#b-light-skin-verify-order-ink--surfaces).
 3. **Pack merges partials in memory by default** (embeds into `.cdxtheme`; does not write root CSS):
 
 ```bash
@@ -100,19 +100,22 @@ Starter CSS is **split by region/function** so agents edit only the relevant fil
 
 | File | Role | When to open |
 | --- | --- | --- |
-| `00-tokens.css` | **Brand color tokens** (`--theme-*`, semantic aliases, layout constants, copy CSS vars) | Generating / recoloring a theme |
-| `01-shell.css` | Body bg/texture/top stripe, sidebar, main surface + header tint | Shell surfaces, page wash |
+| `00-palette.css` | **Primary palette only** (light default + dark overrides) | Recolor / generate brand |
+| `00-tokens.css` | Semantic aliases, layout constants, decorative copy vars | Rare overrides; not brand hex |
+| `01-host-bridges.css` | Host VS Code / color-token bridges → `--theme-*` | Ink/surface host mismatches |
+| `01-shell.css` | Body bg/texture/top stripe, sidebar (`.app-shell-left-panel`), main surface + header tint | Shell surfaces, page wash, sidebar ink |
 | `02-chrome.css` | Injected dream chrome: brand chip, signature, sparkles, polaroid, ribbon (Chat home + **conversation detail** half-cover on composer) | Overlay polish, ribbon half-cover |
 | `03-home.css` | Home flex stack, hero banner (Chat/Work heights), welcome title, Chat suggestion cards | Home layout / hero / suggestions |
 | `04-composer.css` | HOME fixed composer + DETAIL relative; containing-block safety | Composer pin bugs |
 | `05-work.css` | Work hero title, missions, mode toggle, util chips, fixed util+composer stack | Work tab / missions / bottom stack |
-| `06-settings.css` | Settings / Scheduled / Plugins: hide `dream-ribbon` + `dream-polaroid`; **keep `dream-sparkles`**. Settings also hides brand/signature/note (not sparkles). | Settings / Scheduled / Plugins chrome leaks |
+| `06-settings.css` | Settings rail/cards readability + hide dream chrome (ribbon/polaroid; sparkles stay) | Settings / Scheduled / Plugins |
 
 ### `workbuddy/` partial map
 
 | File | Role | When to open |
 | --- | --- | --- |
-| `00-tokens.css` | **Brand color tokens** (mirror codex palette) | Generating / recoloring |
+| `00-palette.css` | **Primary palette** (mirror codex light + dark) | Generating / recoloring |
+| `00-tokens.css` | Semantic aliases + badge (mirror codex structure) | Rare overrides |
 | `01-shell.css` | Body bg/texture/stripe, conversation sidebar/list | Shell / sidebar |
 | `02-home.css` | Main wrapper, home header, scene tabs | WorkBuddy home header/tabs |
 | `03-composer.css` | Home composer + conversation detail composer | Composer / polaroid |
@@ -121,8 +124,9 @@ Starter CSS is **split by region/function** so agents edit only the relevant fil
 
 | Task | Read these only |
 | --- | --- |
-| New brand recolor | `codex/00-tokens.css`, `workbuddy/00-tokens.css`, `theme.json` |
-| Light-skin ink / Settings cards | tokens + `01-shell.css` / `06-settings.css` + probes B |
+| New brand recolor | `codex/00-palette.css`, `workbuddy/00-palette.css`, `theme.json` |
+| Light/dark dual palette | `00-palette.css` only (both modes) |
+| Light-skin ink / Settings cards | `01-host-bridges.css` + `01-shell.css` / `06-settings.css` + probes B |
 | Work util stack | `codex/05-work.css` (+ maybe `04-composer.css`) |
 | Chat ribbon | `codex/02-chrome.css` |
 | Home hero layout | `codex/03-home.css` |
@@ -146,8 +150,8 @@ Agents **must** follow this order when creating a new theme. Do not skip steps o
 ```text
 1. Scaffold
 2. theme.json (id / displayName / version int / copy / images / targets / baseTheme)
-3. Primary --theme-* tokens (codex + workbuddy in sync)
-4. Light-skin host bridges (if color-scheme: light)
+3. Primary --theme-* in 00-palette.css (light + dark; codex + workbuddy in sync)
+4. Host bridges (starter 00-tokens — usually leave)
 5. Theme-owned copy + decorative CSS labels
 6. Assets (hero, …)
 7. Pack → apply
@@ -166,7 +170,9 @@ cp -R .agents/skills/cdxtheme-theme/assets/theme-starter/. theme-dir/
 ```
 
 Never edit the skill’s `theme-starter` in place as a shipped theme.
+
 #### 2. `theme.json`
+
 
 | Field | Rule |
 | --- | --- |
@@ -178,26 +184,22 @@ Never edit the skill’s `theme-starter` in place as a shipped theme.
 | `targets` | Only apps this package supports (`codex`, `workbuddy`, or both) |
 | `baseTheme.mode` | `light` or `dark` — must match tokens `color-scheme` |
 
-#### 3. Primary color tokens
+#### 3. Primary color tokens (`00-palette.css`)
 
 Edit **only**:
 
-- `codex/00-tokens.css` (`:root.cdxtheme-host-codex` / `:root.cdxtheme-codex-skin`)
-- `workbuddy/00-tokens.css` (`:root.cdxtheme-host-workbuddy`)
+- `codex/00-palette.css`
+- `workbuddy/00-palette.css`
 
-Set the full primary palette (see [Color tokens](#color-tokens-theme--edit-these)). Keep **codex and workbuddy in sync**. Do **not** scatter hex through other partials; do **not** hand-edit generated root `codex.css` / `workbuddy.css`.
+Set the full **primary palette for light and dark** (see [Color tokens](#color-tokens-theme--edit-these)). Keep **codex and workbuddy in sync**. Do **not** scatter hex through other partials; do **not** hand-edit generated root `codex.css` / `workbuddy.css`.
 
-Optional decorative labels in tokens: `--theme-eyebrow`, `--theme-eyebrow-work`, `--theme-panel-label`, `--theme-badge`.
+Optional decorative labels stay in `00-tokens.css`: `--theme-eyebrow`, `--theme-eyebrow-work`, `--theme-panel-label`, `--theme-badge`.
 
-#### 4. Light-skin host bridges (when `color-scheme: light`)
+#### 4. Host bridges (starter already includes)
 
-Host Codex keeps many **dark-theme defaults**. In `00-tokens.css` (and shell/settings if needed), also bridge at least:
+Starter `codex/01-host-bridges.css` bridges VS Code / color-token surfaces to `--theme-*` so both light and dark palettes stay readable. Prefer leaving bridges alone; only recolor `00-palette.css`.
 
-- Ink: `--vscode-foreground`, `--color-token-foreground`, text/icon/placeholder tokens
-- Surfaces: `--color-background-panel`, `--color-background-elevated-*`, `--color-background-surface*`
-- Sidebar: style **`.app-shell-left-panel`** (not only `aside`) — Settings uses a `div`
-
-Then run [Light-skin verify order](#b-light-skin-verify-order-ink--surfaces).
+Sidebar/settings layout contracts live in `01-shell.css` + `06-settings.css` (`.app-shell-left-panel`, not only `aside`). After light recolors still run [Light-skin verify order](#b-light-skin-verify-order-ink--surfaces).
 
 #### 5. Copy language
 
@@ -247,7 +249,9 @@ Bump `version` by **+1 integer** when shipping a new package. Do not use semver 
 theme-dir/
 ├── theme.json
 ├── codex/                 # edit partials here
-│   ├── 00-tokens.css
+│   ├── 00-palette.css       # primary --theme-* (light + dark)
+│   ├── 00-tokens.css        # aliases, layout constants, copy vars
+│   ├── 01-host-bridges.css  # host VS Code / color-token bridges
 │   ├── 01-shell.css
 │   ├── 02-chrome.css
 │   ├── 03-home.css
@@ -255,6 +259,7 @@ theme-dir/
 │   ├── 05-work.css
 │   └── 06-settings.css
 ├── workbuddy/
+│   ├── 00-palette.css
 │   ├── 00-tokens.css
 │   ├── 01-shell.css
 │   ├── 02-home.css
@@ -278,33 +283,33 @@ Omit a target (partials dir + `targets` entry + merged css) when the package sho
 
 ### Color tokens (`--theme-*` — edit these)
 
-Starter CSS body rules use **only** `var(--theme-…)` / `color-mix(…, var(--theme-…), …)` for colors. When generating a theme, change **`codex/00-tokens.css` and `workbuddy/00-tokens.css` only** — do **not** scatter hex/rgba through other partials, and do **not** edit generated root `codex.css` / `workbuddy.css` by hand.
+Starter body rules use **only** `var(--theme-…)` / `color-mix(…, var(--theme-…), …)` for colors. When generating a theme, change **`codex/00-palette.css` and `workbuddy/00-palette.css` only** — do **not** scatter hex through other partials; do **not** hand-edit generated root CSS.
 
-#### Primary palette (required recolor)
+#### Primary palette (required recolor) — `00-palette.css`
 
-| Token | Role | Starter default (light) |
-| --- | --- | --- |
-| `--theme-accent` | Primary brand | `#7867a8` |
-| `--theme-accent-hot` | Lighter / highlight | `#9b8bc9` |
-| `--theme-accent-deep` | Darker gradient end | `#5c4d8a` |
-| `--theme-accent-2` | Secondary (metal / stripe) | `#9a93a8` |
-| `--theme-accent-2-hot` | Secondary highlight | `#c8c2d4` |
-| `--theme-accent-3` | Tertiary stripe / accent | `#c45c8a` |
-| `--theme-text` | Primary ink | `#2f2b3a` |
-| `--theme-muted` | Secondary ink | `#756f82` |
-| `--theme-bg` | Deepest page bg | `#f0eef6` |
-| `--theme-bg-elevated` | Elevated surface | `#f8f7fc` |
-| `--theme-panel` | Solid cards / panels | `#ffffff` |
-| `--theme-panel-mid` | Mid panel / chips | `#f4f1fa` |
-| `--theme-on-accent` | Text/icons on accent fills | `#ffffff` |
-| `--theme-white` | Pure white (highlights, glows) | `#ffffff` |
-| `--theme-black` | Shadow base (ink in light mode) | `#2f2b3a` |
+| Token | Role | Starter light | Starter dark |
+| --- | --- | --- | --- |
+| `--theme-accent` | Primary brand | `#7867a8` | `#9b8bc9` |
+| `--theme-accent-hot` | Lighter / highlight | `#9b8bc9` | `#c4b5e8` |
+| `--theme-accent-deep` | Darker gradient end | `#5c4d8a` | `#7a6aad` |
+| `--theme-accent-2` | Secondary (metal / stripe) | `#9a93a8` | `#8a8498` |
+| `--theme-accent-2-hot` | Secondary highlight | `#c8c2d4` | `#c8c2d4` |
+| `--theme-accent-3` | Tertiary stripe / badge | `#c45c8a` | `#d47a9e` |
+| `--theme-text` | Primary ink | `#2f2b3a` | `#f0eef6` |
+| `--theme-muted` | Secondary ink | `#756f82` | `#a8a2b5` |
+| `--theme-bg` | Deepest page bg | `#f0eef6` | `#121018` |
+| `--theme-bg-elevated` | Elevated surface | `#f8f7fc` | `#1a1722` |
+| `--theme-panel` | Cards / solid panels | `#ffffff` | `#221e2c` |
+| `--theme-panel-mid` | Mid panel / chips | `#f4f1fa` | `#2a2536` |
+| `--theme-on-accent` | Text on accent fills | `#ffffff` | `#121018` |
+| `--theme-white` | Pure white (highlights) | `#ffffff` | `#ffffff` |
+| `--theme-black` | Shadow base | `#2f2b3a` | `#000000` |
 
-Also set `color-scheme: light` or `dark` to match.
+Dark applies when host has `.electron-dark` / `data-color-scheme="dark"`, or `prefers-color-scheme: dark` (unless `.electron-light` / `data-color-scheme="light"`).
 
-**Light skins:** after recolor, also bridge host dark leftovers (`--vscode-foreground`, `--color-background-panel`, elevated surfaces, sidebar ink). Follow [Light-skin verify order](#b-light-skin-verify-order-ink--surfaces) under debugging.
+**Light recolor QA:** still run [Light-skin verify order](#b-light-skin-verify-order-ink--surfaces) (host bridges are in `01-host-bridges.css`, but palette contrast can still break).
 
-**Dark brand example (conceptual):** accent teal, text white, bg near-black, panel dark slate, `--theme-black: #000000`, `--theme-on-accent` dark if accent is light.
+**Dark recolor tip:** keep light ink on dark panels; set `--theme-on-accent` dark only when accent is light enough.
 
 #### Semantic aliases (usually leave)
 
@@ -465,7 +470,7 @@ pack → apply → token-bridge → sidebar-ink → contrast-scan
 | Sidebar labels white / invisible | `sidebar-ink`, `token-bridge` | Bridge `--vscode-foreground` + force ink under `.app-shell-left-panel` and `.sidebar-foreground-muted` |
 | Settings left nav unreadable | `settings-contrast`, `sidebar-ink` | Selectors on **`.app-shell-left-panel`** (Settings is a `div`, not only `aside`); light rail bg |
 | Settings section dark + dark text | `settings-contrast`, `token-bridge` | Bridge `--color-background-panel` / elevated surfaces; optional `06-settings.css` card rules |
-| `contrast-scan` | Complete primary palette + host surface/foreground bridges in `00-tokens.css` |
+| Broad hard-to-read UI after recolor | `contrast-scan` | Complete `00-palette.css` + host bridges in `01-host-bridges.css` |
 | Composer mid-page / wrong pin | `chat-layout` / detail visual check | `04-composer.css` — home fixed + detail relative; no transform on ancestors |
 | Work util over missions | `work-layout` | `05-work.css` fixed util+composer stack |
 | Hero mid-page / overlap | `hero-row-tree`, `chat-layout` | `03-home.css` flex stack; kill `grid-rows-2` + `-mt-16` |
@@ -476,10 +481,10 @@ pack → apply → token-bridge → sidebar-ink → contrast-scan
 
 | Trap | Mechanism | Fix location |
 | --- | --- | --- |
-| White sidebar ink | `.sidebar-foreground-muted { --color-token-foreground: color-mix(…, var(--vscode-foreground)) }` while vscode fg is white | `00-tokens.css` + shell ink overrides |
+| White sidebar ink | `.sidebar-foreground-muted { --color-token-foreground: color-mix(…, var(--vscode-foreground)) }` while vscode fg is white | `01-host-bridges.css` + shell ink overrides |
 | Settings rail still dark | Host dark glass on **`div.app-shell-left-panel`** | Shell/settings: `.app-shell-left-panel`, not only `aside` |
-| Settings cards dark | Inline `background-color: var(--color-background-panel, …)` default dark | Bridge `--color-background-panel` (+ elevated) in tokens |
-| Incomplete recolor | Layout CSS uses `--theme-accent-hot`, `--theme-panel`, `--theme-white`, … | Full starter primary palette in **both** `00-tokens.css` files |
+| Settings cards dark | Inline `background-color: var(--color-background-panel, …)` default dark | Bridge `--color-background-panel` (+ elevated) in `01-host-bridges.css` |
+| Incomplete recolor | Layout CSS uses `--theme-accent-hot`, `--theme-panel`, `--theme-white`, … | Full primary palette in **both** `00-palette.css` files (light + dark) |
 | Invalid nested var | e.g. `var(--theme-var(--theme-white))` | Use `var(--theme-white)` / `var(--theme-on-accent)` |
 
 ### E. Dark themes
@@ -498,10 +503,10 @@ Dark skins set light ink + dark panels intentionally. **Do not** force light `--
 
 Workflow:
 
-1. If the user specifies a language (e.g. “中文”, “Japanese”), translate/author all theme-owned display strings into that language.
-2. If they do not, use **English**.
+1. **Default: English.** Author theme-owned display strings in English unless the user explicitly requests another language.
+2. If the user names a language, translate/author all theme-owned strings into that language.
 3. Prefer `theme.json` → `copy` for shared strings; keep CSS `content` in the same language (or driven by copy vars when runtime provides them).
-4. Matching localized host controls still needs both EN and locale selectors (`aria-label="Choose project"` **and** `"选择项目"`) — that is selector coverage, not replacing host UI text.
+4. Selectors that match host chrome may include non-English `aria-label` values for locale coverage — that is matching only, not rewriting host UI text.
 
 ## Codex checklist (from production themes)
 
@@ -517,7 +522,7 @@ When authoring or repairing Codex CSS, verify:
 | Work util + composer pinned as one bottom stack (util above) | Fixed composer alone leaves util mid-page over missions |
 | Work hides empty hero `> .absolute`; Chat `nth-child(2)` scoped | Chat-era absolute rail steals Work space |
 | Utility chips style **button**, not label as 20px badge | Crushes Plugins / model text |
-| Prefer `data-composer-navigation-target` (+ zh labels) | English-only `aria-label` misses 选择项目 / 插件 |
+| Prefer `data-composer-navigation-target` (+ locale labels) | English-only `aria-label` misses localized host chrome |
 | Chat model vs Work model selectors are separate | Shared attrs double-hit both |
 | Work measurement span out of layout | Inflates model chip width |
 | Chat shell not forced tall; card min-height skips list rows | Empty band / tall Work rows |

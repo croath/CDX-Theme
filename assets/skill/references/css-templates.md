@@ -319,7 +319,7 @@ button[aria-label="Plugins"] > span:first-child {
 }
 ```
 
-Also match localized labels when needed: `aria-label="选择项目"`, `"插件"`, `"听写"`.
+Also match localized host `aria-label` values when needed (prefer `data-composer-navigation-target` over language-specific labels).
 
 Scope Chat vs Work model pickers separately:
 

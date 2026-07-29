@@ -63,8 +63,8 @@ html.cdxtheme-codex-skin body::after {
 }
 
 /* —— Sidebar —— */
-html.cdxtheme-host-codex aside.app-shell-left-panel,
-html.cdxtheme-codex-skin aside.app-shell-left-panel {
+html.cdxtheme-host-codex .app-shell-left-panel,
+html.cdxtheme-codex-skin .app-shell-left-panel {
   background:
     linear-gradient(180deg, var(--theme-bg) 0%, var(--theme-bg) 100%) !important;
   border: 1px solid color-mix(in srgb, var(--theme-accent) 25%, transparent) !important;
@@ -76,30 +76,77 @@ html.cdxtheme-codex-skin aside.app-shell-left-panel {
     inset 3px 0 0 var(--theme-accent) !important;
   backdrop-filter: none !important;
   color: var(--theme-text) !important;
+  /* Host dark-theme leftovers: keep ink readable on light rail */
+  --vscode-foreground: var(--theme-text) !important;
+  --color-token-foreground: var(--theme-text) !important;
+  --color-token-icon-foreground: var(--theme-text) !important;
+  --color-token-input-placeholder-foreground: var(--theme-muted) !important;
+  --color-token-description-foreground: var(--theme-muted) !important;
+  --color-token-disabled-foreground: color-mix(in srgb, var(--theme-muted) 72%, transparent) !important;
 }
 
-html.cdxtheme-host-codex aside.app-shell-left-panel nav,
-html.cdxtheme-codex-skin aside.app-shell-left-panel nav {
+html.cdxtheme-host-codex .app-shell-left-panel nav,
+html.cdxtheme-codex-skin .app-shell-left-panel nav {
   background: transparent !important;
 }
 
-html.cdxtheme-host-codex aside.app-shell-left-panel button,
-html.cdxtheme-codex-skin aside.app-shell-left-panel button {
+/* Host remaps --color-token-foreground from --vscode-foreground (often white). */
+html.cdxtheme-host-codex .app-shell-left-panel .sidebar-foreground-muted,
+html.cdxtheme-codex-skin .app-shell-left-panel .sidebar-foreground-muted {
+  --color-token-foreground: var(--theme-text) !important;
+  --vscode-foreground: var(--theme-text) !important;
+  color: var(--theme-text) !important;
+}
+
+html.cdxtheme-host-codex .app-shell-left-panel button,
+html.cdxtheme-codex-skin .app-shell-left-panel button {
   color: var(--theme-muted) !important;
   transition: transform .14s ease, background .14s ease, color .14s ease, box-shadow .14s ease !important;
   border-radius: 10px !important;
 }
 
-html.cdxtheme-host-codex aside.app-shell-left-panel button:hover,
-html.cdxtheme-codex-skin aside.app-shell-left-panel button:hover {
+/* Force nested token utilities (text-token-foreground, placeholders, icons). */
+html.cdxtheme-host-codex .app-shell-left-panel .text-token-foreground,
+html.cdxtheme-host-codex .app-shell-left-panel .text-token-muted-foreground,
+html.cdxtheme-host-codex .app-shell-left-panel .text-token-text-tertiary,
+html.cdxtheme-host-codex .app-shell-left-panel .text-token-input-placeholder-foreground,
+html.cdxtheme-host-codex .app-shell-left-panel .text-fade-truncate,
+html.cdxtheme-host-codex .app-shell-left-panel [class*="text-token-"],
+html.cdxtheme-codex-skin .app-shell-left-panel .text-token-foreground,
+html.cdxtheme-codex-skin .app-shell-left-panel .text-token-muted-foreground,
+html.cdxtheme-codex-skin .app-shell-left-panel .text-token-text-tertiary,
+html.cdxtheme-codex-skin .app-shell-left-panel .text-token-input-placeholder-foreground,
+html.cdxtheme-codex-skin .app-shell-left-panel .text-fade-truncate,
+html.cdxtheme-codex-skin .app-shell-left-panel [class*="text-token-"] {
+  color: var(--theme-text) !important;
+  -webkit-text-fill-color: var(--theme-text) !important;
+}
+
+html.cdxtheme-host-codex .app-shell-left-panel svg,
+html.cdxtheme-codex-skin .app-shell-left-panel svg {
+  color: inherit !important;
+}
+
+html.cdxtheme-host-codex .app-shell-left-panel button:hover,
+html.cdxtheme-codex-skin .app-shell-left-panel button:hover {
   background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 18%, transparent), color-mix(in srgb, var(--theme-accent-2) 6%, transparent)) !important;
   color: var(--theme-text) !important;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
   transform: translateX(2px);
 }
 
-html.cdxtheme-host-codex aside.app-shell-left-panel button[aria-label^="切换模式"],
-html.cdxtheme-codex-skin aside.app-shell-left-panel button[aria-label^="切换模式"] {
+html.cdxtheme-host-codex .app-shell-left-panel button:hover .text-token-foreground,
+html.cdxtheme-host-codex .app-shell-left-panel button:hover .text-fade-truncate,
+html.cdxtheme-host-codex .app-shell-left-panel button:hover [class*="text-token-"],
+html.cdxtheme-codex-skin .app-shell-left-panel button:hover .text-token-foreground,
+html.cdxtheme-codex-skin .app-shell-left-panel button:hover .text-fade-truncate,
+html.cdxtheme-codex-skin .app-shell-left-panel button:hover [class*="text-token-"] {
+  color: var(--theme-text) !important;
+  -webkit-text-fill-color: var(--theme-text) !important;
+}
+
+html.cdxtheme-host-codex .app-shell-left-panel button[aria-label^="切换模式"],
+html.cdxtheme-codex-skin .app-shell-left-panel button[aria-label^="切换模式"] {
   background: transparent !important;
   border-color: transparent !important;
   font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif !important;
@@ -111,18 +158,18 @@ html.cdxtheme-codex-skin aside.app-shell-left-panel button[aria-label^="切换�
   text-shadow: 0 0 12px color-mix(in srgb, var(--theme-accent-2-hot) 35%, transparent);
 }
 
-html.cdxtheme-host-codex aside.app-shell-left-panel button[aria-label^="切换模式"]::after,
-html.cdxtheme-codex-skin aside.app-shell-left-panel button[aria-label^="切换模式"]::after {
+html.cdxtheme-host-codex .app-shell-left-panel button[aria-label^="切换模式"]::after,
+html.cdxtheme-codex-skin .app-shell-left-panel button[aria-label^="切换模式"]::after {
   content: "";
   margin-left: 6px;
   color: var(--theme-accent);
   font-size: .80em;
 }
 
-html.cdxtheme-host-codex aside.app-shell-left-panel [class~="bg-token-list-hover-background"],
-html.cdxtheme-host-codex aside.app-shell-left-panel [aria-current="page"],
-html.cdxtheme-codex-skin aside.app-shell-left-panel [class~="bg-token-list-hover-background"],
-html.cdxtheme-codex-skin aside.app-shell-left-panel [aria-current="page"] {
+html.cdxtheme-host-codex .app-shell-left-panel [class~="bg-token-list-hover-background"],
+html.cdxtheme-host-codex .app-shell-left-panel [aria-current="page"],
+html.cdxtheme-codex-skin .app-shell-left-panel [class~="bg-token-list-hover-background"],
+html.cdxtheme-codex-skin .app-shell-left-panel [aria-current="page"] {
   background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 28%, transparent), color-mix(in srgb, var(--theme-bg-elevated) 70%, transparent)) !important;
   border: 1px solid color-mix(in srgb, var(--theme-accent) 40%, transparent) !important;
   color: var(--theme-text) !important;
@@ -155,4 +202,3 @@ html.cdxtheme-codex-skin main.main-surface > header.app-header-tint {
   backdrop-filter: none !important;
   box-shadow: 0 1px 0 color-mix(in srgb, var(--theme-accent-2) 8%, transparent);
 }
-

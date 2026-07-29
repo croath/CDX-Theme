@@ -7,6 +7,106 @@
  * Pack still reads the merged root file declared in theme.json.
  */
 
+/* —— Settings rail + content readability (theme surface) ——
+   Settings uses div.app-shell-left-panel (not aside) with a host dark glass
+   background. Force rail + theme ink so nav labels stay readable. */
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .app-shell-left-panel,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .app-shell-left-panel {
+  background:
+    linear-gradient(180deg, var(--theme-bg) 0%, var(--theme-panel-mid) 100%) !important;
+  color: var(--theme-text) !important;
+  --vscode-foreground: var(--theme-text) !important;
+  --color-token-foreground: var(--theme-text) !important;
+  --color-token-icon-foreground: var(--theme-text) !important;
+  --color-token-text-primary: var(--theme-text) !important;
+  --color-token-text-secondary: var(--theme-muted) !important;
+  --color-token-text-tertiary: var(--theme-muted) !important;
+  --color-token-input-placeholder-foreground: var(--theme-muted) !important;
+  --color-token-description-foreground: var(--theme-muted) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .app-shell-left-panel button,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .app-shell-left-panel button,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .app-shell-left-panel .text-token-foreground,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .app-shell-left-panel .text-fade-truncate,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) .app-shell-left-panel [class*="text-token-"],
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .app-shell-left-panel .text-token-foreground,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .app-shell-left-panel .text-fade-truncate,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) .app-shell-left-panel [class*="text-token-"] {
+  color: var(--theme-text) !important;
+  -webkit-text-fill-color: var(--theme-text) !important;
+}
+
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface .text-token-foreground,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface .text-token-text-primary,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface .text-token-text-secondary,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface .text-token-text-tertiary,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface .text-token-foreground,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface .text-token-text-primary,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface .text-token-text-secondary,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface .text-token-text-tertiary {
+  color: var(--theme-text) !important;
+  -webkit-text-fill-color: var(--theme-text) !important;
+}
+
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface .text-token-text-secondary,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface .text-token-text-tertiary,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface .text-token-description-foreground,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface .text-token-text-secondary,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface .text-token-text-tertiary,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface .text-token-description-foreground {
+  color: var(--theme-muted) !important;
+  -webkit-text-fill-color: var(--theme-muted) !important;
+}
+
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface a,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface .text-token-text-link-foreground,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface a,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface .text-token-text-link-foreground {
+  color: var(--theme-accent-deep) !important;
+  -webkit-text-fill-color: var(--theme-accent-deep) !important;
+}
+
+/* Settings content cards: host inline style uses --color-background-panel (dark by default). */
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface {
+  --color-background-panel: var(--theme-panel) !important;
+  --color-background-elevated-primary: var(--theme-panel) !important;
+  --color-background-elevated-primary-opaque: var(--theme-panel) !important;
+  --color-background-elevated-secondary: var(--theme-panel-mid) !important;
+  --color-background-elevated-secondary-opaque: var(--theme-panel-mid) !important;
+  --color-background-surface: var(--theme-bg) !important;
+  --color-token-bg-fog: color-mix(in srgb, var(--theme-panel-mid) 80%, transparent) !important;
+}
+
+/* Rounded section cards + bordered control chips */
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface .rounded-2xl.border,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface .rounded-2xl.border {
+  background-color: var(--theme-panel) !important;
+  border-color: color-mix(in srgb, var(--theme-accent) 22%, transparent) !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--theme-black) 6%, transparent) !important;
+  color: var(--theme-text) !important;
+}
+
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface .rounded-2xl.border .text-token-text-secondary,
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface .rounded-2xl.border .text-token-text-tertiary,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface .rounded-2xl.border .text-token-text-secondary,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface .rounded-2xl.border .text-token-text-tertiary {
+  color: var(--theme-muted) !important;
+  -webkit-text-fill-color: var(--theme-muted) !important;
+}
+
+html.cdxtheme-host-codex:has([data-settings-panel-slug]) main.main-surface button.border-token-border,
+html.cdxtheme-codex-skin:has([data-settings-panel-slug]) main.main-surface button.border-token-border {
+  background-color: var(--theme-panel-mid) !important;
+  color: var(--theme-text) !important;
+  border-color: color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
+}
+
 /* —— Settings: hide dream chrome except sparkles ——
    Settings surface exposes [data-settings-panel-slug].
    Keep dream-sparkles visible; hide brand/signature/ribbon/polaroid/note.
