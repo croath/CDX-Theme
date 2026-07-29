@@ -1,6 +1,7 @@
 use icons::{Library, PackagePlus, RotateCcw, Settings, Sparkles, WandSparkles};
 use leptos::prelude::*;
 
+use super::update_notify::UpdateNotify;
 use crate::i18n::I18n;
 use crate::state::AppCtx;
 use crate::types::Page;
@@ -47,7 +48,7 @@ pub fn Sidebar() -> impl IntoView {
       <div class="relative z-10 mx-4 mb-3 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
       // Navigation only (theme switch is in Settings; status bar is on main panel)
-      <nav class="relative z-10 flex flex-1 flex-col gap-1 px-3 pb-4">
+      <nav class="relative z-10 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 pb-2">
         <NavItem page=Page::Recommend icon=NavIcon::Recommend label_key="nav.recommend" />
         <NavItem page=Page::Library icon=NavIcon::Library label_key="nav.library" />
         <NavItem page=Page::Install icon=NavIcon::Install label_key="nav.install" />
@@ -55,6 +56,9 @@ pub fn Sidebar() -> impl IntoView {
         <NavItem page=Page::Restore icon=NavIcon::Restore label_key="nav.restore" />
         <NavItem page=Page::Settings icon=NavIcon::Settings label_key="nav.settings" />
       </nav>
+
+      // App update notification (Sonner-style) at left nav bottom
+      <UpdateNotify />
     </aside>
   }
 }

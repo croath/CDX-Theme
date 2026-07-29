@@ -52,20 +52,100 @@ impl Drop for EventUnlisten {
 pub async fn listen_theme_builder_acp_stream(
   on_event: impl Fn(AcpStreamEvent) + 'static,
 ) -> Result<EventUnlisten, String> {
-  let cb = Closure::wrap(Box::new(move |event: JsValue| {
-    // Tauri event shape: { event, id, payload }
-    let payload = js_sys::Reflect::get(&event, &JsValue::from_str("payload")).unwrap_or(event);
-    match from_value::<AcpStreamEvent>(payload.clone()) {
+  listen_event(
+    "theme-builder-acp-stream",
+    move |payload| match from_value::<AcpStreamEvent>(payload.clone()) {
       Ok(ev) => on_event(ev),
       Err(_) => {
         if let Some(text) = payload.as_string() {
           on_event(AcpStreamEvent { text, done: false });
         }
       }
+    },
+  )
+  .await
+}
+
+/// App update notification phases from the native updater (`app-update` events).
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppUpdateStatus {
+  /// `idle` | `available` | `downloading` | `ready` | `installing` | `error`
+  #[serde(default)]
+  pub phase: String,
+  #[serde(default)]
+  pub current_version: String,
+  #[serde(default)]
+  pub version: String,
+  #[serde(default)]
+  pub body: Option<String>,
+  #[serde(default)]
+  pub downloaded: u64,
+  #[serde(default)]
+  pub total: Option<u64>,
+  #[serde(default)]
+  pub percent: Option<u8>,
+  #[serde(default)]
+  pub error: Option<String>,
+}
+
+impl AppUpdateStatus {
+  pub fn is_visible(&self) -> bool {
+    matches!(
+      self.phase.as_str(),
+      "available" | "downloading" | "ready" | "installing" | "error"
+    )
+  }
+}
+
+/// Current app-update card state (for UI mount).
+pub async fn get_app_update_status() -> Result<AppUpdateStatus, String> {
+  invoke_cmd_with_args("get_app_update_status", empty_args()).await
+}
+
+/// Download the pending app update (progress via `app-update` events).
+pub async fn download_app_update() -> Result<(), String> {
+  invoke_unit_with_args("download_app_update", empty_args()).await
+}
+
+/// Install a downloaded update and restart.
+pub async fn install_app_update() -> Result<(), String> {
+  invoke_unit_with_args("install_app_update", empty_args()).await
+}
+
+/// Dismiss the update card for this session (version deferred until manual check).
+pub async fn dismiss_app_update() -> Result<(), String> {
+  invoke_unit_with_args("dismiss_app_update", empty_args()).await
+}
+
+/// Subscribe to `app-update` events from the native updater.
+pub async fn listen_app_update(
+  on_event: impl Fn(AppUpdateStatus) + 'static,
+) -> Result<EventUnlisten, String> {
+  listen_event("app-update", move |payload| {
+    match from_value::<AppUpdateStatus>(payload) {
+      Ok(ev) => on_event(ev),
+      Err(e) => {
+        web_sys::console::warn_1(&JsValue::from_str(&format!(
+          "app-update deserialize failed: {e}"
+        )));
+      }
     }
+  })
+  .await
+}
+
+async fn listen_event(
+  event: &str,
+  on_payload: impl Fn(JsValue) + 'static,
+) -> Result<EventUnlisten, String> {
+  let cb = Closure::wrap(Box::new(move |event: JsValue| {
+    // Tauri event shape: { event, id, payload }
+    let payload = js_sys::Reflect::get(&event, &JsValue::from_str("payload")).unwrap_or(event);
+    on_payload(payload);
   }) as Box<dyn FnMut(JsValue)>);
 
-  let unlisten_val = listen("theme-builder-acp-stream", cb.as_ref().unchecked_ref())
+  let unlisten_val = listen(event, cb.as_ref().unchecked_ref())
     .await
     .map_err(js_err_to_string)?;
 
