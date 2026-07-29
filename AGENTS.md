@@ -106,7 +106,7 @@ Notable modules:
 
 ### IPC commands (keep UI + backend aligned)
 
-`retrieve_local_theme_list`, `fetch_remote_theme_catalog`, `resolve_cached_image`, `cdp_status`, `set_window_appearance`, `get_cdp_port`, `set_cdp_port`, `apply_theme`, `restore_theme`, `download_theme`, `install_theme`, `delete_theme`, `get_analytics_enabled`, `get_analytics_state`, `set_analytics_enabled`, `track_event`, **Theme Builder:** `check_theme_builder_runtime`, `install_bun_for_theme_builder`, `codex_chat`, `list_codex_sessions`, `get_codex_session`.
+`retrieve_local_theme_list`, `fetch_remote_theme_catalog`, `resolve_cached_image`, `cdp_status`, `set_window_appearance`, `get_cdp_port`, `set_cdp_port`, `apply_theme`, `restore_theme`, `download_theme`, `install_theme`, `delete_theme`, `get_analytics_enabled`, `get_analytics_state`, `set_analytics_enabled`, `track_event`, **Theme Builder:** `check_theme_builder_runtime`, `install_bun_for_theme_builder`, `codex_chat`, `list_codex_sessions`, `list_codex_models`, `get_codex_session`.
 
 Capabilities: `app-tauri/capabilities/default.json` (window drag/minimize/close/set-background-color, opener, log, updater). New privileged APIs need capability + command registration.
 
@@ -206,7 +206,7 @@ Project-local skills for AI agents. Prefer these over inventing ad-hoc workflows
 | Skill | Path | When to use |
 | --- | --- | --- |
 | **Rust / Tauri / Leptos** | `skills/rust/SKILLS.md` | Frontend/backend Rust changes, WASM, Tauri IPC, formatting |
-| **Agent Client Protocol** | `.agnets/skills/agent-client-protocol/SKILL.md` | Theme Builder, Codex chat, ACP sessions, `codex-acp` |
+| **Agent Client Protocol** | `.agnets/skills/agent-client-protocol/SKILL.md` | Theme Builder, Codex chat, ACP sessions, model select, `codex-acp` |
 
 All skill documentation in this repository is written in **English**.
 
@@ -257,7 +257,7 @@ cargo check -p cdx-theme-core
 
 #### What ACP is
 
-ACP standardizes **client ↔ coding agent** communication (sessions, prompts, streaming, permissions). It is to agents what **LSP** is to language servers.
+ACP standardizes **client ↔ coding agent** communication (sessions, prompts, streaming, permissions, **session config options** such as model). It is to agents what **LSP** is to language servers.
 
 | Protocol | Purpose |
 | --- | --- |
@@ -278,15 +278,15 @@ Client (CDXTheme)  ──JSON-RPC over stdio──►  Agent process (codex-acp)
                                               Codex CLI
 ```
 
-Client spawns the agent; messages go over **stdio**. Dropping the connection tears down the process group (including `npx` wrappers on Unix).
+Client spawns the agent; messages go over **stdio**. Dropping the connection tears down the process group (including `npx` / `bunx` wrappers on Unix).
 
 #### CDXTheme Theme Builder path
 
 ```text
 Theme Builder UI
-  ──invoke──►  codex_chat / list_codex_sessions / get_codex_session
+  ──invoke──►  codex_chat / list_codex_sessions / list_codex_models / get_codex_session
   ──core──►  agent-client-protocol Client
-  ──stdio──►  codex-acp  (PATH binary, or npx @agentclientprotocol/codex-acp)
+  ──stdio──►  codex-acp  (PATH binary, or bunx/npx @agentclientprotocol/codex-acp)
   ──►  Codex CLI (ChatGPT-bundled `…/Resources/codex` preferred on PATH)
 ```
 
@@ -297,10 +297,13 @@ Theme Builder UI
 1. Spawn / connect agent  
 2. `initialize` (protocol version + capabilities)  
 3. `session/new` or `session/load` (`cwd` must be absolute)  
-4. `session/prompt` (content blocks; text baseline)  
-5. Stream `session/update` notifications (`agent_message_chunk` → assistant text)  
-6. Answer **permission** requests if the agent asks (Theme Builder auto-approves first option)  
-7. Close connection  
+4. Optional: `session/set_config_option` (e.g. model)  
+5. `session/prompt` (content blocks; text baseline)  
+6. Stream `session/update` notifications (`agent_message_chunk` → assistant text)  
+7. Answer **permission** requests if the agent asks (Theme Builder auto-approves first option)  
+8. Close connection  
+
+Theme Builder currently uses a **fresh ACP connection per turn**, so model must be re-applied after every `session/new` / `session/load`.
 
 #### Session ops
 
@@ -309,29 +312,44 @@ Theme Builder UI
 | `session/new` | Client → Agent | First message of a new Theme Builder chat |
 | `session/load` | Client → Agent | Continue with stored `session_id` |
 | `session/list` | Client → Agent | Optional; fall back to `~/.codex/session_index.jsonl` |
+| `session/set_config_option` | Client → Agent | Set model / reasoning / other session options |
 | `session/prompt` | Client → Agent | User turn |
 | `session/update` | Agent → Client | Streaming chunks, tool calls, plan |
+
+#### Model selection (summary)
+
+There is **no** dedicated modern `session/set_model`. Use generic config options:
+
+| Concern | CDXTheme approach |
+| --- | --- |
+| List models for UI | Disk: `~/.codex/models_cache.json` + default from `config.toml` (`list_codex_models`) — do **not** spawn ACP just for the menu |
+| Apply model on turn | After new/load: `session/set_config_option` with `configId: "model"` (codex-acp); **best-effort**, non-fatal |
+| UI surfaces | Model menu on **New Build** + **Chat** only (`BuilderModelSelect`); shared `selected_model` signal |
+| IPC | `list_codex_models`; `codex_chat(..., model: Option<String>)` → `CodexChatOptions.model` |
+
+codex-acp option ids of interest: `model` (category `model`), `reasoning_effort` (category `thought_level`). Prefer matching `category == "model"` when parsing live `configOptions`.
 
 #### Agent resolution (order)
 
 1. `codex-acp` on `PATH`  
-2. `npx -y @agentclientprotocol/codex-acp@latest`  
+2. `bunx` / `npx -y @agentclientprotocol/codex-acp@latest`  
 3. Prepend ChatGPT-bundled `codex` directory onto the agent’s `PATH`  
 
 #### Runtime requirements
 
-- **Node/npm** if using the default npx adapter (or install `codex-acp` yourself).  
+- **Bun/Node** if using the default bunx/npx adapter (or install `codex-acp` yourself).  
 - **Codex CLI** (bundled with ChatGPT and/or on PATH).  
 - **Auth:** `codex login` when needed (`~/.codex/auth.json`).  
-- Theme Builder workspace cwd: temp `…/cdxtheme-theme-builder` (absolute).  
+- Theme Builder workspace cwd: app data `…/theme_builder/{id}` (absolute).  
 - Prompt timeout budget: long (e.g. ~180s); inject/CDP is separate.
 
 #### IPC (Theme Builder)
 
 | Command | Role |
 | --- | --- |
-| `codex_chat` | `prompt` + optional `session_id` + optional `wait_ms` → ACP turn |
+| `codex_chat` | `prompt` + optional `session_id` + optional `wait_ms` + optional `model` → ACP turn |
 | `list_codex_sessions` | ACP list when available, else disk index |
+| `list_codex_models` | Models from `~/.codex/models_cache.json` + current from `config.toml` |
 | `get_codex_session` | Load transcript from `~/.codex` rollout JSONL |
 
 #### Practical rules
@@ -340,8 +358,9 @@ Theme Builder UI
 2. Persist **session ids** from `session/new` for multi-turn UI.  
 3. Build the assistant bubble from **`agent_message_chunk`**, not only the prompt RPC result.  
 4. Prefer ACP over scraping Codex TUI or brittle `codex exec` for host-app chat.  
-5. Keep disk fallbacks for list/transcript when the adapter lacks APIs.  
-6. Auto-approve permissions is a product shortcut — do not treat as safe for untrusted agents.
+5. Keep disk fallbacks for list/transcript **and models** when the adapter lacks APIs.  
+6. Auto-approve permissions is a product shortcut — do not treat as safe for untrusted agents.  
+7. **Re-apply model every turn** when using short-lived ACP connections; do not fail the turn if set-model errors.
 
 #### Minimal Rust client sketch
 
@@ -356,6 +375,7 @@ Client.builder()
     cx.send_request(InitializeRequest::new(ProtocolVersion::V1)).block_task().await?;
     let s = cx.send_request(NewSessionRequest::new(cwd)).block_task().await?;
     // or LoadSessionRequest::new(session_id, cwd)
+    // optional: SetSessionConfigOptionRequest::new(s.session_id, "model", SessionConfigOptionValue::value_id(model))
     cx.send_request(PromptRequest::new(
       s.session_id,
       vec![ContentBlock::Text(TextContent::new(prompt))],
@@ -373,4 +393,5 @@ Client.builder()
 | Rust SDK | https://github.com/agentclientprotocol/rust-sdk |
 | Codex ACP adapter | `@agentclientprotocol/codex-acp` / agentclientprotocol/codex-acp |
 | Core implementation | `core/src/codex_chat.rs` |
+| Theme Builder UI | `app-ui/src/pages/theme_builder/` |
 | Full skill file | `.agnets/skills/agent-client-protocol/SKILL.md` |

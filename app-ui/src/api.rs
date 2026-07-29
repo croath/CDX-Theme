@@ -113,10 +113,10 @@ pub async fn install_app_update() -> Result<(), String> {
   invoke_unit_with_args("install_app_update", empty_args()).await
 }
 
-/// Dismiss the update card for this session (version deferred until manual check).
-pub async fn dismiss_app_update() -> Result<(), String> {
-  invoke_unit_with_args("dismiss_app_update", empty_args()).await
-}
+// /// Dismiss the update card for this session (version deferred until manual check).
+// pub async fn dismiss_app_update() -> Result<(), String> {
+//   invoke_unit_with_args("dismiss_app_update", empty_args()).await
+// }
 
 /// Subscribe to `app-update` events from the native updater.
 pub async fn listen_app_update(
@@ -547,6 +547,29 @@ pub async fn start_theme_build() -> Result<PreparedWorkspace, String> {
   invoke_cmd_with_args::<PreparedWorkspace>("start_theme_build", empty_args()).await
 }
 
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexModelOption {
+  pub id: String,
+  pub name: String,
+  #[serde(default)]
+  pub description: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexModelsList {
+  #[serde(default)]
+  pub models: Vec<CodexModelOption>,
+  #[serde(default)]
+  pub current: Option<String>,
+}
+
+/// Theme Builder: models from local Codex cache (`~/.codex/models_cache.json`).
+pub async fn list_codex_models() -> Result<CodexModelsList, String> {
+  invoke_cmd_with_args::<CodexModelsList>("list_codex_models", empty_args()).await
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
 struct CodexChatArgs {
@@ -559,6 +582,8 @@ struct CodexChatArgs {
   workspace_id: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   wait_ms: Option<u64>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  model: Option<String>,
 }
 
 /// Theme Builder: prompt Codex over ACP (`session/new|load` + `session/prompt`).
@@ -568,6 +593,7 @@ pub async fn codex_chat(
   workspace_path: Option<String>,
   workspace_id: Option<String>,
   wait_ms: Option<u64>,
+  model: Option<String>,
 ) -> Result<CodexChatResult, String> {
   let args = to_value(&CodexChatArgs {
     prompt: prompt.into(),
@@ -575,6 +601,7 @@ pub async fn codex_chat(
     workspace_path,
     workspace_id,
     wait_ms,
+    model,
   })
   .map_err(|e| e.to_string())?;
   invoke_cmd_with_args::<CodexChatResult>("codex_chat", args).await

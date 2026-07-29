@@ -349,6 +349,14 @@ pub async fn list_codex_sessions(
   crate::theme_builder_store::list_intersection(&app, codex, limit)
 }
 
+/// Theme Builder: list Codex models from local cache (`~/.codex/models_cache.json`).
+#[tauri::command]
+pub async fn list_codex_models() -> Result<cdx_theme_core::CodexModelsList, String> {
+  tokio::task::spawn_blocking(cdx_theme_core::list_codex_models)
+    .await
+    .map_err(|e| format!("list_codex_models task failed: {e}"))
+}
+
 /// Theme Builder: delete a tracked session (app data registry + workspace folder).
 #[tauri::command(rename_all = "snake_case")]
 pub async fn delete_theme_builder_session(
@@ -407,6 +415,7 @@ pub async fn codex_chat(
   workspace_path: Option<String>,
   workspace_id: Option<String>,
   wait_ms: Option<u64>,
+  model: Option<String>,
   app: AppHandle,
   _state: State<'_, AppState>,
 ) -> Result<cdx_theme_core::CodexChatResult, String> {
@@ -482,10 +491,15 @@ pub async fn codex_chat(
       .map(|s| s.to_string())
   });
 
+  let model = model
+    .map(|s| s.trim().to_string())
+    .filter(|s| !s.is_empty());
+
   tracing::info!(
     chars = wire.len(),
     wait_ms = wait_ms.unwrap_or(180_000),
     session = resume_id.as_deref().unwrap_or(""),
+    model = model.as_deref().unwrap_or(""),
     cwd = %cwd.display(),
     cdxthemex = %cdxthemex.display(),
     "theme builder → ACP session/prompt"
@@ -513,6 +527,7 @@ pub async fn codex_chat(
         ("CDXTHEMEX".into(), cdxthemex.to_string_lossy().into_owned()),
       ],
       on_stream: Some(on_stream),
+      model,
     },
   )
   .await?;

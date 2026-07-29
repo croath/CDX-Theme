@@ -13,7 +13,8 @@ use agent_client_protocol::schema::ProtocolVersion;
 use agent_client_protocol::schema::v1::{
   ContentBlock, InitializeRequest, ListSessionsRequest, LoadSessionRequest, NewSessionRequest,
   PromptRequest, RequestPermissionOutcome, RequestPermissionRequest, RequestPermissionResponse,
-  SelectedPermissionOutcome, SessionNotification, SessionUpdate, TextContent,
+  SelectedPermissionOutcome, SessionConfigOptionValue, SessionNotification, SessionUpdate,
+  SetSessionConfigOptionRequest, TextContent,
 };
 use agent_client_protocol::{AcpAgent, AcpAgentConfig, Agent, Client, ConnectionTo};
 use serde::{Deserialize, Serialize};
@@ -96,6 +97,28 @@ pub struct CodexSessionDetail {
   /// Theme Builder workspace root when known.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub workspace_path: Option<String>,
+}
+
+/// One selectable Codex model for Theme Builder UI.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexModelOption {
+  /// Model id / slug (e.g. `gpt-5.6-luna`).
+  pub id: String,
+  /// Human-readable label.
+  pub name: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub description: Option<String>,
+}
+
+/// Models available to Theme Builder, plus the preferred default.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexModelsList {
+  pub models: Vec<CodexModelOption>,
+  /// Current / preferred model id from `~/.codex/config.toml` when known.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub current: Option<String>,
 }
 
 /// Resolve the Codex CLI binary: ChatGPT-bundled first, then `PATH`.
@@ -227,6 +250,125 @@ fn codex_home() -> PathBuf {
   dirs_home()
     .map(|h| h.join(".codex"))
     .unwrap_or_else(|| PathBuf::from(".codex"))
+}
+
+/// Read selectable Codex models from the local Codex cache + config.
+///
+/// Source of truth for the list is `~/.codex/models_cache.json` (written by Codex CLI).
+/// Preferred default comes from `model = "…"` in `~/.codex/config.toml` when present.
+pub fn list_models() -> CodexModelsList {
+  let home = codex_home();
+  let current = read_config_model(&home.join("config.toml"));
+  let mut models = read_models_cache(&home.join("models_cache.json"));
+  // Ensure the configured model appears even if the cache omitted it.
+  if let Some(ref cur) = current {
+    if !cur.is_empty() && !models.iter().any(|m| m.id == *cur) {
+      models.insert(
+        0,
+        CodexModelOption {
+          id: cur.clone(),
+          name: cur.clone(),
+          description: None,
+        },
+      );
+    }
+  }
+  if models.is_empty() {
+    // Minimal fallback so the UI still shows a menu.
+    for (id, name) in [
+      ("gpt-5.6-luna", "GPT-5.6-Luna"),
+      ("gpt-5.6-terra", "GPT-5.6-Terra"),
+      ("gpt-5.5", "GPT-5.5"),
+      ("gpt-5.4-mini", "GPT-5.4-Mini"),
+    ] {
+      models.push(CodexModelOption {
+        id: id.into(),
+        name: name.into(),
+        description: None,
+      });
+    }
+  }
+  CodexModelsList { models, current }
+}
+
+fn read_config_model(path: &Path) -> Option<String> {
+  let raw = std::fs::read_to_string(path).ok()?;
+  for line in raw.lines() {
+    let trimmed = line.trim();
+    if trimmed.starts_with('#') {
+      continue;
+    }
+    // Top-level `model = "…"` (not nested tables — first match is fine for Codex default).
+    if let Some(rest) = trimmed.strip_prefix("model") {
+      let rest = rest.trim_start();
+      if let Some(rest) = rest.strip_prefix('=') {
+        let val = rest.trim().trim_matches(|c| c == '"' || c == '\'');
+        if !val.is_empty() {
+          return Some(val.to_string());
+        }
+      }
+    }
+  }
+  None
+}
+
+fn read_models_cache(path: &Path) -> Vec<CodexModelOption> {
+  let raw = match std::fs::read_to_string(path) {
+    Ok(s) => s,
+    Err(_) => return Vec::new(),
+  };
+  let value: Value = match serde_json::from_str(&raw) {
+    Ok(v) => v,
+    Err(_) => return Vec::new(),
+  };
+  let Some(arr) = value.get("models").and_then(|m| m.as_array()) else {
+    return Vec::new();
+  };
+  let mut out = Vec::new();
+  for item in arr {
+    let id = item
+      .get("slug")
+      .or_else(|| item.get("id"))
+      .and_then(|v| v.as_str())
+      .unwrap_or("")
+      .trim()
+      .to_string();
+    if id.is_empty() {
+      continue;
+    }
+    // Prefer list-visible models; keep unknowns if visibility is absent.
+    if let Some(vis) = item.get("visibility").and_then(|v| v.as_str()) {
+      if vis != "list" && vis != "default" {
+        continue;
+      }
+    }
+    let name = item
+      .get("display_name")
+      .or_else(|| item.get("name"))
+      .and_then(|v| v.as_str())
+      .map(str::trim)
+      .filter(|s| !s.is_empty())
+      .unwrap_or(id.as_str())
+      .to_string();
+    let description = item
+      .get("description")
+      .and_then(|v| v.as_str())
+      .map(str::trim)
+      .filter(|s| !s.is_empty())
+      .map(str::to_string);
+    out.push(CodexModelOption {
+      id,
+      name,
+      description,
+    });
+  }
+  // Stable, priority-aware order when available.
+  out.sort_by(|a, b| {
+    a.name
+      .to_ascii_lowercase()
+      .cmp(&b.name.to_ascii_lowercase())
+  });
+  out
 }
 
 fn dirs_home() -> Option<PathBuf> {
@@ -1581,6 +1723,9 @@ pub struct CodexChatOptions {
   pub extra_env: Vec<(String, String)>,
   /// Invoked whenever the turn transcript changes (for live UI streaming).
   pub on_stream: Option<CodexStreamCallback>,
+  /// Preferred model id for this turn (`session/set_config_option` id `model`).
+  /// When set, applied after `session/new` or `session/load` and before `session/prompt`.
+  pub model: Option<String>,
 }
 
 impl std::fmt::Debug for CodexChatOptions {
@@ -1592,6 +1737,7 @@ impl std::fmt::Debug for CodexChatOptions {
       .field("path_prepend", &self.path_prepend)
       .field("extra_env", &self.extra_env)
       .field("on_stream", &self.on_stream.as_ref().map(|_| "<callback>"))
+      .field("model", &self.model)
       .finish()
   }
 }
@@ -1648,12 +1794,19 @@ pub async fn send_and_wait_with(
     .as_deref()
     .map(str::trim)
     .filter(|s| !s.is_empty());
+  let model = options
+    .model
+    .as_deref()
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .map(str::to_string);
 
   tracing::info!(
     agent = %agent_label,
     chars = prompt.len(),
     wait_ms,
     resume = resume.unwrap_or(""),
+    model = model.as_deref().unwrap_or(""),
     cwd = %cwd.display(),
     "theme builder → ACP session/prompt"
   );
@@ -1704,6 +1857,7 @@ pub async fn send_and_wait_with(
     .connect_with(agent, move |connection: ConnectionTo<Agent>| {
       let prompt_owned = prompt_owned.clone();
       let resume_owned = resume_owned.clone();
+      let model_owned = model.clone();
       let cwd = cwd.clone();
       async move {
         connection
@@ -1724,6 +1878,27 @@ pub async fn send_and_wait_with(
             .await?;
           resp.session_id.to_string()
         };
+
+        // Apply model via ACP session config (codex-acp advertises id "model").
+        if let Some(model_id) = model_owned {
+          match connection
+            .send_request(SetSessionConfigOptionRequest::new(
+              session_id.clone(),
+              "model",
+              SessionConfigOptionValue::value_id(model_id.clone()),
+            ))
+            .block_task()
+            .await
+          {
+            Ok(_) => {
+              tracing::info!(%model_id, "theme builder → ACP model set");
+            }
+            Err(e) => {
+              // Non-fatal: continue with the agent's default model.
+              tracing::warn!(%model_id, error = %e, "theme builder → ACP set model failed");
+            }
+          }
+        }
 
         let prompt_resp = connection
           .send_request(PromptRequest::new(

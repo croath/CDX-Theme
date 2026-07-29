@@ -3,13 +3,13 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::JsCast;
 
-use crate::api;
+use crate::api::{self, CodexModelOption};
 use crate::components::ui::sonner::{toast_error, toast_success};
 use crate::i18n::I18n;
 use crate::state::AppCtx;
 use crate::types::Locale;
 
-use super::{ChatMessage, ChatRole, short_id};
+use super::{BuilderModelSelect, ChatMessage, ChatRole, short_id};
 
 /// Reopened session: chat + optional apply when a package exists in the workspace.
 #[component]
@@ -26,6 +26,8 @@ pub(super) fn BuilderChat(
   package_path: RwSignal<Option<String>>,
   applying: RwSignal<bool>,
   applied_name: RwSignal<Option<String>>,
+  models: RwSignal<Vec<CodexModelOption>>,
+  selected_model: RwSignal<String>,
   list_ref: NodeRef<leptos::html::Div>,
   on_back: Callback<()>,
 ) -> impl IntoView {
@@ -87,9 +89,14 @@ pub(super) fn BuilderChat(
     let resume = session_id.get_untracked();
     let ws_path = workspace_path.get_untracked();
     let ws_id = workspace_id.get_untracked();
+    let model = {
+      let m = selected_model.get_untracked();
+      let m = m.trim().to_string();
+      if m.is_empty() { None } else { Some(m) }
+    };
 
     spawn_local(async move {
-      match api::codex_chat(text, resume.clone(), ws_path, ws_id, Some(180_000)).await {
+      match api::codex_chat(text, resume.clone(), ws_path, ws_id, Some(180_000), model).await {
         Ok(result) => {
           if let Some(sid) = result.session_id.filter(|s| !s.is_empty()) {
             session_id.set(Some(sid));
@@ -211,6 +218,11 @@ pub(super) fn BuilderChat(
           }}
         </p>
       </div>
+      <BuilderModelSelect
+        models=models
+        selected_model=selected_model
+        disabled=Signal::derive(move || sending.get() || chat_loading.get() || applying.get())
+      />
     </header>
 
     <div class="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-card/70 shadow-xl shadow-black/5 backdrop-blur-md">
