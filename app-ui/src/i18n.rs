@@ -1392,6 +1392,195 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
       "Mi tema de Codex rompe el composer en inicio vs conversación. Explica el CSS correcto de .composer-surface-chrome bajo html.cdxtheme-host-codex (fixed en chat home, relative en hilo) con overrides seguros."
     }
 
+    // Theme Builder runtime gate (bunx / npx)
+    (Locale::EnUs, "builder.runtime.title") => "Theme Builder setup",
+    (Locale::ZhHans, "builder.runtime.title") => "主题构建环境准备",
+    (Locale::ZhHant, "builder.runtime.title") => "主題構建環境準備",
+    (Locale::JaJp, "builder.runtime.title") => "テーマビルダーの準備",
+    (Locale::KoKr, "builder.runtime.title") => "테마 빌더 설정",
+    (Locale::DeDe, "builder.runtime.title") => "Theme-Builder Einrichtung",
+    (Locale::EsEs, "builder.runtime.title") => "Configuración del constructor",
+
+    (Locale::EnUs, "builder.runtime.subtitle") => {
+      "Theme Builder needs Bun (bunx) or Node.js (npx) to run the Codex ACP adapter"
+    }
+    (Locale::ZhHans, "builder.runtime.subtitle") => {
+      "主题构建需要 Bun（bunx）或 Node.js（npx）来运行 Codex ACP 适配器"
+    }
+    (Locale::ZhHant, "builder.runtime.subtitle") => {
+      "主題構建需要 Bun（bunx）或 Node.js（npx）來執行 Codex ACP 適配器"
+    }
+    (Locale::JaJp, "builder.runtime.subtitle") => {
+      "テーマビルダーは Codex ACP アダプタ実行に Bun（bunx）または Node.js（npx）が必要です"
+    }
+    (Locale::KoKr, "builder.runtime.subtitle") => {
+      "테마 빌더는 Codex ACP 어댑터 실행을 위해 Bun(bunx) 또는 Node.js(npx)가 필요합니다"
+    }
+    (Locale::DeDe, "builder.runtime.subtitle") => {
+      "Theme Builder benötigt Bun (bunx) oder Node.js (npx) für den Codex-ACP-Adapter"
+    }
+    (Locale::EsEs, "builder.runtime.subtitle") => {
+      "El constructor necesita Bun (bunx) o Node.js (npx) para el adaptador ACP de Codex"
+    }
+
+    (Locale::EnUs, "builder.runtime.checking") => "Checking host runtime…",
+    (Locale::ZhHans, "builder.runtime.checking") => "正在检查本机运行环境…",
+    (Locale::ZhHant, "builder.runtime.checking") => "正在檢查本機執行環境…",
+    (Locale::JaJp, "builder.runtime.checking") => "ホストのランタイムを確認中…",
+    (Locale::KoKr, "builder.runtime.checking") => "호스트 런타임 확인 중…",
+    (Locale::DeDe, "builder.runtime.checking") => "Host-Runtime wird geprüft…",
+    (Locale::EsEs, "builder.runtime.checking") => "Comprobando el runtime del host…",
+
+    (Locale::EnUs, "builder.runtime.need.title") => "Install Bun to continue",
+    (Locale::ZhHans, "builder.runtime.need.title") => "请安装 Bun 以继续",
+    (Locale::ZhHant, "builder.runtime.need.title") => "請安裝 Bun 以繼續",
+    (Locale::JaJp, "builder.runtime.need.title") => "続行するには Bun をインストール",
+    (Locale::KoKr, "builder.runtime.need.title") => "계속하려면 Bun을 설치하세요",
+    (Locale::DeDe, "builder.runtime.need.title") => "Bun installieren, um fortzufahren",
+    (Locale::EsEs, "builder.runtime.need.title") => "Instala Bun para continuar",
+
+    (Locale::EnUs, "builder.runtime.need.body") => {
+      "Neither bunx nor npx was found on this Mac/PC. Theme Builder uses them to launch codex-acp. Install Bun with one click (downloads try official, GitHub, and jsDelivr mirrors), or install Node.js yourself and re-check."
+    }
+    (Locale::ZhHans, "builder.runtime.need.body") => {
+      "本机未检测到 bunx 或 npx。主题构建用它们启动 codex-acp。可一键安装 Bun（会依次尝试官方、GitHub、jsDelivr 镜像），或自行安装 Node.js 后重新检测。"
+    }
+    (Locale::ZhHant, "builder.runtime.need.body") => {
+      "本機未偵測到 bunx 或 npx。主題構建會用它們啟動 codex-acp。可一鍵安裝 Bun（會依序嘗試官方、GitHub、jsDelivr 鏡像），或自行安裝 Node.js 後重新檢查。"
+    }
+    (Locale::JaJp, "builder.runtime.need.body") => {
+      "この Mac/PC に bunx も npx も見つかりません。テーマビルダーは codex-acp 起動に使います。ワンクリックで Bun をインストール（公式・GitHub・jsDelivr を順に試行）するか、Node.js を入れて再確認してください。"
+    }
+    (Locale::KoKr, "builder.runtime.need.body") => {
+      "이 Mac/PC에서 bunx 또는 npx를 찾지 못했습니다. 테마 빌더는 codex-acp 실행에 사용합니다. 원클릭으로 Bun을 설치하거나(공식·GitHub·jsDelivr 순), Node.js를 설치한 뒤 다시 확인하세요."
+    }
+    (Locale::DeDe, "builder.runtime.need.body") => {
+      "Weder bunx noch npx gefunden. Theme Builder startet damit codex-acp. Installieren Sie Bun per Klick (offiziell, GitHub, jsDelivr) oder Node.js manuell und prüfen Sie erneut."
+    }
+    (Locale::EsEs, "builder.runtime.need.body") => {
+      "No se encontró bunx ni npx. El constructor los usa para lanzar codex-acp. Instala Bun con un clic (oficial, GitHub y jsDelivr) o Node.js y vuelve a comprobar."
+    }
+
+    (Locale::EnUs, "builder.runtime.step.install") => {
+      "Click Install Bun — CDXTheme downloads the installer/binary for your OS."
+    }
+    (Locale::ZhHans, "builder.runtime.step.install") => {
+      "点击「安装 Bun」— CDXTheme 会为本机下载安装脚本或二进制。"
+    }
+    (Locale::ZhHant, "builder.runtime.step.install") => {
+      "點「安裝 Bun」— CDXTheme 會為本機下載安裝腳本或二進位檔。"
+    }
+    (Locale::JaJp, "builder.runtime.step.install") => {
+      "「Bun をインストール」をクリック — OS 向けのインストーラ/バイナリを取得します。"
+    }
+    (Locale::KoKr, "builder.runtime.step.install") => {
+      "Bun 설치 클릭 — OS용 설치 스크립트/바이너리를 받습니다."
+    }
+    (Locale::DeDe, "builder.runtime.step.install") => {
+      "„Bun installieren“ — CDXTheme lädt Installer/Binary für Ihr OS."
+    }
+    (Locale::EsEs, "builder.runtime.step.install") => {
+      "Pulsa Instalar Bun — CDXTheme descarga el instalador/binario de tu SO."
+    }
+
+    (Locale::EnUs, "builder.runtime.step.mirrors") => {
+      "Download sources: bun.sh, GitHub Releases, jsDelivr (and npm CDN mirrors)."
+    }
+    (Locale::ZhHans, "builder.runtime.step.mirrors") => {
+      "下载源：bun.sh、GitHub Releases、jsDelivr（及 npm CDN 镜像）。"
+    }
+    (Locale::ZhHant, "builder.runtime.step.mirrors") => {
+      "下載來源：bun.sh、GitHub Releases、jsDelivr（及 npm CDN 鏡像）。"
+    }
+    (Locale::JaJp, "builder.runtime.step.mirrors") => {
+      "取得元: bun.sh、GitHub Releases、jsDelivr（npm CDN ミラー含む）。"
+    }
+    (Locale::KoKr, "builder.runtime.step.mirrors") => {
+      "다운로드 소스: bun.sh, GitHub Releases, jsDelivr(npm CDN 미러 포함)."
+    }
+    (Locale::DeDe, "builder.runtime.step.mirrors") => {
+      "Quellen: bun.sh, GitHub Releases, jsDelivr (und npm-CDN-Spiegel)."
+    }
+    (Locale::EsEs, "builder.runtime.step.mirrors") => {
+      "Fuentes: bun.sh, GitHub Releases, jsDelivr (y espejos CDN de npm)."
+    }
+
+    (Locale::EnUs, "builder.runtime.step.continue") => {
+      "When ready, Theme Builder unlocks automatically. You can also re-check after installing Node.js yourself."
+    }
+    (Locale::ZhHans, "builder.runtime.step.continue") => {
+      "就绪后主题构建会自动解锁。也可自行安装 Node.js 后点击重新检测。"
+    }
+    (Locale::ZhHant, "builder.runtime.step.continue") => {
+      "就緒後主題構建會自動解鎖。也可自行安裝 Node.js 後按重新檢查。"
+    }
+    (Locale::JaJp, "builder.runtime.step.continue") => {
+      "準備でき次第テーマビルダーが自動で開きます。Node.js を入れた後の再確認も可能です。"
+    }
+    (Locale::KoKr, "builder.runtime.step.continue") => {
+      "준비되면 테마 빌더가 자동으로 열립니다. Node.js를 직접 설치한 뒤 다시 확인할 수도 있습니다."
+    }
+    (Locale::DeDe, "builder.runtime.step.continue") => {
+      "Wenn bereit, entsperrt sich Theme Builder automatisch. Nach manueller Node.js-Installation erneut prüfen."
+    }
+    (Locale::EsEs, "builder.runtime.step.continue") => {
+      "Cuando esté listo, el constructor se desbloquea solo. También puedes reinstalar Node.js y volver a comprobar."
+    }
+
+    (Locale::EnUs, "builder.runtime.install") => "Install Bun",
+    (Locale::ZhHans, "builder.runtime.install") => "安装 Bun",
+    (Locale::ZhHant, "builder.runtime.install") => "安裝 Bun",
+    (Locale::JaJp, "builder.runtime.install") => "Bun をインストール",
+    (Locale::KoKr, "builder.runtime.install") => "Bun 설치",
+    (Locale::DeDe, "builder.runtime.install") => "Bun installieren",
+    (Locale::EsEs, "builder.runtime.install") => "Instalar Bun",
+
+    (Locale::EnUs, "builder.runtime.installing") => "Installing Bun…",
+    (Locale::ZhHans, "builder.runtime.installing") => "正在安装 Bun…",
+    (Locale::ZhHant, "builder.runtime.installing") => "正在安裝 Bun…",
+    (Locale::JaJp, "builder.runtime.installing") => "Bun をインストール中…",
+    (Locale::KoKr, "builder.runtime.installing") => "Bun 설치 중…",
+    (Locale::DeDe, "builder.runtime.installing") => "Bun wird installiert…",
+    (Locale::EsEs, "builder.runtime.installing") => "Instalando Bun…",
+
+    (Locale::EnUs, "builder.runtime.install.success") => "Bun installed",
+    (Locale::ZhHans, "builder.runtime.install.success") => "Bun 已安装",
+    (Locale::ZhHant, "builder.runtime.install.success") => "Bun 已安裝",
+    (Locale::JaJp, "builder.runtime.install.success") => "Bun をインストールしました",
+    (Locale::KoKr, "builder.runtime.install.success") => "Bun이 설치되었습니다",
+    (Locale::DeDe, "builder.runtime.install.success") => "Bun installiert",
+    (Locale::EsEs, "builder.runtime.install.success") => "Bun instalado",
+
+    (Locale::EnUs, "builder.runtime.recheck") => "Re-check",
+    (Locale::ZhHans, "builder.runtime.recheck") => "重新检测",
+    (Locale::ZhHant, "builder.runtime.recheck") => "重新檢查",
+    (Locale::JaJp, "builder.runtime.recheck") => "再確認",
+    (Locale::KoKr, "builder.runtime.recheck") => "다시 확인",
+    (Locale::DeDe, "builder.runtime.recheck") => "Erneut prüfen",
+    (Locale::EsEs, "builder.runtime.recheck") => "Volver a comprobar",
+
+    (Locale::EnUs, "builder.runtime.manual") => {
+      "Manual install: https://bun.sh — or install Node.js (includes npx). Restart CDXTheme if PATH does not update."
+    }
+    (Locale::ZhHans, "builder.runtime.manual") => {
+      "手动安装：https://bun.sh — 或安装 Node.js（含 npx）。若 PATH 未更新请重启 CDXTheme。"
+    }
+    (Locale::ZhHant, "builder.runtime.manual") => {
+      "手動安裝：https://bun.sh — 或安裝 Node.js（含 npx）。若 PATH 未更新請重啟 CDXTheme。"
+    }
+    (Locale::JaJp, "builder.runtime.manual") => {
+      "手動: https://bun.sh — または Node.js（npx 同梱）。PATH が変わらない場合は CDXTheme を再起動。"
+    }
+    (Locale::KoKr, "builder.runtime.manual") => {
+      "수동 설치: https://bun.sh — 또는 Node.js(npx 포함). PATH가 안 바뀌면 CDXTheme을 다시 시작하세요."
+    }
+    (Locale::DeDe, "builder.runtime.manual") => {
+      "Manuell: https://bun.sh — oder Node.js (mit npx). CDXTheme neu starten, falls PATH fehlt."
+    }
+    (Locale::EsEs, "builder.runtime.manual") => {
+      "Manual: https://bun.sh — o Node.js (incluye npx). Reinicia CDXTheme si no actualiza el PATH."
+    }
+
     _ => "…",
   }
 }

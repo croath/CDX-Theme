@@ -401,15 +401,85 @@ pub fn prepare_workspace(app: &AppHandle) -> Result<PreparedWorkspace, String> {
   })
 }
 
-/// Derive a short title from the user prompt (strips Theme Builder prefix if present).
+/// Derive a short title from the user prompt / description.
+///
+/// Prefers the Theme Builder `Description:` block so sessions are named after the
+/// user's description instead of the fixed "Create a Codex theme…" template line.
 pub fn title_from_prompt(prompt: &str) -> String {
-  let mut t = prompt.trim();
-  if let Some(idx) = t.find("User:\n") {
-    t = t[idx + "User:\n".len()..].trim();
-  } else if let Some(idx) = t.find("User:") {
-    t = t[idx + "User:".len()..].trim();
+  let prompt = prompt.trim();
+  if prompt.is_empty() {
+    return "Untitled theme build".into();
   }
-  let one_line: String = t.lines().next().unwrap_or(t).chars().take(72).collect();
+
+  // Hero-flow wire prompt embeds the user text under "Description:".
+  if let Some(rest) = after_marker(prompt, "Description:") {
+    if let Some(line) = first_title_line(rest) {
+      return truncate_title(line);
+    }
+  }
+
+  // Skill bootstrap ends with "User:\n{text}".
+  if let Some(rest) = after_marker(prompt, "User:") {
+    if let Some(line) = first_title_line(rest) {
+      return truncate_title(line);
+    }
+  }
+
+  // Fall back to first meaningful non-boilerplate line.
+  if let Some(line) = first_title_line(prompt) {
+    return truncate_title(line);
+  }
+  "Untitled theme build".into()
+}
+
+fn after_marker<'a>(text: &'a str, marker: &str) -> Option<&'a str> {
+  let idx = text.find(marker)?;
+  Some(text[idx + marker.len()..].trim_start())
+}
+
+fn first_title_line(text: &str) -> Option<&str> {
+  for line in text.lines() {
+    let line = line.trim();
+    if line.is_empty() {
+      continue;
+    }
+    if is_boilerplate_title_line(line) {
+      continue;
+    }
+    return Some(line);
+  }
+  None
+}
+
+fn is_boilerplate_title_line(line: &str) -> bool {
+  let lower = line.to_ascii_lowercase();
+  line.starts_with('[')
+    || line.starts_with('-')
+    || lower.starts_with("create a codex theme from my hero")
+    || lower.starts_with("hero image")
+    || lower.starts_with("when done")
+    || lower.starts_with("workspace")
+    || lower.starts_with("you must")
+    || lower.starts_with("theme-dir")
+    || lower.starts_with("use the app-bundled")
+    || lower.starts_with("goal:")
+    || lower.starts_with("other useful")
+    || lower.starts_with("keep packages")
+    || lower.starts_with("## ")
+    || lower.starts_with("prefer tools")
+    || lower.starts_with("final message")
+    || lower.starts_with("never")
+    || lower.starts_with("no markdown")
+    || lower.starts_with("if something failed")
+    || lower.starts_with("set theme.json")
+    || lower.starts_with("use var(--cdxtheme")
+    || lower.starts_with("derive accent")
+    || lower.starts_with("file:")
+    || lower.starts_with("reply style")
+}
+
+fn truncate_title(line: &str) -> String {
+  let one_line: String = line.chars().take(72).collect();
   let one_line = one_line.trim();
   if one_line.is_empty() {
     "Untitled theme build".into()
@@ -574,11 +644,13 @@ pub fn record_session(
   }
   let now = now_iso();
   let mut store = load_file(app);
+  let mut applied_title: Option<String> = None;
   if let Some(existing) = store.sessions.iter_mut().find(|s| s.id == session_id) {
     existing.updated_at = now;
     if let Some(hint) = title_hint.map(str::trim).filter(|s| !s.is_empty()) {
-      if existing.title.trim().is_empty() || existing.title == "Untitled theme build" {
+      if should_replace_session_title(&existing.title, hint) {
         existing.title = hint.to_string();
+        applied_title = Some(hint.to_string());
       }
     }
     if let Some(wp) = workspace_path.map(str::trim).filter(|s| !s.is_empty()) {
@@ -597,6 +669,7 @@ pub fn record_session(
       .filter(|s| !s.is_empty())
       .unwrap_or("Untitled theme build")
       .to_string();
+    applied_title = Some(title.clone());
     store.sessions.push(TrackedSession {
       id: session_id.to_string(),
       title,
@@ -609,7 +682,38 @@ pub fn record_session(
   store
     .sessions
     .sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-  save_file(app, &store)
+  save_file(app, &store)?;
+
+  // Keep Codex history name in sync with the Theme Builder description/title.
+  if let Some(title) = applied_title.filter(|t| !t.trim().is_empty()) {
+    if let Err(e) = cdx_theme_core::rename_codex_session(session_id, &title) {
+      tracing::warn!(
+        session = %session_id,
+        error = %e,
+        "failed to rename Codex session thread_name"
+      );
+    }
+  }
+  Ok(())
+}
+
+fn should_replace_session_title(existing: &str, hint: &str) -> bool {
+  let existing = existing.trim();
+  if existing.is_empty() || existing == "Untitled theme build" || existing == "Untitled session" {
+    return true;
+  }
+  // Legacy bug: title was taken from the fixed hero-flow template first line.
+  if existing
+    .to_ascii_lowercase()
+    .starts_with("create a codex theme from my hero")
+  {
+    return true;
+  }
+  // Allow upgrading a truncated title when the new hint is more descriptive.
+  if hint.len() > existing.len() && hint.starts_with(existing.trim_end_matches('…')) {
+    return true;
+  }
+  false
 }
 
 pub fn is_tracked(app: &AppHandle, session_id: &str) -> bool {
@@ -630,10 +734,10 @@ pub fn workspace_path_for(app: &AppHandle, session_id: &str) -> Option<String> {
     .filter(|p| !p.is_empty())
 }
 
-/// Remove a Theme Builder session from app data and delete its workspace folder.
+/// Remove a Theme Builder session from app data, its workspace folder, **and Codex**.
 ///
-/// Does not delete Codex's own history files — the session simply stops appearing
-/// in Theme Builder (intersection requires app-data tracking).
+/// Codex cleanup uses `codex delete --force` when available, plus `session_index.jsonl`
+/// and rollout file removal under `~/.codex`.
 pub fn delete_session(app: &AppHandle, session_id: &str) -> Result<(), String> {
   let session_id = session_id.trim();
   if session_id.is_empty() {
@@ -665,7 +769,10 @@ pub fn delete_session(app: &AppHandle, session_id: &str) -> Result<(), String> {
       }
     });
   let Some(idx) = idx else {
-    // Already gone — treat as success so the UI can drop the row.
+    // Still try Codex delete in case only host history remains.
+    if let Err(e) = cdx_theme_core::delete_codex_session(session_id) {
+      tracing::debug!(session = %session_id, error = %e, "codex delete for absent app session");
+    }
     tracing::info!(session = %session_id, "theme builder session already absent");
     return Ok(());
   };
@@ -686,7 +793,17 @@ pub fn delete_session(app: &AppHandle, session_id: &str) -> Result<(), String> {
   } else {
     tracing::info!(
       session = %removed.id,
-      "theme builder session deleted"
+      "theme builder session deleted from app data"
+    );
+  }
+
+  // Also remove from Codex history so it does not linger in CLI / Desktop.
+  if let Err(e) = cdx_theme_core::delete_codex_session(&removed.id) {
+    // App-side delete already succeeded; do not fail the IPC call.
+    tracing::warn!(
+      session = %removed.id,
+      error = %e,
+      "theme builder session removed from app data but Codex delete failed"
     );
   }
 

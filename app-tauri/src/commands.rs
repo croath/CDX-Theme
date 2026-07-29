@@ -645,3 +645,21 @@ pub async fn save_theme_builder_hero(
   .await
   .map_err(|e| format!("save hero task failed: {e}"))?
 }
+
+/// Theme Builder: probe host for `codex-acp` / `bunx` / `npx`.
+#[tauri::command]
+pub async fn check_theme_builder_runtime()
+-> Result<cdx_theme_core::ThemeBuilderRuntimeStatus, String> {
+  Ok(
+    tokio::task::spawn_blocking(cdx_theme_core::check_theme_builder_runtime)
+      .await
+      .map_err(|e| format!("runtime check task failed: {e}"))?,
+  )
+}
+
+/// Theme Builder: download + install Bun (multi-mirror: official, GitHub, jsDelivr).
+#[tauri::command]
+pub async fn install_bun_for_theme_builder()
+-> Result<cdx_theme_core::ThemeBuilderRuntimeStatus, String> {
+  cdx_theme_core::install_bun_for_theme_builder().await
+}

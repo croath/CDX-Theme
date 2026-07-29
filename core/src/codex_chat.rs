@@ -264,13 +264,113 @@ fn prepend_path_env(path_env: &mut String, dir: &Path) {
 
 const CODEX_ACP_PKG: &str = "@agentclientprotocol/codex-acp@latest";
 
+/// Host runtime needed to spawn the Codex ACP adapter (`codex-acp` / bunx / npx).
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThemeBuilderRuntimeStatus {
+  /// True when Theme Builder can spawn the ACP adapter without installing Bun.
+  pub ready: bool,
+  pub has_codex_acp: bool,
+  pub has_bun: bool,
+  pub has_bunx: bool,
+  pub has_npx: bool,
+  /// Preferred runner label: `codex-acp` | `bunx` | `bun` | `npx`.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub runner: Option<String>,
+  /// Absolute path of the preferred runner when known.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub runner_path: Option<String>,
+  /// Short status for UI / logs.
+  pub message: String,
+}
+
+/// Probe host for `codex-acp`, Bun (`bun` / `bunx`), or Node (`npx`).
+pub fn check_theme_builder_runtime() -> ThemeBuilderRuntimeStatus {
+  // Include ~/.bun/bin even when the app process PATH was set before install.
+  let _ = bun_bin_dir();
+
+  let codex_acp = which("codex-acp");
+  let bun = resolve_bun();
+  let bunx = resolve_bunx();
+  let npx = resolve_npx();
+
+  let has_codex_acp = codex_acp.is_some();
+  let has_bun = bun.is_some();
+  let has_bunx = bunx.is_some();
+  let has_npx = npx.is_some();
+  let ready = has_codex_acp || has_bun || has_bunx || has_npx;
+
+  let (runner, runner_path) = if let Some(p) = codex_acp {
+    (Some("codex-acp".into()), Some(p.display().to_string()))
+  } else if let Some(p) = bunx {
+    (Some("bunx".into()), Some(p.display().to_string()))
+  } else if let Some(p) = bun {
+    (Some("bun".into()), Some(p.display().to_string()))
+  } else if let Some(p) = npx {
+    (Some("npx".into()), Some(p.display().to_string()))
+  } else {
+    (None, None)
+  };
+
+  let message = if ready {
+    match runner.as_deref() {
+      Some("codex-acp") => "codex-acp is available".into(),
+      Some("bunx") | Some("bun") => "Bun is available (bunx)".into(),
+      Some("npx") => "Node.js npx is available".into(),
+      _ => "Runtime ready".into(),
+    }
+  } else {
+    "Bun (bunx) or Node.js (npx) is required to run Theme Builder".into()
+  };
+
+  ThemeBuilderRuntimeStatus {
+    ready,
+    has_codex_acp,
+    has_bun,
+    has_bunx,
+    has_npx,
+    runner,
+    runner_path,
+    message,
+  }
+}
+
+/// Download and install Bun into `~/.bun`, trying multiple mirrors (official, GitHub, jsDelivr).
+///
+/// Returns an updated runtime status. Safe to call when Bun is already present.
+pub async fn install_bun_for_theme_builder() -> Result<ThemeBuilderRuntimeStatus, String> {
+  if resolve_bun().is_some() || resolve_bunx().is_some() {
+    return Ok(check_theme_builder_runtime());
+  }
+
+  tracing::info!("installing Bun for Theme Builder (multi-mirror)…");
+  install_bun_multi_mirror().await?;
+
+  let status = check_theme_builder_runtime();
+  if status.has_bun || status.has_bunx {
+    tracing::info!(
+      runner = ?status.runner_path,
+      "Bun installed for Theme Builder"
+    );
+    Ok(status)
+  } else {
+    Err(
+      "Bun installer finished but `bun`/`bunx` was not found under ~/.bun/bin. \
+       Install from https://bun.sh then restart CDXTheme."
+        .into(),
+    )
+  }
+}
+
 /// Build the ACP agent process config (Codex adapter).
 ///
 /// Preference order:
 /// 1. `codex-acp` on PATH
 /// 2. `bunx` / `bun x` (user-installed Bun)
 /// 3. `npx -y` (user-installed Node/npm)
-/// 4. If neither Bun nor npx/node is available: install Bun, then `bunx`
+///
+/// Does **not** auto-install Bun — Theme Builder UI gates on
+/// [`check_theme_builder_runtime`] / [`install_bun_for_theme_builder`].
 ///
 /// `path_prepend` directories (e.g. folder of bundled `cdxthemex`) are put first on PATH.
 /// `extra_env` is merged into the agent process environment.
@@ -303,10 +403,8 @@ fn build_acp_agent(
     );
   }
 
-  // Detect user-installed runners: bun / npx / node.
   let has_bun = resolve_bun().is_some() || resolve_bunx().is_some();
   let has_npx = resolve_npx().is_some();
-  let has_node = resolve_node().is_some();
 
   if has_bun {
     return acp_via_bunx(&path_env, extra_env);
@@ -314,16 +412,12 @@ fn build_acp_agent(
   if has_npx {
     return acp_via_npx(&path_env, extra_env);
   }
-  // Node alone without npx is not enough for the package runner — fall through
-  // and install Bun (same as when nothing is installed).
-  if !has_node {
-    tracing::info!("no bun/npx/node on PATH — installing Bun to run codex-acp");
-  } else {
-    tracing::info!("node found but no npx/bun — installing Bun to run codex-acp");
-  }
 
-  ensure_bun_installed(&mut path_env)?;
-  acp_via_bunx(&path_env, extra_env)
+  Err(
+    "Theme Builder needs Bun (`bunx`) or Node.js (`npx`) to run codex-acp. \
+     Open Theme Builder and use Install Bun, or install from https://bun.sh."
+      .into(),
+  )
 }
 
 fn make_acp_agent(
@@ -339,9 +433,13 @@ fn make_acp_agent(
   Ok((AcpAgent::new(cfg), label))
 }
 
+fn bun_install_root() -> Option<PathBuf> {
+  dirs_home().map(|h| h.join(".bun"))
+}
+
 fn bun_bin_dir() -> Option<PathBuf> {
-  dirs_home()
-    .map(|h| h.join(".bun").join("bin"))
+  bun_install_root()
+    .map(|h| h.join("bin"))
     .filter(|p| p.is_dir())
 }
 
@@ -365,10 +463,6 @@ fn resolve_npx() -> Option<PathBuf> {
   which("npx")
 }
 
-fn resolve_node() -> Option<PathBuf> {
-  which("node")
-}
-
 #[cfg(windows)]
 fn bun_exe_name() -> &'static str {
   "bun.exe"
@@ -387,80 +481,335 @@ fn bunx_exe_name() -> &'static str {
   "bunx"
 }
 
-/// Install Bun via the official installer when missing.
-fn ensure_bun_installed(path_env: &mut String) -> Result<PathBuf, String> {
-  if let Some(bun) = resolve_bun() {
-    if let Some(dir) = bun.parent() {
-      prepend_path_env(path_env, dir);
-    }
-    return Ok(bun);
+/// Platform triple used by Bun release assets / `@oven/bun-*` packages.
+fn bun_release_target() -> Result<&'static str, String> {
+  #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+  {
+    return Ok("darwin-aarch64");
   }
-
-  tracing::info!("installing Bun (required to run codex-acp)…");
-  install_bun()?;
-
-  // Official installer puts binaries under ~/.bun/bin
-  if let Some(dir) = bun_bin_dir() {
-    prepend_path_env(path_env, &dir);
+  #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+  {
+    return Ok("darwin-x64");
   }
-
-  let bun = resolve_bun().ok_or_else(|| {
-    "Bun installer finished but `bun` was not found. Install from https://bun.sh \
-     then restart CDXTheme."
-      .to_string()
-  })?;
-  if let Some(dir) = bun.parent() {
-    prepend_path_env(path_env, dir);
+  #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+  {
+    return Ok("linux-aarch64");
   }
-  tracing::info!(bun = %bun.display(), "Bun installed");
-  Ok(bun)
+  #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+  {
+    return Ok("linux-x64");
+  }
+  #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+  {
+    return Ok("windows-x64");
+  }
+  #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
+  {
+    return Ok("windows-aarch64");
+  }
+  #[allow(unreachable_code)]
+  Err(format!(
+    "unsupported platform for Bun install ({}-{})",
+    std::env::consts::OS,
+    std::env::consts::ARCH
+  ))
 }
 
-fn install_bun() -> Result<(), String> {
+/// Install Bun by trying install scripts and direct binary mirrors in order.
+async fn install_bun_multi_mirror() -> Result<(), String> {
+  let mut errors: Vec<String> = Vec::new();
+
+  // 1) Official / mirrored install scripts (handle PATH, bunx shim, unzip).
+  match install_bun_via_scripts() {
+    Ok(()) if resolve_bun().is_some() || resolve_bunx().is_some() => return Ok(()),
+    Ok(()) => errors.push("install script finished but bun binary missing".into()),
+    Err(e) => {
+      tracing::warn!(error = %e, "Bun install script path failed");
+      errors.push(e);
+    }
+  }
+
+  // 2) Direct binary download (GitHub releases zip + jsDelivr / unpkg npm packages).
+  match install_bun_via_direct_download().await {
+    Ok(()) if resolve_bun().is_some() || resolve_bunx().is_some() => return Ok(()),
+    Ok(()) => errors.push("direct download finished but bun binary missing".into()),
+    Err(e) => {
+      tracing::warn!(error = %e, "Bun direct download failed");
+      errors.push(e);
+    }
+  }
+
+  Err(format!(
+    "failed to install Bun from all mirrors. Tried official script, GitHub, and jsDelivr. \
+     Last errors: {}. Install manually from https://bun.sh",
+    errors.join(" | ")
+  ))
+}
+
+fn install_bun_via_scripts() -> Result<(), String> {
   #[cfg(windows)]
   {
-    let status = std::process::Command::new("powershell")
-      .args([
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        "irm https://bun.sh/install.ps1 | iex",
-      ])
-      .status()
-      .map_err(|e| {
-        format!(
-          "failed to start Bun installer (powershell): {e}. \
-           Install Bun from https://bun.sh then retry."
-        )
-      })?;
-    if !status.success() {
-      return Err(format!(
-        "Bun installer exited with {status}. Install Bun from https://bun.sh then retry."
-      ));
+    // PowerShell installers — try official hosts in order.
+    const SCRIPT_URLS: &[&str] = &[
+      "https://bun.sh/install.ps1",
+      "https://bun.com/install.ps1",
+      // jsDelivr mirror of oven-sh website install script when published
+      "https://cdn.jsdelivr.net/gh/oven-sh/bun@main/src/cli/install.ps1",
+    ];
+    let mut last = String::from("no script URL tried");
+    for url in SCRIPT_URLS {
+      let cmd = format!("irm {url} | iex");
+      tracing::info!(url, "trying Bun PowerShell installer");
+      match std::process::Command::new("powershell")
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &cmd])
+        .status()
+      {
+        Ok(status) if status.success() => {
+          if resolve_bun().is_some() || resolve_bunx().is_some() {
+            return Ok(());
+          }
+          last = format!("{url}: success but bun not found");
+        }
+        Ok(status) => last = format!("{url}: exit {status}"),
+        Err(e) => last = format!("{url}: {e}"),
+      }
     }
-    return Ok(());
+    return Err(format!("PowerShell Bun install failed ({last})"));
   }
 
   #[cfg(not(windows))]
   {
-    // curl -fsSL https://bun.sh/install | bash
-    let status = std::process::Command::new("bash")
-      .args(["-lc", "curl -fsSL https://bun.sh/install | bash"])
+    // curl | bash installers — try multiple script hosts.
+    const SCRIPT_URLS: &[&str] = &[
+      "https://bun.sh/install",
+      "https://bun.com/install",
+      // GitHub raw (install script lives on bun.sh; also try oven-sh docs mirrors)
+      "https://raw.githubusercontent.com/oven-sh/bun/main/src/cli/install.sh",
+      "https://cdn.jsdelivr.net/gh/oven-sh/bun@main/src/cli/install.sh",
+    ];
+    let mut last = String::from("no script URL tried");
+    for url in SCRIPT_URLS {
+      tracing::info!(url, "trying Bun install script");
+      let shell = format!("curl -fsSL {url} | bash");
+      match std::process::Command::new("bash")
+        .args(["-lc", &shell])
+        .status()
+      {
+        Ok(status) if status.success() => {
+          if resolve_bun().is_some() || resolve_bunx().is_some() {
+            return Ok(());
+          }
+          last = format!("{url}: success but bun not found");
+        }
+        Ok(status) => last = format!("{url}: exit {status}"),
+        Err(e) => last = format!("{url}: {e}"),
+      }
+    }
+    Err(format!("bash Bun install failed ({last})"))
+  }
+}
+
+async fn install_bun_via_direct_download() -> Result<(), String> {
+  let target = bun_release_target()?;
+  let home = dirs_home().ok_or_else(|| "HOME/USERPROFILE not set".to_string())?;
+  let install_root = home.join(".bun");
+  let bin_dir = install_root.join("bin");
+  std::fs::create_dir_all(&bin_dir).map_err(|e| format!("create ~/.bun/bin: {e}"))?;
+
+  let dest = bin_dir.join(bun_exe_name());
+  let client = reqwest::Client::builder()
+    .timeout(Duration::from_secs(180))
+    .redirect(reqwest::redirect::Policy::limited(10))
+    .user_agent("CDXTheme-ThemeBuilder/0.1")
+    .build()
+    .map_err(|e| format!("http client: {e}"))?;
+
+  // Prefer zip from GitHub (full release layout), then raw binary from npm CDNs.
+  let zip_urls = [
+    format!("https://github.com/oven-sh/bun/releases/latest/download/bun-{target}.zip"),
+    // jsDelivr GitHub release proxy
+    format!("https://cdn.jsdelivr.net/gh/oven-sh/bun-releases@latest/bun-{target}.zip"),
+    // ghproxy-style is unreliable; skip. npmmirror zip of GitHub:
+    format!("https://npmmirror.com/mirrors/bun/latest/bun-{target}.zip"),
+  ];
+
+  let mut last_err = String::new();
+  for url in &zip_urls {
+    tracing::info!(%url, "downloading Bun zip");
+    match download_bytes(&client, url).await {
+      Ok(bytes) if bytes.len() > 1_000_000 => match extract_bun_zip_to_bin(&bytes, &bin_dir) {
+        Ok(()) => {
+          ensure_bunx_shim(&bin_dir)?;
+          if dest.is_file() {
+            return Ok(());
+          }
+          last_err = format!("{url}: extracted but {dest:?} missing");
+        }
+        Err(e) => last_err = format!("{url}: extract failed: {e}"),
+      },
+      Ok(bytes) => last_err = format!("{url}: unexpected size {}", bytes.len()),
+      Err(e) => last_err = format!("{url}: {e}"),
+    }
+  }
+
+  // Raw executable from @oven/bun-* npm packages (jsDelivr / unpkg).
+  let npm_pkg = format!("@oven/bun-{target}");
+  let exe = bun_exe_name();
+  let binary_urls = [
+    format!("https://cdn.jsdelivr.net/npm/{npm_pkg}/bin/{exe}"),
+    format!("https://unpkg.com/{npm_pkg}/bin/{exe}"),
+    format!("https://registry.npmmirror.com/{npm_pkg}/latest"),
+  ];
+
+  for url in &binary_urls {
+    // npmmirror registry returns JSON — skip pure registry URL for binary write.
+    if url.contains("registry.npmmirror.com") {
+      continue;
+    }
+    tracing::info!(%url, "downloading Bun binary");
+    match download_bytes(&client, url).await {
+      Ok(bytes) if bytes.len() > 1_000_000 => {
+        std::fs::write(&dest, &bytes).map_err(|e| format!("write bun: {e}"))?;
+        #[cfg(unix)]
+        {
+          use std::os::unix::fs::PermissionsExt;
+          let mut perms = std::fs::metadata(&dest)
+            .map_err(|e| format!("stat bun: {e}"))?
+            .permissions();
+          perms.set_mode(0o755);
+          std::fs::set_permissions(&dest, perms).map_err(|e| format!("chmod bun: {e}"))?;
+        }
+        ensure_bunx_shim(&bin_dir)?;
+        if dest.is_file() {
+          return Ok(());
+        }
+      }
+      Ok(bytes) => last_err = format!("{url}: unexpected size {}", bytes.len()),
+      Err(e) => last_err = format!("{url}: {e}"),
+    }
+  }
+
+  Err(format!("direct Bun download failed ({last_err})"))
+}
+
+async fn download_bytes(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, String> {
+  let resp = client
+    .get(url)
+    .send()
+    .await
+    .map_err(|e| format!("GET {url}: {e}"))?;
+  if !resp.status().is_success() {
+    return Err(format!("GET {url}: HTTP {}", resp.status()));
+  }
+  resp
+    .bytes()
+    .await
+    .map(|b| b.to_vec())
+    .map_err(|e| format!("read body {url}: {e}"))
+}
+
+fn extract_bun_zip_to_bin(zip_bytes: &[u8], bin_dir: &Path) -> Result<(), String> {
+  // Write zip to a temp file and use system unzip / Expand-Archive (no zip crate dep).
+  let tmp_dir = std::env::temp_dir().join(format!("cdxtheme-bun-{}", std::process::id()));
+  let _ = std::fs::remove_dir_all(&tmp_dir);
+  std::fs::create_dir_all(&tmp_dir).map_err(|e| format!("temp dir: {e}"))?;
+  let zip_path = tmp_dir.join("bun.zip");
+  std::fs::write(&zip_path, zip_bytes).map_err(|e| format!("write zip: {e}"))?;
+
+  #[cfg(windows)]
+  {
+    let expand = format!(
+      "Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
+      zip_path.display(),
+      tmp_dir.display()
+    );
+    let status = std::process::Command::new("powershell")
+      .args(["-NoProfile", "-Command", &expand])
+      .status()
+      .map_err(|e| format!("Expand-Archive: {e}"))?;
+    if !status.success() {
+      let _ = std::fs::remove_dir_all(&tmp_dir);
+      return Err(format!("Expand-Archive exit {status}"));
+    }
+  }
+  #[cfg(not(windows))]
+  {
+    let status = std::process::Command::new("unzip")
+      .args([
+        "-o",
+        &zip_path.to_string_lossy(),
+        "-d",
+        &tmp_dir.to_string_lossy(),
+      ])
       .status()
       .map_err(|e| {
-        format!(
-          "failed to start Bun installer (bash/curl): {e}. \
-           Install Bun from https://bun.sh then retry."
-        )
+        format!("unzip failed ({e}). Install `unzip` or use the official Bun installer.")
       })?;
     if !status.success() {
-      return Err(format!(
-        "Bun installer exited with {status}. Install Bun from https://bun.sh then retry."
-      ));
+      let _ = std::fs::remove_dir_all(&tmp_dir);
+      return Err(format!("unzip exit {status}"));
     }
-    Ok(())
   }
+
+  // Release zip layout: bun-<target>/bun[.exe]
+  let exe_name = bun_exe_name();
+  let found = find_file_named(&tmp_dir, exe_name)
+    .ok_or_else(|| format!("could not find {exe_name} inside downloaded zip"))?;
+  let dest = bin_dir.join(exe_name);
+  std::fs::create_dir_all(bin_dir).map_err(|e| format!("create bin dir: {e}"))?;
+  std::fs::copy(&found, &dest).map_err(|e| format!("copy bun: {e}"))?;
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = std::fs::metadata(&dest)
+      .map_err(|e| format!("stat bun: {e}"))?
+      .permissions();
+    perms.set_mode(0o755);
+    std::fs::set_permissions(&dest, perms).map_err(|e| format!("chmod bun: {e}"))?;
+  }
+
+  let _ = std::fs::remove_dir_all(&tmp_dir);
+  Ok(())
+}
+
+fn find_file_named(root: &Path, name: &str) -> Option<PathBuf> {
+  let mut stack = vec![root.to_path_buf()];
+  while let Some(dir) = stack.pop() {
+    let entries = std::fs::read_dir(&dir).ok()?;
+    for entry in entries.flatten() {
+      let path = entry.path();
+      if path.is_dir() {
+        stack.push(path);
+      } else if path.file_name().and_then(|n| n.to_str()) == Some(name) {
+        return Some(path);
+      }
+    }
+  }
+  None
+}
+
+fn ensure_bunx_shim(bin_dir: &Path) -> Result<(), String> {
+  let bun = bin_dir.join(bun_exe_name());
+  if !bun.is_file() {
+    return Ok(());
+  }
+  let bunx = bin_dir.join(bunx_exe_name());
+  if bunx.is_file() {
+    return Ok(());
+  }
+  #[cfg(windows)]
+  {
+    std::fs::copy(&bun, &bunx).map_err(|e| format!("create bunx.exe: {e}"))?;
+  }
+  #[cfg(unix)]
+  {
+    // Official installer links bunx → bun.
+    let _ = std::fs::remove_file(&bunx);
+    if std::os::unix::fs::symlink("bun", &bunx).is_err() {
+      std::fs::copy(&bun, &bunx).map_err(|e| format!("create bunx: {e}"))?;
+    }
+  }
+  Ok(())
 }
 
 fn acp_via_bunx(
@@ -629,6 +978,283 @@ fn list_sessions_from_disk(limit: usize) -> Result<Vec<CodexSessionSummary>, Str
   sessions.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
   sessions.truncate(limit);
   Ok(sessions)
+}
+
+/// Set Codex `thread_name` for a session (session_index + rollout `session_meta`).
+///
+/// Theme Builder uses this so the host session list shows the user's description
+/// instead of a generic first-line prompt.
+pub fn rename_codex_session(session_id: &str, thread_name: &str) -> Result<(), String> {
+  let session_id = session_id.trim();
+  let name = thread_name.trim();
+  if session_id.is_empty() {
+    return Err("session id is empty".into());
+  }
+  if name.is_empty() {
+    return Err("thread name is empty".into());
+  }
+
+  upsert_session_index_name(session_id, name)?;
+  if let Some(path) = find_rollout_path(&codex_home(), session_id) {
+    if let Err(e) = patch_rollout_thread_name(&path, name) {
+      tracing::debug!(error = %e, path = %path.display(), "rollout thread_name patch skipped");
+    }
+  }
+  tracing::info!(session = %session_id, name = %name, "codex session renamed");
+  Ok(())
+}
+
+/// Permanently remove a Codex session (index entry, rollout file, and CLI delete when available).
+pub fn delete_codex_session(session_id: &str) -> Result<(), String> {
+  let session_id = session_id.trim();
+  if session_id.is_empty() {
+    return Err("session id is empty".into());
+  }
+
+  let mut errors: Vec<String> = Vec::new();
+
+  // Prefer official CLI so SQLite / app-server state stays consistent.
+  match find_codex_cli() {
+    Ok(codex) => {
+      let status = std::process::Command::new(&codex)
+        .args(["delete", "--force", session_id])
+        .status();
+      match status {
+        Ok(s) if s.success() => {
+          tracing::info!(session = %session_id, "codex delete --force ok");
+        }
+        Ok(s) => {
+          let msg = format!("codex delete --force exit {s}");
+          tracing::warn!(session = %session_id, %msg);
+          errors.push(msg);
+        }
+        Err(e) => {
+          let msg = format!("codex delete failed to start: {e}");
+          tracing::warn!(session = %session_id, %msg);
+          errors.push(msg);
+        }
+      }
+    }
+    Err(e) => {
+      tracing::debug!(error = %e, "codex CLI missing; filesystem delete only");
+      errors.push(e);
+    }
+  }
+
+  // Always clean disk artifacts (index + rollout), even if CLI already did.
+  if let Err(e) = remove_session_index_entry(session_id) {
+    errors.push(e);
+  }
+  if let Err(e) = remove_session_rollouts(session_id) {
+    errors.push(e);
+  }
+
+  // Success if the session is gone from disk, even when CLI was unavailable.
+  let still_indexed = session_index_has(session_id);
+  let still_rollout = find_rollout_path(&codex_home(), session_id).is_some();
+  if !still_indexed && !still_rollout {
+    tracing::info!(session = %session_id, "codex session deleted from disk");
+    return Ok(());
+  }
+  if still_indexed || still_rollout {
+    return Err(format!(
+      "failed to fully delete Codex session `{session_id}` (index={still_indexed}, rollout={still_rollout}): {}",
+      errors.join(" | ")
+    ));
+  }
+  Ok(())
+}
+
+fn session_index_path() -> PathBuf {
+  codex_home().join("session_index.jsonl")
+}
+
+fn session_index_has(session_id: &str) -> bool {
+  let path = session_index_path();
+  let Ok(text) = std::fs::read_to_string(path) else {
+    return false;
+  };
+  text.lines().any(|line| {
+    serde_json::from_str::<Value>(line.trim())
+      .ok()
+      .and_then(|v| {
+        v.get("id")
+          .and_then(|x| x.as_str())
+          .map(|s| s == session_id)
+      })
+      .unwrap_or(false)
+  })
+}
+
+/// Upsert `thread_name` for `session_id` in `~/.codex/session_index.jsonl`.
+fn upsert_session_index_name(session_id: &str, thread_name: &str) -> Result<(), String> {
+  let path = session_index_path();
+  let home = codex_home();
+  if let Some(parent) = path.parent() {
+    std::fs::create_dir_all(parent).map_err(|e| format!("create CODEX_HOME: {e}"))?;
+  }
+
+  let mut rows: Vec<Value> = Vec::new();
+  let mut found = false;
+  if path.is_file() {
+    let text = std::fs::read_to_string(&path).map_err(|e| format!("read session_index: {e}"))?;
+    for line in text.lines() {
+      let line = line.trim();
+      if line.is_empty() {
+        continue;
+      }
+      let Ok(mut v) = serde_json::from_str::<Value>(line) else {
+        continue;
+      };
+      let id = v
+        .get("id")
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string();
+      if id == session_id {
+        if let Some(obj) = v.as_object_mut() {
+          obj.insert("thread_name".into(), Value::String(thread_name.to_string()));
+          obj.insert(
+            "updated_at".into(),
+            Value::String(humantime_iso(std::time::SystemTime::now())),
+          );
+        }
+        found = true;
+      }
+      rows.push(v);
+    }
+  }
+
+  if !found {
+    rows.push(serde_json::json!({
+      "id": session_id,
+      "thread_name": thread_name,
+      "updated_at": humantime_iso(std::time::SystemTime::now()),
+    }));
+  }
+
+  let mut out = String::new();
+  for v in rows {
+    out.push_str(&serde_json::to_string(&v).map_err(|e| e.to_string())?);
+    out.push('\n');
+  }
+  let tmp = home.join("session_index.jsonl.tmp");
+  std::fs::write(&tmp, out.as_bytes()).map_err(|e| format!("write session_index tmp: {e}"))?;
+  std::fs::rename(&tmp, &path).map_err(|e| format!("replace session_index: {e}"))?;
+  Ok(())
+}
+
+fn remove_session_index_entry(session_id: &str) -> Result<(), String> {
+  let path = session_index_path();
+  if !path.is_file() {
+    return Ok(());
+  }
+  let text = std::fs::read_to_string(&path).map_err(|e| format!("read session_index: {e}"))?;
+  let mut out = String::new();
+  let mut removed = false;
+  for line in text.lines() {
+    let line = line.trim();
+    if line.is_empty() {
+      continue;
+    }
+    let keep = match serde_json::from_str::<Value>(line) {
+      Ok(v) => {
+        let id = v.get("id").and_then(|x| x.as_str()).unwrap_or("");
+        if id == session_id {
+          removed = true;
+          false
+        } else {
+          true
+        }
+      }
+      Err(_) => true,
+    };
+    if keep {
+      out.push_str(line);
+      out.push('\n');
+    }
+  }
+  if removed {
+    std::fs::write(&path, out.as_bytes()).map_err(|e| format!("write session_index: {e}"))?;
+    tracing::info!(session = %session_id, "removed from session_index.jsonl");
+  }
+  Ok(())
+}
+
+fn remove_session_rollouts(session_id: &str) -> Result<(), String> {
+  let home = codex_home();
+  let mut paths = scan_rollout_files(&home);
+  // Also catch any remaining match if scan missed archived copies.
+  paths.extend(scan_rollout_files(&home).into_iter().filter(|p| {
+    p.file_name()
+      .and_then(|n| n.to_str())
+      .is_some_and(|n| n.contains(session_id))
+  }));
+  paths.sort();
+  paths.dedup();
+
+  let mut deleted = 0usize;
+  for path in paths {
+    let matches = path
+      .file_name()
+      .and_then(|n| n.to_str())
+      .is_some_and(|n| n.contains(session_id));
+    if !matches {
+      continue;
+    }
+    match std::fs::remove_file(&path) {
+      Ok(()) => {
+        deleted += 1;
+        tracing::info!(path = %path.display(), "deleted codex rollout");
+      }
+      Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+      Err(e) => return Err(format!("delete rollout {}: {e}", path.display())),
+    }
+  }
+  if deleted == 0 {
+    tracing::debug!(session = %session_id, "no rollout files found to delete");
+  }
+  Ok(())
+}
+
+/// Patch `thread_name` / `title` inside the first `session_meta` line of a rollout.
+fn patch_rollout_thread_name(path: &Path, thread_name: &str) -> Result<(), String> {
+  let text = std::fs::read_to_string(path).map_err(|e| format!("read rollout: {e}"))?;
+  let mut out_lines: Vec<String> = Vec::new();
+  let mut patched = false;
+  for line in text.lines() {
+    if patched {
+      out_lines.push(line.to_string());
+      continue;
+    }
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+      out_lines.push(line.to_string());
+      continue;
+    }
+    match serde_json::from_str::<Value>(trimmed) {
+      Ok(mut v) if v.get("type").and_then(|t| t.as_str()) == Some("session_meta") => {
+        if let Some(payload) = v.get_mut("payload").and_then(|p| p.as_object_mut()) {
+          payload.insert("thread_name".into(), Value::String(thread_name.to_string()));
+          payload.insert("title".into(), Value::String(thread_name.to_string()));
+          patched = true;
+          out_lines.push(serde_json::to_string(&v).map_err(|e| e.to_string())?);
+        } else {
+          out_lines.push(line.to_string());
+        }
+      }
+      _ => out_lines.push(line.to_string()),
+    }
+  }
+  if !patched {
+    return Ok(());
+  }
+  let mut body = out_lines.join("\n");
+  if text.ends_with('\n') {
+    body.push('\n');
+  }
+  std::fs::write(path, body.as_bytes()).map_err(|e| format!("write rollout: {e}"))?;
+  Ok(())
 }
 
 /// Load transcript + meta for a session id (from `~/.codex` rollouts).

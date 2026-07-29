@@ -202,6 +202,8 @@ pub fn run() {
       commands::delete_theme_builder_session,
       commands::get_codex_session,
       commands::start_theme_build,
+      commands::check_theme_builder_runtime,
+      commands::install_bun_for_theme_builder,
     ])
     .build(tauri::generate_context!())
     .expect("error while building tauri application")

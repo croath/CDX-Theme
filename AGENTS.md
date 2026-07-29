@@ -80,7 +80,8 @@ CDXTheme (Tauri)
 
 - **Leptos 0.8 CSR**, Trunk serve on **http://localhost:1420**, Tailwind **4** (`style/tailwind.css`, Trunk tool pin `4.3.3`).
 - UI deps via Bun/npm: Tailwind CLI only (`package.json`); install with `bun install` from `app-ui/` (or root scripts).
-- Pages under `app-ui/src/pages/`: Recommend, Install, Library, Restore, Settings.
+- Pages under `app-ui/src/pages/`: Recommend, Install, Library, Restore, Settings, Theme Builder.
+- Theme Builder UI is a module (`app-ui/src/pages/theme_builder/`): `mod.rs` (`ThemeBuilderPage` + shared types/helpers), `builder_runtime_setup.rs` (bunx/npx gate + Install Bun), `builder_home.rs`, `builder_new_build.rs`, `builder_chat.rs`. On open, probes host for `codex-acp` / `bunx` / `npx`; if missing, shows setup UI and can install Bun via multi-mirror download (official, GitHub, jsDelivr).
 - Shared state: `AppCtx` in `state.rs` (page, dark mode, locale) via `provide_context` / `use_context`.
 - **All Tauri calls** go through `app-ui/src/api.rs` (`window.__TAURI__.core.invoke`). Keep invoke arg shapes in sync with backend command `rename_all` (many use `snake_case`).
 - i18n: English, Simplified Chinese, Traditional Chinese, Japanese (`i18n.rs`). Prefer adding strings there rather than hardcoding copy in pages.
@@ -105,7 +106,7 @@ Notable modules:
 
 ### IPC commands (keep UI + backend aligned)
 
-`retrieve_local_theme_list`, `fetch_remote_theme_catalog`, `resolve_cached_image`, `cdp_status`, `set_window_appearance`, `get_cdp_port`, `set_cdp_port`, `apply_theme`, `restore_theme`, `download_theme`, `install_theme`, `delete_theme`, `get_analytics_enabled`, `get_analytics_state`, `set_analytics_enabled`, `track_event`, **Theme Builder:** `codex_chat`, `list_codex_sessions`, `get_codex_session`.
+`retrieve_local_theme_list`, `fetch_remote_theme_catalog`, `resolve_cached_image`, `cdp_status`, `set_window_appearance`, `get_cdp_port`, `set_cdp_port`, `apply_theme`, `restore_theme`, `download_theme`, `install_theme`, `delete_theme`, `get_analytics_enabled`, `get_analytics_state`, `set_analytics_enabled`, `track_event`, **Theme Builder:** `check_theme_builder_runtime`, `install_bun_for_theme_builder`, `codex_chat`, `list_codex_sessions`, `get_codex_session`.
 
 Capabilities: `app-tauri/capabilities/default.json` (window drag/minimize/close/set-background-color, opener, log, updater). New privileged APIs need capability + command registration.
 
@@ -191,7 +192,7 @@ Bundles land under `target/release/bundle/`. Release CI: `.github/workflows/rele
 | Theme list / remote catalog | `app-tauri/src/theme_catalog.rs` |
 | Host process launch | `core/src/launch.rs`, `app-tauri/src/codex_launch.rs` |
 | Injected DOM/CSS runtime | `assets/renderer-inject.js`, `core/src/inject/` |
-| Theme Builder (ACP / Codex chat) | `core/src/codex_chat.rs`, `app-ui/src/pages/theme_builder.rs` |
+| Theme Builder (ACP / Codex chat) | `core/src/codex_chat.rs`, `app-ui/src/pages/theme_builder/` |
 | CLI authoring | `cli/`, `cli/README.md` |
 | Build / CI | `scripts/`, `.github/workflows/release.yml` |
 | Project agent skills | See **[Agent skills](#agent-skills-english)** below |
@@ -251,7 +252,7 @@ cargo check -p cdx-theme-core
 
 **Path:** `.agnets/skills/agent-client-protocol/SKILL.md` (full detail)  
 **Implementation:** `core/src/codex_chat.rs`  
-**UI:** Theme Builder (`app-ui/src/pages/theme_builder.rs`)  
+**UI:** Theme Builder (`app-ui/src/pages/theme_builder/`: `mod.rs`, `builder_home.rs`, `builder_new_build.rs`, `builder_chat.rs`)  
 **Crate:** `agent-client-protocol = "2.0.0"` (in `core/`)
 
 #### What ACP is
