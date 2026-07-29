@@ -156,8 +156,8 @@ pub fn SettingsPage() -> impl IntoView {
 #[component]
 fn AnalyticsSetting() -> impl IntoView {
   let ctx = AppCtx::use_ctx();
-  // Opt-in: default off until the backend preference loads.
-  let enabled = RwSignal::new(false);
+  // Default on (matches backend); updated when preference loads.
+  let enabled = RwSignal::new(true);
   let saving = RwSignal::new(false);
 
   Effect::new(move |_| {

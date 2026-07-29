@@ -101,7 +101,7 @@ Notable modules:
 | `cdp_monitor.rs` | Background CDP connectivity |
 | `settings_store.rs` | CDP port, analytics, applied theme id, etc. |
 | `image_cache.rs` | HTTP(S) preview → disk cache → `data:` URLs |
-| `analytics.rs` | PostHog (posthog-rs) + opt-in state |
+| `analytics.rs` | PostHog (posthog-rs) + opt-out state (default on) |
 | `paths.rs` | App data / themes / cache locations |
 
 ### IPC commands (keep UI + backend aligned)
@@ -170,7 +170,7 @@ Bundles land under `target/release/bundle/`. Release CI: `.github/workflows/rele
 5. Do not introduce remote CSS loading in packages; security model forbids remote `@import` / `url(http…)`.
 6. Do not switch the main window to transparent/private-API chrome without an explicit product decision.
 7. Keep WASM size and inject payload size in mind — large assets are already a CDP bottleneck.
-8. Analytics is **opt-in**; do not track without respecting settings / identify flows.
+8. Analytics is **on by default** (opt-out); do not track when disabled, and respect settings / identify flows.
 9. When adding UI strings, wire **i18n** for supported locales.
 10. Prefer minimal, focused diffs; do not drive-by reformat unrelated modules.
 

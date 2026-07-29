@@ -42,7 +42,7 @@ Do **not** put app UI under a root `src/`. Do **not** duplicate core logic in bo
 4. IPC: `Result<T, String>` at the boundary; structured errors inside core.
 5. New copy: add strings for all locales in `i18n.rs`.
 6. No remote CSS in theme packages (`@import` / `url(http…)` forbidden).
-7. Analytics is opt-in only.
+7. Analytics is on by default (opt-out); respect the user setting.
 8. Prefer `core/` for pack, CDP inject, launch, apply, restore, and ACP chat.
 
 ## Commands

@@ -5,7 +5,7 @@
 //! - `POSTHOG_HOST` — optional host, default `https://us.i.posthog.com`
 //!   (use `https://eu.i.posthog.com` for EU cloud)
 //!
-//! Collection is **opt-in** (default off). Users enable it in Settings.
+//! Collection is **on by default** (opt-out). Users can disable it in Settings.
 //! When disabled, or when no API key was baked in, all capture calls are no-ops.
 
 use crate::settings_store::{self, AppSettings};
@@ -126,7 +126,7 @@ impl Analytics {
     Self::get().and_then(|a| a.distinct_id.lock().ok().map(|g| g.clone()))
   }
 
-  /// Snapshot for the web UI (opt-in flag + shared anonymous person id).
+  /// Snapshot for the web UI (enabled flag + shared anonymous person id).
   pub fn state(app: &AppHandle) -> AnalyticsState {
     let settings = settings_store::load(app);
     let distinct_id = Self::distinct_id().unwrap_or_else(|| {

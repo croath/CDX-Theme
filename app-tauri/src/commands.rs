@@ -288,7 +288,7 @@ pub async fn get_analytics_enabled(app: AppHandle) -> Result<bool, String> {
   Ok(settings_store::load(&app).analytics_enabled)
 }
 
-/// Full analytics snapshot (opt-in + anonymous distinct_id + build-time configured).
+/// Full analytics snapshot (enabled flag + anonymous distinct_id + build-time configured).
 #[tauri::command]
 pub async fn get_analytics_state(app: AppHandle) -> Result<analytics::AnalyticsState, String> {
   Ok(analytics::Analytics::state(&app))
