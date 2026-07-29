@@ -16,12 +16,16 @@ pub struct AppSettings {
   #[serde(default)]
   pub applied_theme_id: Option<String>,
   /// When true, anonymous product analytics may be sent to PostHog.
-  /// Defaults to **false** (opt-in); users enable it in Settings.
-  #[serde(default)]
+  /// Defaults to **true** (opt-out); users can disable it in Settings.
+  #[serde(default = "default_analytics_enabled")]
   pub analytics_enabled: bool,
   /// Stable anonymous id for PostHog (`distinct_id`). Generated once per install.
   #[serde(default)]
   pub analytics_distinct_id: Option<String>,
+}
+
+fn default_analytics_enabled() -> bool {
+  true
 }
 
 impl Default for AppSettings {
@@ -29,7 +33,7 @@ impl Default for AppSettings {
     Self {
       cdp_port: DEFAULT_CDP_PORT,
       applied_theme_id: None,
-      analytics_enabled: false,
+      analytics_enabled: true,
       analytics_distinct_id: None,
     }
   }
