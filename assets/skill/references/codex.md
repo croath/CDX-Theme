@@ -293,7 +293,7 @@ html.cdxtheme-host-codex .composer-surface-chrome:has([data-composer-navigation-
 | Polaroid | On Work, tuck top-right (smaller), not bottom over missions/composer |
 | Mission list | Panel border/background; optional `::before` section label (target language, default EN); row min-height ~52–58px |
 | Card min-height | Only `.group/home-suggestions button:not(.group/home-suggestion-list-item)` |
-| i18n chips | Also match `aria-label="选择项目"`, `"插件"`, `"听写"` — match host locale; do not replace host strings |
+| i18n chips | Also match localized host `aria-label` values when needed — match host locale; do not replace host strings |
 | Theme copy language | `theme.json` `copy` + decorative `content: "…"` in user language; **default English** |
 | Padding-bottom | Work stack (util ~50 + composer ~124) needs ~`composer-bottom + 200px` on home scroll body |
 
@@ -338,12 +338,12 @@ Stable attributes (prefer these over generated class hashes):
 
 | Control | Selector |
 | --- | --- |
-| Choose project | `data-composer-navigation-target="workspace-project"`; also `aria-label="Choose project"` / `"选择项目"` |
-| Plugins (utility bar) | `data-composer-navigation-target="plugins"`; also `aria-label="Plugins"` / `"插件"` |
+| Choose project | `data-composer-navigation-target="workspace-project"`; also `aria-label="Choose project"` (+ locale labels if present) |
+| Plugins (utility bar) | `data-composer-navigation-target="plugins"`; also `aria-label="Plugins"` (+ locale labels if present) |
 | Run location | `data-composer-navigation-target="run-location"`; `aria-label="Choose where to run this chat"` |
 | Work model | `data-composer-navigation-target="reasoning"` (+ often `data-codex-intelligence-trigger="true"`) |
 | Chat model | `aria-label="Select ChatGPT model"` (may also have `data-codex-intelligence-trigger`) |
-| Dictate / mic | `aria-label="Dictate"` / `"听写"` |
+| Dictate / mic | `aria-label="Dictate"` (+ locale labels if present) |
 | Permissions | `data-composer-navigation-target="permissions"` |
 
 Prefer **`data-composer-navigation-target`** over English-only `aria-label` so Chinese (and other) locales still match.
