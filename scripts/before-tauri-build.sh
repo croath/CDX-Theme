@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tauri beforeBuildCommand / beforeDevCommand helper.
-# Stages the cdxtheme CLI sidecar, then runs Trunk (build or serve).
+# Stages the cdxtheme CLI + Bun sidecars, then runs Trunk (build or serve).
 #
 # Usage:
 #   scripts/before-tauri-build.sh           # trunk build (release packaging)
@@ -15,6 +15,7 @@ if [[ "${1:-}" == "--dev" ]]; then
 fi
 
 bash "$ROOT/scripts/prepare-cli-sidecar.sh"
+bash "$ROOT/scripts/prepare-bun-sidecar.sh"
 
 cd "$ROOT/app-ui"
 if [[ "$MODE" == "dev" ]]; then

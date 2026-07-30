@@ -169,38 +169,55 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
 
 /// Resolve the app-bundled `cdxthemex` sidecar (next to main binary / staged binaries).
 pub fn resolve_cdxthemex(app: &AppHandle) -> Result<PathBuf, String> {
+  resolve_external_bin(app, "cdxthemex").ok_or_else(|| {
+    "bundled cdxthemex CLI not found (expected next to CDXTheme binary, or app-tauri/binaries/)"
+      .into()
+  })
+}
+
+/// Resolve the app-bundled Bun sidecar (`bundle.externalBin` → `binaries/bun`).
+///
+/// Production: next to the main binary as `bun` / `bun.exe`
+/// (`Contents/MacOS/bun` on macOS).
+/// Dev: `app-tauri/binaries/bun-<triple>[.exe]` staged by `scripts/prepare-bun-sidecar.*`.
+pub fn resolve_bundled_bun(app: &AppHandle) -> Option<PathBuf> {
+  resolve_external_bin(app, "bun")
+}
+
+/// Locate a Tauri `externalBin` sidecar by base name (`cdxthemex`, `bun`, …).
+fn resolve_external_bin(app: &AppHandle, base: &str) -> Option<PathBuf> {
   // 1) Same directory as the running app binary (production + most `tauri dev` setups).
+  //    macOS: Contents/MacOS/{name}; Windows: next to CDXTheme.exe.
   if let Ok(exe) = std::env::current_exe() {
     if let Some(dir) = exe.parent() {
-      for name in ["cdxthemex", "cdxthemex.exe"] {
-        let p = dir.join(name);
-        if p.is_file() {
-          return Ok(p.canonicalize().unwrap_or(p));
-        }
+      if let Some(p) = sidecar_in_dir(dir, base) {
+        return Some(p);
       }
     }
   }
 
-  // 2) Tauri resource / resource dir (some layouts).
+  // 2) Tauri resource dir (fallback for older layouts).
   if let Ok(dir) = app.path().resource_dir() {
-    for name in ["cdxthemex", "cdxthemex.exe"] {
-      let p = dir.join(name);
-      if p.is_file() {
-        return Ok(p.canonicalize().unwrap_or(p));
-      }
+    if let Some(p) = sidecar_in_dir(&dir.join("bin"), base) {
+      return Some(p);
+    }
+    if let Some(p) = sidecar_in_dir(&dir, base) {
+      return Some(p);
     }
   }
 
-  // 3) Dev: app-tauri/binaries/cdxthemex-<triple>
+  // 3) Dev: app-tauri/binaries/<base>-<triple>[.exe]
   let binaries = Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries");
   if binaries.is_dir() {
     if let Ok(rd) = fs::read_dir(&binaries) {
+      let prefix = format!("{base}-");
+      let with_exe = format!("{base}.exe");
       for entry in rd.flatten() {
         let name = entry.file_name().to_string_lossy().to_string();
-        if name.starts_with("cdxthemex-") || name == "cdxthemex" || name == "cdxthemex.exe" {
+        if name.starts_with(&prefix) || name == base || name == with_exe {
           let p = entry.path();
           if p.is_file() {
-            return Ok(p.canonicalize().unwrap_or(p));
+            return Some(p.canonicalize().unwrap_or(p));
           }
         }
       }
@@ -208,14 +225,30 @@ pub fn resolve_cdxthemex(app: &AppHandle) -> Result<PathBuf, String> {
   }
 
   // 4) PATH fallback (cargo install / local dev).
-  if let Some(p) = which_on_path("cdxthemex") {
-    return Ok(p);
-  }
+  which_on_path(base)
+}
 
-  Err(
-    "bundled cdxthemex CLI not found (expected next to CDXTheme binary, or app-tauri/binaries/)"
-      .into(),
-  )
+fn sidecar_in_dir(dir: &Path, base: &str) -> Option<PathBuf> {
+  if !dir.is_dir() {
+    return None;
+  }
+  #[cfg(windows)]
+  {
+    for name in [format!("{base}.exe"), base.to_string()] {
+      let p = dir.join(&name);
+      if p.is_file() {
+        return Some(p.canonicalize().unwrap_or(p));
+      }
+    }
+  }
+  #[cfg(not(windows))]
+  {
+    let p = dir.join(base);
+    if p.is_file() {
+      return Some(p.canonicalize().unwrap_or(p));
+    }
+  }
+  None
 }
 
 fn which_on_path(bin: &str) -> Option<PathBuf> {

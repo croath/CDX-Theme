@@ -59,7 +59,8 @@
     ],
     "createUpdaterArtifacts": true,
     "externalBin": [
-      "binaries/cdxthemex"
+      "binaries/cdxthemex",
+      "binaries/bun"
     ],
     "resources": {
       "../assets/skill": "skill"

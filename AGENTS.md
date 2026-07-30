@@ -116,7 +116,7 @@ Logging: `tracing` + `tauri-plugin-log`; respect `RUST_LOG` filter syntax (defau
 
 - Prefer implementing pack/load/CDP/apply/restore once in **`cdx-theme-core`**, then call from Tauri and CLI.
 - CLI binary name: **`cdxtheme`** (`cargo run -p cdx-theme-cli -- …` or `cargo install --path cli`).
-- The desktop app **bundles** the CLI via Tauri `bundle.externalBin` as **`cdxthemex`** (`app-tauri/binaries/cdxthemex-<triple>`). Staging: `scripts/prepare-cli-sidecar.sh` / `.ps1` (also run from `beforeBuildCommand` / `beforeDevCommand`). Cargo binary name stays `cdxtheme` for `cargo install`; the staged sidecar must **not** be named `cdxtheme` because macOS/Windows filesystems are case-insensitive and that collides with main binary `CDXTheme` (breaks codesign/notarization). Installed path: `CDXTheme.app/Contents/MacOS/cdxthemex`.
+- The desktop app **bundles** helpers via Tauri `bundle.externalBin` as **`cdxthemex`** and **`bun`** (`app-tauri/binaries/{name}-<triple>`). Staging: `scripts/prepare-cli-sidecar.*` / `prepare-bun-sidecar.*` (also run from `beforeBuildCommand` / `beforeDevCommand`). On macOS they land in **`CDXTheme.app/Contents/MacOS/`** next to `CDXTheme`. CLI cargo/install name stays `cdxtheme`; staged name is always **`cdxthemex`** (must not case-collide with `CDXTheme`). Bun pin: `BUN_VERSION` (default `latest`), re-download with `BUN_SIDECAR_FORCE=1`. Runtime prefers app-bundled Bun over system install.
 - Supported portable formats include `cdxtheme` (`.cdxtheme`).
 - Legacy single-file `.codex-theme` layouts are **not** supported.
 

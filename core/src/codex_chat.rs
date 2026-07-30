@@ -428,11 +428,19 @@ pub struct ThemeBuilderRuntimeStatus {
 
 /// Probe host for `codex-acp`, Bun (`bun` / `bunx`), or Node (`npx`).
 pub fn check_theme_builder_runtime() -> ThemeBuilderRuntimeStatus {
+  check_theme_builder_runtime_with(None)
+}
+
+/// Like [`check_theme_builder_runtime`], but prefer an app-bundled Bun path when set.
+pub fn check_theme_builder_runtime_with(bundled_bun: Option<&Path>) -> ThemeBuilderRuntimeStatus {
   // Include ~/.bun/bin even when the app process PATH was set before install.
   let _ = bun_bin_dir();
 
   let codex_acp = which("codex-acp");
-  let bun = resolve_bun();
+  let bun = bundled_bun
+    .filter(|p| p.is_file())
+    .map(Path::to_path_buf)
+    .or_else(resolve_bun);
   let bunx = resolve_bunx();
   let npx = resolve_npx();
 
@@ -441,9 +449,18 @@ pub fn check_theme_builder_runtime() -> ThemeBuilderRuntimeStatus {
   let has_bunx = bunx.is_some();
   let has_npx = npx.is_some();
   let ready = has_codex_acp || has_bun || has_bunx || has_npx;
+  let used_bundled = bundled_bun
+    .filter(|p| p.is_file())
+    .is_some_and(|bp| bun.as_ref().is_some_and(|b| b == bp));
 
   let (runner, runner_path) = if let Some(p) = codex_acp {
     (Some("codex-acp".into()), Some(p.display().to_string()))
+  } else if used_bundled {
+    // Prefer reporting the bundled bun path when that is what we would run.
+    (
+      Some("bun".into()),
+      bun.as_ref().map(|p| p.display().to_string()),
+    )
   } else if let Some(p) = bunx {
     (Some("bunx".into()), Some(p.display().to_string()))
   } else if let Some(p) = bun {
@@ -457,6 +474,7 @@ pub fn check_theme_builder_runtime() -> ThemeBuilderRuntimeStatus {
   let message = if ready {
     match runner.as_deref() {
       Some("codex-acp") => "codex-acp is available".into(),
+      Some("bun") if used_bundled => "Bundled Bun is available".into(),
       Some("bunx") | Some("bun") => "Bun is available (bunx)".into(),
       Some("npx") => "Node.js npx is available".into(),
       _ => "Runtime ready".into(),
@@ -479,16 +497,25 @@ pub fn check_theme_builder_runtime() -> ThemeBuilderRuntimeStatus {
 
 /// Download and install Bun into `~/.bun`, trying multiple mirrors (official, GitHub, jsDelivr).
 ///
-/// Returns an updated runtime status. Safe to call when Bun is already present.
+/// Returns an updated runtime status. Safe to call when Bun is already present
+/// (system install or app-bundled sidecar).
 pub async fn install_bun_for_theme_builder() -> Result<ThemeBuilderRuntimeStatus, String> {
-  if resolve_bun().is_some() || resolve_bunx().is_some() {
-    return Ok(check_theme_builder_runtime());
+  install_bun_for_theme_builder_with(None).await
+}
+
+/// Like [`install_bun_for_theme_builder`], skipping download when a bundled Bun path is usable.
+pub async fn install_bun_for_theme_builder_with(
+  bundled_bun: Option<&Path>,
+) -> Result<ThemeBuilderRuntimeStatus, String> {
+  if bundled_bun.is_some_and(|p| p.is_file()) || resolve_bun().is_some() || resolve_bunx().is_some()
+  {
+    return Ok(check_theme_builder_runtime_with(bundled_bun));
   }
 
   tracing::info!("installing Bun for Theme Builder (multi-mirror)…");
   install_bun_multi_mirror().await?;
 
-  let status = check_theme_builder_runtime();
+  let status = check_theme_builder_runtime_with(bundled_bun);
   if status.has_bun || status.has_bunx {
     tracing::info!(
       runner = ?status.runner_path,
@@ -508,20 +535,23 @@ pub async fn install_bun_for_theme_builder() -> Result<ThemeBuilderRuntimeStatus
 ///
 /// Preference order:
 /// 1. `codex-acp` on PATH
-/// 2. `bunx` / `bun x` (user-installed Bun)
-/// 3. `npx -y` (user-installed Node/npm)
+/// 2. App-bundled Bun sidecar (`bun_path`) via `bun x`
+/// 3. `bunx` / `bun x` (user-installed Bun)
+/// 4. `npx -y` (user-installed Node/npm)
 ///
 /// Does **not** auto-install Bun — Theme Builder UI gates on
 /// [`check_theme_builder_runtime`] / [`install_bun_for_theme_builder`].
 ///
-/// `path_prepend` directories (e.g. folder of bundled `cdxthemex`) are put first on PATH.
+/// `path_prepend` directories (e.g. folder of bundled `cdxthemex` / `bun`) are put first on PATH.
 /// `extra_env` is merged into the agent process environment.
+/// `bun_path` is an absolute path to the preferred Bun executable when known.
 fn build_acp_agent(
   path_prepend: &[PathBuf],
   extra_env: &[(String, String)],
+  bun_path: Option<&Path>,
 ) -> Result<(AcpAgent, String), String> {
   let mut path_env = std::env::var("PATH").unwrap_or_default();
-  // Host-provided dirs first (bundled cdxthemex).
+  // Host-provided dirs first (bundled cdxthemex / bun).
   for dir in path_prepend.iter().rev() {
     prepend_path_env(&mut path_env, dir);
   }
@@ -535,11 +565,28 @@ fn build_acp_agent(
   if let Some(dir) = bun_bin_dir() {
     prepend_path_env(&mut path_env, &dir);
   }
+  // Parent of app-bundled bun (triple-suffixed in dev, plain `bun` in prod).
+  if let Some(bun) = bun_path.filter(|p| p.is_file()) {
+    if let Some(dir) = bun.parent() {
+      prepend_path_env(&mut path_env, dir);
+    }
+  }
 
   if let Some(local) = which("codex-acp") {
     return make_acp_agent(
       AcpAgentConfig::new(&local),
       local.display().to_string(),
+      &path_env,
+      extra_env,
+    );
+  }
+
+  // Preferred: absolute path to app-bundled Bun (always use `bun x`).
+  if let Some(bun) = bun_path.filter(|p| p.is_file()) {
+    let label = format!("{} x {}", bun.display(), CODEX_ACP_PKG);
+    return make_acp_agent(
+      AcpAgentConfig::new(bun).args(["x", CODEX_ACP_PKG]),
+      label,
       &path_env,
       extra_env,
     );
@@ -1019,7 +1066,7 @@ pub async fn list_sessions_async(limit: Option<usize>) -> Result<Vec<CodexSessio
 }
 
 async fn list_sessions_via_acp(limit: usize) -> Result<Vec<CodexSessionSummary>, String> {
-  let (agent, _) = build_acp_agent(&[], &[])?;
+  let (agent, _) = build_acp_agent(&[], &[], None)?;
   // List without cwd filter so all Codex history is available for intersection.
   let result = Client
     .builder()
@@ -1726,6 +1773,9 @@ pub struct CodexChatOptions {
   /// Preferred model id for this turn (`session/set_config_option` id `model`).
   /// When set, applied after `session/new` or `session/load` and before `session/prompt`.
   pub model: Option<String>,
+  /// Absolute path to app-bundled Bun (`externalBin` sidecar). When set and present,
+  /// used before system Bun / npx to spawn `bun x @agentclientprotocol/codex-acp`.
+  pub bun_path: Option<PathBuf>,
 }
 
 impl std::fmt::Debug for CodexChatOptions {
@@ -1738,6 +1788,7 @@ impl std::fmt::Debug for CodexChatOptions {
       .field("extra_env", &self.extra_env)
       .field("on_stream", &self.on_stream.as_ref().map(|_| "<callback>"))
       .field("model", &self.model)
+      .field("bun_path", &self.bun_path)
       .finish()
   }
 }
@@ -1781,7 +1832,11 @@ pub async fn send_and_wait_with(
   }
 
   let wait_ms = options.wait_ms.unwrap_or(180_000).clamp(10_000, 600_000);
-  let (agent, agent_label) = build_acp_agent(&options.path_prepend, &options.extra_env)?;
+  let (agent, agent_label) = build_acp_agent(
+    &options.path_prepend,
+    &options.extra_env,
+    options.bun_path.as_deref(),
+  )?;
   let cwd = options
     .cwd
     .filter(|p| p.is_absolute())

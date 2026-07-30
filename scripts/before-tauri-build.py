@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tauri beforeBuildCommand / beforeDevCommand helper (cross-platform).
 
-Stages the cdxtheme CLI sidecar, then runs Trunk (build or serve).
+Stages the cdxtheme CLI + Bun sidecars, then runs Trunk (build or serve).
 
 Usage:
   python3 scripts/before-tauri-build.py           # trunk build
@@ -24,23 +24,38 @@ def run(cmd: list[str], *, cwd: Path | None = None) -> None:
   subprocess.check_call(cmd, cwd=str(cwd or ROOT))
 
 
+def run_ps1(name: str) -> None:
+  ps1 = ROOT / "scripts" / name
+  run(
+    [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      str(ps1),
+    ]
+  )
+
+
+def run_sh(name: str) -> None:
+  sh = ROOT / "scripts" / name
+  run(["bash", str(sh)])
+
+
 def prepare_cli() -> None:
   if os.name == "nt":
-    ps1 = ROOT / "scripts" / "prepare-cli-sidecar.ps1"
-    run(
-      [
-        "powershell",
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        str(ps1),
-      ]
-    )
+    run_ps1("prepare-cli-sidecar.ps1")
     return
+  run_sh("prepare-cli-sidecar.sh")
 
-  sh = ROOT / "scripts" / "prepare-cli-sidecar.sh"
-  run(["bash", str(sh)])
+
+def prepare_bun() -> None:
+  """Download Bun into app-tauri/binaries if missing (for bundle.externalBin)."""
+  if os.name == "nt":
+    run_ps1("prepare-bun-sidecar.ps1")
+    return
+  run_sh("prepare-bun-sidecar.sh")
 
 
 def trunk_bin() -> str:
@@ -53,6 +68,7 @@ def trunk_bin() -> str:
 def main() -> int:
   dev = "--dev" in sys.argv[1:]
   prepare_cli()
+  prepare_bun()
   ui = ROOT / "app-ui"
   if dev:
     # Replace process so signals go to trunk serve.
