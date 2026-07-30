@@ -1,11 +1,12 @@
 //! Theme Builder — generate a theme with Codex (ACP), then apply into the library.
+//!
+//! Spawns codex-acp via the app-bundled Bun sidecar (`bun x @agentclientprotocol/codex-acp`).
 
 mod builder_chat;
 mod builder_home;
 mod builder_new_build;
-mod builder_runtime_setup;
 
-use icons::{Check, ChevronDown, LoaderCircle, WandSparkles};
+use icons::{Check, ChevronDown};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::JsCast;
@@ -13,7 +14,7 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::File;
 
-use crate::api::{self, CodexModelOption, CodexSessionSummary, ThemeBuilderRuntimeStatus};
+use crate::api::{self, CodexModelOption, CodexSessionSummary};
 use crate::components::ui::sonner::toast_error;
 use crate::i18n::I18n;
 use crate::state::AppCtx;
@@ -21,7 +22,6 @@ use crate::state::AppCtx;
 use builder_chat::BuilderChat;
 use builder_home::BuilderHome;
 use builder_new_build::BuilderNewBuild;
-use builder_runtime_setup::BuilderRuntimeSetup;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum ChatRole {
@@ -46,20 +46,10 @@ enum BuilderView {
   Chat,
 }
 
-/// Host runtime gate before Home / NewBuild / Chat.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum RuntimeGate {
-  Checking,
-  NeedSetup,
-  Ready,
-}
-
 #[component]
 pub fn ThemeBuilderPage() -> impl IntoView {
   let ctx = AppCtx::use_ctx();
   let view = RwSignal::new(BuilderView::Home);
-  let runtime_gate = RwSignal::new(RuntimeGate::Checking);
-  let runtime_status = RwSignal::new(Option::<ThemeBuilderRuntimeStatus>::None);
 
   // Home state
   let sessions = RwSignal::new(Vec::<CodexSessionSummary>::new());
@@ -95,45 +85,7 @@ pub fn ThemeBuilderPage() -> impl IntoView {
   let models = RwSignal::new(Vec::<CodexModelOption>::new());
   let selected_model = RwSignal::new(String::new());
 
-  let apply_runtime_status = move |status: ThemeBuilderRuntimeStatus| {
-    let ready = status.ready;
-    runtime_status.set(Some(status));
-    runtime_gate.set(if ready {
-      RuntimeGate::Ready
-    } else {
-      RuntimeGate::NeedSetup
-    });
-  };
-
-  let check_runtime = move || {
-    runtime_gate.set(RuntimeGate::Checking);
-    let locale = ctx.locale.get_untracked();
-    spawn_local(async move {
-      match api::check_theme_builder_runtime().await {
-        Ok(status) => apply_runtime_status(status),
-        Err(e) => {
-          runtime_status.set(Some(ThemeBuilderRuntimeStatus {
-            ready: false,
-            message: e.clone(),
-            ..Default::default()
-          }));
-          runtime_gate.set(RuntimeGate::NeedSetup);
-          let i18n = I18n { locale };
-          toast_error(i18n.t("builder.error"), &e);
-        }
-      }
-    });
-  };
-
-  // First open: probe bunx / npx / codex-acp on the host.
-  Effect::new(move |_| {
-    check_runtime();
-  });
-
   let refresh_sessions = move || {
-    if runtime_gate.get_untracked() != RuntimeGate::Ready {
-      return;
-    }
     if sessions_loading.get_untracked() {
       return;
     }
@@ -164,16 +116,13 @@ pub fn ThemeBuilderPage() -> impl IntoView {
   };
 
   Effect::new(move |_| {
-    if runtime_gate.get() == RuntimeGate::Ready && view.get() == BuilderView::Home {
+    if view.get() == BuilderView::Home {
       refresh_sessions();
     }
   });
 
-  // Load Codex model list once the host runtime is ready.
+  // Load Codex model list once (disk cache; no ACP spawn).
   Effect::new(move |_| {
-    if runtime_gate.get() != RuntimeGate::Ready {
-      return;
-    }
     if !models.get_untracked().is_empty() {
       return;
     }
@@ -314,92 +263,66 @@ pub fn ThemeBuilderPage() -> impl IntoView {
 
   view! {
     <div class="flex h-full min-h-0 w-full flex-col">
-      {move || match runtime_gate.get() {
-        RuntimeGate::Checking => view! {
-          <div class="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
-            <div class="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/25">
-              <WandSparkles class="size-5" />
-            </div>
-            <div class="inline-flex items-center gap-2">
-              <LoaderCircle class="size-4 animate-spin" />
-              {move || {
-                let i18n = I18n { locale: ctx.locale.get() };
-                i18n.t("builder.runtime.checking")
-              }}
-            </div>
-          </div>
-        }.into_any(),
-        RuntimeGate::NeedSetup => view! {
-          <BuilderRuntimeSetup
-            status=runtime_status
-            on_ready=Callback::new(move |s: ThemeBuilderRuntimeStatus| {
-              apply_runtime_status(s);
-              view.set(BuilderView::Home);
+      {move || match view.get() {
+        BuilderView::Home => view! {
+          <BuilderHome
+            sessions=sessions
+            loading=sessions_loading
+            error=sessions_error
+            sessions_list_gen=sessions_list_gen
+            on_refresh=Callback::new(move |_| refresh_sessions())
+            on_start=Callback::new(move |_| open_new_build())
+            on_open=Callback::new(move |(id, title, wp): (String, String, Option<String>)| {
+              if let Some(path) = wp.filter(|p| !p.is_empty()) {
+                let basename = path_basename(&path);
+                if !basename.is_empty() {
+                  workspace_id.set(Some(basename));
+                }
+                workspace_path.set(Some(path));
+              }
+              open_session(id, title);
             })
-            on_recheck=Callback::new(move |_| check_runtime())
           />
         }.into_any(),
-        RuntimeGate::Ready => match view.get() {
-          BuilderView::Home => view! {
-            <BuilderHome
-              sessions=sessions
-              loading=sessions_loading
-              error=sessions_error
-              sessions_list_gen=sessions_list_gen
-              on_refresh=Callback::new(move |_| refresh_sessions())
-              on_start=Callback::new(move |_| open_new_build())
-              on_open=Callback::new(move |(id, title, wp): (String, String, Option<String>)| {
-                if let Some(path) = wp.filter(|p| !p.is_empty()) {
-                  let basename = path_basename(&path);
-                  if !basename.is_empty() {
-                    workspace_id.set(Some(basename));
-                  }
-                  workspace_path.set(Some(path));
-                }
-                open_session(id, title);
-              })
-            />
-          }.into_any(),
-          BuilderView::NewBuild => view! {
-            <BuilderNewBuild
-              session_id=session_id
-              session_title=session_title
-              workspace_id=workspace_id
-              workspace_path=workspace_path
-              workspace_ready=workspace_ready
-              workspace_error=workspace_error
-              draft=draft
-              generating=generating
-              applying=applying
-              build_reply=build_reply
-              package_path=package_path
-              applied_name=applied_name
-              models=models
-              selected_model=selected_model
-              on_back=Callback::new(move |_| back_home())
-            />
-          }.into_any(),
-          BuilderView::Chat => view! {
-            <BuilderChat
-              session_id=session_id
-              session_title=session_title
-              workspace_id=workspace_id
-              workspace_path=workspace_path
-              messages=messages
-              draft=draft
-              sending=sending
-              next_id=next_id
-              chat_loading=chat_loading
-              package_path=package_path
-              applying=applying
-              applied_name=applied_name
-              models=models
-              selected_model=selected_model
-              list_ref=list_ref
-              on_back=Callback::new(move |_| back_home())
-            />
-          }.into_any(),
-        },
+        BuilderView::NewBuild => view! {
+          <BuilderNewBuild
+            session_id=session_id
+            session_title=session_title
+            workspace_id=workspace_id
+            workspace_path=workspace_path
+            workspace_ready=workspace_ready
+            workspace_error=workspace_error
+            draft=draft
+            generating=generating
+            applying=applying
+            build_reply=build_reply
+            package_path=package_path
+            applied_name=applied_name
+            models=models
+            selected_model=selected_model
+            on_back=Callback::new(move |_| back_home())
+          />
+        }.into_any(),
+        BuilderView::Chat => view! {
+          <BuilderChat
+            session_id=session_id
+            session_title=session_title
+            workspace_id=workspace_id
+            workspace_path=workspace_path
+            messages=messages
+            draft=draft
+            sending=sending
+            next_id=next_id
+            chat_loading=chat_loading
+            package_path=package_path
+            applying=applying
+            applied_name=applied_name
+            models=models
+            selected_model=selected_model
+            list_ref=list_ref
+            on_back=Callback::new(move |_| back_home())
+          />
+        }.into_any(),
       }}
     </div>
   }

@@ -711,39 +711,6 @@ pub async fn get_codex_session(
   invoke_cmd_with_args::<CodexSessionDetail>("get_codex_session", args).await
 }
 
-/// Host runtime probe for Theme Builder (`codex-acp` / bunx / npx).
-#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct ThemeBuilderRuntimeStatus {
-  pub ready: bool,
-  #[serde(default)]
-  pub has_codex_acp: bool,
-  #[serde(default)]
-  pub has_bun: bool,
-  #[serde(default)]
-  pub has_bunx: bool,
-  #[serde(default)]
-  pub has_npx: bool,
-  #[serde(default)]
-  pub runner: Option<String>,
-  #[serde(default)]
-  pub runner_path: Option<String>,
-  #[serde(default)]
-  pub message: String,
-}
-
-/// Theme Builder: check whether bunx/npx/codex-acp is available on the host.
-pub async fn check_theme_builder_runtime() -> Result<ThemeBuilderRuntimeStatus, String> {
-  invoke_cmd_with_args::<ThemeBuilderRuntimeStatus>("check_theme_builder_runtime", empty_args())
-    .await
-}
-
-/// Theme Builder: install Bun via multi-mirror download (official / GitHub / jsDelivr).
-pub async fn install_bun_for_theme_builder() -> Result<ThemeBuilderRuntimeStatus, String> {
-  invoke_cmd_with_args::<ThemeBuilderRuntimeStatus>("install_bun_for_theme_builder", empty_args())
-    .await
-}
-
 /// Explicit `$pageleave` (e.g. app hide). Usually handled inside `capture_pageview`.
 #[allow(dead_code)]
 pub async fn track_page_leave(page: Option<&str>) {
