@@ -112,10 +112,10 @@ impl UpdaterState {
   }
 
   fn clear_deferred(&self, version: &str) {
-    if let Ok(mut guard) = self.deferred_version.lock() {
-      if guard.as_deref() == Some(version) {
-        *guard = None;
-      }
+    if let Ok(mut guard) = self.deferred_version.lock()
+      && guard.as_deref() == Some(version)
+    {
+      *guard = None;
     }
   }
 
@@ -583,7 +583,7 @@ fn setup_app_menu(app: &AppHandle) -> tauri::Result<()> {
   )?;
 
   app.set_menu(menu)?;
-  app.on_menu_event(|app, event| on_menu_event(app, event));
+  app.on_menu_event(on_menu_event);
   Ok(())
 }
 
@@ -645,22 +645,21 @@ async fn run_updater_check(app: &AppHandle, source: UpdateCheckSource) {
       .lock()
       .ok()
       .is_some_and(|g| g.is_some())
+    && let Some(version) = state.staged_version()
   {
-    if let Some(version) = state.staged_version() {
-      if source == UpdateCheckSource::Automatic && state.is_deferred(&version) {
-        tracing::debug!(
-          version = %version,
-          "updater: user deferred this version; skipping automatic prompt"
-        );
-        return;
-      }
-      if source == UpdateCheckSource::Manual {
-        state.clear_deferred(&version);
-      }
-      // Re-surface known available state; still re-check remote below so we pick up
-      // a newer build if the catalog moved on.
-      emit_app_update(app, &state.snapshot_status());
+    if source == UpdateCheckSource::Automatic && state.is_deferred(&version) {
+      tracing::debug!(
+        version = %version,
+        "updater: user deferred this version; skipping automatic prompt"
+      );
+      return;
     }
+    if source == UpdateCheckSource::Manual {
+      state.clear_deferred(&version);
+    }
+    // Re-surface known available state; still re-check remote below so we pick up
+    // a newer build if the catalog moved on.
+    emit_app_update(app, &state.snapshot_status());
   }
 
   if state
@@ -745,10 +744,10 @@ async fn run_updater_check_inner(app: &AppHandle, source: UpdateCheckSource) -> 
     url = %update.download_url,
     "updater: update available"
   );
-  if let Some(body) = update.body.as_deref() {
-    if !body.trim().is_empty() {
-      tracing::info!("updater: release notes:\n{body}");
-    }
+  if let Some(body) = update.body.as_deref()
+    && !body.trim().is_empty()
+  {
+    tracing::info!("updater: release notes:\n{body}");
   }
 
   let staged = state.staged_version();

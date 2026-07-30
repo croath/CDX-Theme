@@ -126,7 +126,7 @@ run_tauri_build() {
     args+=(--verbose)
   fi
 
-  # Stage cdxtheme next to the app binary (Tauri externalBin). beforeBuildCommand
+  # Stage cdxtheme + Bun next to the app binary (Tauri externalBin). beforeBuildCommand
   # also runs this; calling here makes failures earlier and clearer.
   log "Preparing cdxtheme CLI sidecar…"
   if [[ "$MODE" == "debug" ]]; then
@@ -134,6 +134,9 @@ run_tauri_build() {
   else
     bash "$ROOT/scripts/prepare-cli-sidecar.sh"
   fi
+
+  log "Preparing Bun sidecar…"
+  bash "$ROOT/scripts/prepare-bun-sidecar.sh"
 
   log "Building CDXTheme (${MODE})…"
   log "Command: ${TAURI_CMD[*]} ${args[*]}"

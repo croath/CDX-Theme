@@ -35,7 +35,7 @@ pub(super) fn BuilderChat(
 
   let scroll_to_bottom = move || {
     if let Some(el) = list_ref.get_untracked() {
-      let _ = el.set_scroll_top(el.scroll_height());
+      el.set_scroll_top(el.scroll_height());
     }
   };
 
@@ -284,7 +284,10 @@ pub(super) fn BuilderChat(
                         Some(msg) => view! {
                           <p class="select-text whitespace-pre-wrap break-words">{msg.content}</p>
                         }.into_any(),
-                        None => view! { <></> }.into_any(),
+                        None => {
+                            let _: () = view! { <></> };
+                            ().into_any()
+                        },
                       }
                     }}
                   </div>

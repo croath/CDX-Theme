@@ -80,10 +80,10 @@ pub(super) fn BuilderNewBuild(
     else {
       return;
     };
-    if let Some(files) = input.files() {
-      if let Some(file) = files.get(0) {
-        accept_hero_file(file, locale);
-      }
+    if let Some(files) = input.files()
+      && let Some(file) = files.get(0)
+    {
+      accept_hero_file(file, locale);
     }
     // Allow re-selecting the same file later.
     input.set_value("");
@@ -301,7 +301,7 @@ pub(super) fn BuilderNewBuild(
   Effect::new(move |_| {
     let _ = build_reply.get();
     if let Some(el) = stream_ref.get_untracked() {
-      let _ = el.set_scroll_top(el.scroll_height());
+      el.set_scroll_top(el.scroll_height());
     }
   });
 
@@ -442,13 +442,11 @@ pub(super) fn BuilderNewBuild(
                     return;
                   }
                   let locale = ctx.locale.get_untracked();
-                  if let Some(dt) = ev.data_transfer() {
-                    if let Some(files) = dt.files() {
-                      if let Some(file) = files.get(0) {
+                  if let Some(dt) = ev.data_transfer()
+                    && let Some(files) = dt.files()
+                      && let Some(file) = files.get(0) {
                         accept_hero_file(file, locale);
                       }
-                    }
-                  }
                 }
               >
                 <Show when=move || hero_preview.get().is_none()>

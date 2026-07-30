@@ -181,7 +181,7 @@ pub fn merge_css_partials_content(
       )));
     }
     if i > 0 {
-      out.push_str("\n");
+      out.push('\n');
     }
     out.push_str(&format!("/* ── begin {target}/{name} ── */\n"));
     out.push_str(body.trim_end());
@@ -203,10 +203,10 @@ pub fn merge_css_target(
   let partials_dir = theme_dir.join(target);
   let output = theme_dir.join(output_name);
   let (content, parts) = merge_css_partials_content(&partials_dir, target)?;
-  if let Some(parent) = output.parent() {
-    if !parent.as_os_str().is_empty() {
-      fs::create_dir_all(parent)?;
-    }
+  if let Some(parent) = output.parent()
+    && !parent.as_os_str().is_empty()
+  {
+    fs::create_dir_all(parent)?;
   }
   fs::write(&output, &content)?;
   Ok(CssMergeResult {
@@ -350,16 +350,14 @@ pub fn resolve_target_css(
   css_rel: &str,
   merge_css: bool,
 ) -> Result<(String, Option<CssMergeResult>)> {
-  if merge_css {
-    if let Some((content, merged)) = merge_css_for_path_in_memory(base, css_rel)? {
-      if content.trim().is_empty() {
-        return Err(CoreError::msg(format!(
-          "merged css is empty for `{css_rel}` (partials under {})",
-          merged.partials_dir.display()
-        )));
-      }
-      return Ok((content, Some(merged)));
+  if merge_css && let Some((content, merged)) = merge_css_for_path_in_memory(base, css_rel)? {
+    if content.trim().is_empty() {
+      return Err(CoreError::msg(format!(
+        "merged css is empty for `{css_rel}` (partials under {})",
+        merged.partials_dir.display()
+      )));
     }
+    return Ok((content, Some(merged)));
   }
   let css_path = base.join(css_rel);
   if !css_path.is_file() {
@@ -384,10 +382,10 @@ pub fn maybe_merge_css_for_path(base: &Path, css_rel: &str) -> Result<Option<Css
     return Ok(None);
   };
   let css_path = base.join(css_rel);
-  if let Some(p) = css_path.parent() {
-    if !p.as_os_str().is_empty() {
-      fs::create_dir_all(p)?;
-    }
+  if let Some(p) = css_path.parent()
+    && !p.as_os_str().is_empty()
+  {
+    fs::create_dir_all(p)?;
   }
   fs::write(&css_path, &content)?;
   result.output = css_path;
@@ -452,10 +450,10 @@ pub fn pack_theme_dir_with_options(
     )));
   }
 
-  if let Some(parent) = out.parent() {
-    if !parent.as_os_str().is_empty() {
-      fs::create_dir_all(parent)?;
-    }
+  if let Some(parent) = out.parent()
+    && !parent.as_os_str().is_empty()
+  {
+    fs::create_dir_all(parent)?;
   }
 
   let bytes = write_package(&package, &out, pretty)?;
@@ -929,10 +927,10 @@ fn resolved_image_assets(package: &ThemePackage) -> BTreeMap<String, ImageAsset>
     if let Some(map) = &assets.images {
       images.extend(map.clone());
     }
-    if let Some(art) = &assets.art {
-      if !images.contains_key("hero") {
-        images.insert("hero".into(), art.clone());
-      }
+    if let Some(art) = &assets.art
+      && !images.contains_key("hero")
+    {
+      images.insert("hero".into(), art.clone());
     }
   }
   images

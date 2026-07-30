@@ -7,10 +7,10 @@ use tauri::{AppHandle, Manager, path::BaseDirectory};
 
 /// Bundled / dev themes directory (`…/themes` resource or repo `themes/`).
 pub fn builtin_themes_dir(app: &AppHandle) -> Option<PathBuf> {
-  if let Ok(path) = app.path().resolve("themes", BaseDirectory::Resource) {
-    if path.is_dir() {
-      return Some(path);
-    }
+  if let Ok(path) = app.path().resolve("themes", BaseDirectory::Resource)
+    && path.is_dir()
+  {
+    return Some(path);
   }
   // `CARGO_MANIFEST_DIR/../themes` works on Windows too (PathBuf normalizes separators).
   let dev = Path::new(env!("CARGO_MANIFEST_DIR")).join("../themes");

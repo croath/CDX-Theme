@@ -69,21 +69,21 @@ impl CdpSession {
         while let Some(msg) = read.next().await {
           match msg {
             Ok(Message::Text(text)) => {
-              if let Ok(value) = serde_json::from_str::<Value>(&text) {
-                if let Some(id) = value.get("id").and_then(|v| v.as_u64()) {
-                  let result = if let Some(err) = value.get("error") {
-                    let message = err
-                      .get("message")
-                      .and_then(|m| m.as_str())
-                      .unwrap_or("CDP error");
-                    let code = err.get("code").and_then(|c| c.as_i64()).unwrap_or(0);
-                    Err(format!("{message} ({code})"))
-                  } else {
-                    Ok(value.get("result").cloned().unwrap_or(Value::Null))
-                  };
-                  if let Some(tx) = pending.lock().await.remove(&id) {
-                    let _ = tx.send(result);
-                  }
+              if let Ok(value) = serde_json::from_str::<Value>(&text)
+                && let Some(id) = value.get("id").and_then(|v| v.as_u64())
+              {
+                let result = if let Some(err) = value.get("error") {
+                  let message = err
+                    .get("message")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("CDP error");
+                  let code = err.get("code").and_then(|c| c.as_i64()).unwrap_or(0);
+                  Err(format!("{message} ({code})"))
+                } else {
+                  Ok(value.get("result").cloned().unwrap_or(Value::Null))
+                };
+                if let Some(tx) = pending.lock().await.remove(&id) {
+                  let _ = tx.send(result);
                 }
               }
             }
@@ -149,7 +149,6 @@ impl CdpSession {
       .map_err(|e| {
         // Drop pending entry on send failure
         let pending = self.pending.clone();
-        let id = id;
         tokio::spawn(async move {
           pending.lock().await.remove(&id);
         });

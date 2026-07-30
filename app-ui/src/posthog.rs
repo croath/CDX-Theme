@@ -120,10 +120,10 @@ pub fn capture_pageleave(page: Option<&str>) {
   let Some(bridge) = bridge() else {
     return;
   };
-  if let Ok(fn_v) = Reflect::get(bridge.as_ref(), &JsValue::from_str("capturePageleave")) {
-    if let Ok(func) = fn_v.dyn_into::<Function>() {
-      let _ = func.call0(bridge.as_ref());
-    }
+  if let Ok(fn_v) = Reflect::get(bridge.as_ref(), &JsValue::from_str("capturePageleave"))
+    && let Ok(func) = fn_v.dyn_into::<Function>()
+  {
+    let _ = func.call0(bridge.as_ref());
   }
 }
 

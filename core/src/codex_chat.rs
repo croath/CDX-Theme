@@ -124,10 +124,10 @@ pub struct CodexModelsList {
 /// Resolve the Codex CLI binary: ChatGPT-bundled first, then `PATH`.
 /// Used to put Codex on PATH for the ACP adapter process.
 pub fn find_codex_cli() -> Result<PathBuf, String> {
-  if let Some(bundled) = find_bundled_codex_cli() {
-    if bundled.is_file() {
-      return Ok(bundled);
-    }
+  if let Some(bundled) = find_bundled_codex_cli()
+    && bundled.is_file()
+  {
+    return Ok(bundled);
   }
   if let Some(path) = which("codex") {
     return Ok(path);
@@ -147,10 +147,10 @@ fn find_bundled_codex_cli() -> Option<PathBuf> {
         .parent()
         .and_then(|p| p.parent())
         .map(|contents| contents.join("Resources").join("codex"));
-      if let Some(ref p) = resources {
-        if p.is_file() {
-          return Some(p.clone());
-        }
+      if let Some(ref p) = resources
+        && p.is_file()
+      {
+        return Some(p.clone());
       }
     }
     for app in [
@@ -168,7 +168,7 @@ fn find_bundled_codex_cli() -> Option<PathBuf> {
         return Some(p);
       }
     }
-    return None;
+    None
   }
 
   #[cfg(target_os = "windows")]
@@ -261,17 +261,18 @@ pub fn list_models() -> CodexModelsList {
   let current = read_config_model(&home.join("config.toml"));
   let mut models = read_models_cache(&home.join("models_cache.json"));
   // Ensure the configured model appears even if the cache omitted it.
-  if let Some(ref cur) = current {
-    if !cur.is_empty() && !models.iter().any(|m| m.id == *cur) {
-      models.insert(
-        0,
-        CodexModelOption {
-          id: cur.clone(),
-          name: cur.clone(),
-          description: None,
-        },
-      );
-    }
+  if let Some(ref cur) = current
+    && !cur.is_empty()
+    && !models.iter().any(|m| m.id == *cur)
+  {
+    models.insert(
+      0,
+      CodexModelOption {
+        id: cur.clone(),
+        name: cur.clone(),
+        description: None,
+      },
+    );
   }
   if models.is_empty() {
     // Minimal fallback so the UI still shows a menu.
@@ -337,10 +338,11 @@ fn read_models_cache(path: &Path) -> Vec<CodexModelOption> {
       continue;
     }
     // Prefer list-visible models; keep unknowns if visibility is absent.
-    if let Some(vis) = item.get("visibility").and_then(|v| v.as_str()) {
-      if vis != "list" && vis != "default" {
-        continue;
-      }
+    if let Some(vis) = item.get("visibility").and_then(|v| v.as_str())
+      && vis != "list"
+      && vis != "default"
+    {
+      continue;
     }
     let name = item
       .get("display_name")
@@ -428,11 +430,19 @@ pub struct ThemeBuilderRuntimeStatus {
 
 /// Probe host for `codex-acp`, Bun (`bun` / `bunx`), or Node (`npx`).
 pub fn check_theme_builder_runtime() -> ThemeBuilderRuntimeStatus {
+  check_theme_builder_runtime_with(None)
+}
+
+/// Like [`check_theme_builder_runtime`], but prefer an app-bundled Bun path when set.
+pub fn check_theme_builder_runtime_with(bundled_bun: Option<&Path>) -> ThemeBuilderRuntimeStatus {
   // Include ~/.bun/bin even when the app process PATH was set before install.
   let _ = bun_bin_dir();
 
   let codex_acp = which("codex-acp");
-  let bun = resolve_bun();
+  let bun = bundled_bun
+    .filter(|p| p.is_file())
+    .map(Path::to_path_buf)
+    .or_else(resolve_bun);
   let bunx = resolve_bunx();
   let npx = resolve_npx();
 
@@ -441,9 +451,18 @@ pub fn check_theme_builder_runtime() -> ThemeBuilderRuntimeStatus {
   let has_bunx = bunx.is_some();
   let has_npx = npx.is_some();
   let ready = has_codex_acp || has_bun || has_bunx || has_npx;
+  let used_bundled = bundled_bun
+    .filter(|p| p.is_file())
+    .is_some_and(|bp| bun.as_ref().is_some_and(|b| b == bp));
 
   let (runner, runner_path) = if let Some(p) = codex_acp {
     (Some("codex-acp".into()), Some(p.display().to_string()))
+  } else if used_bundled {
+    // Prefer reporting the bundled bun path when that is what we would run.
+    (
+      Some("bun".into()),
+      bun.as_ref().map(|p| p.display().to_string()),
+    )
   } else if let Some(p) = bunx {
     (Some("bunx".into()), Some(p.display().to_string()))
   } else if let Some(p) = bun {
@@ -457,6 +476,7 @@ pub fn check_theme_builder_runtime() -> ThemeBuilderRuntimeStatus {
   let message = if ready {
     match runner.as_deref() {
       Some("codex-acp") => "codex-acp is available".into(),
+      Some("bun") if used_bundled => "Bundled Bun is available".into(),
       Some("bunx") | Some("bun") => "Bun is available (bunx)".into(),
       Some("npx") => "Node.js npx is available".into(),
       _ => "Runtime ready".into(),
@@ -479,16 +499,25 @@ pub fn check_theme_builder_runtime() -> ThemeBuilderRuntimeStatus {
 
 /// Download and install Bun into `~/.bun`, trying multiple mirrors (official, GitHub, jsDelivr).
 ///
-/// Returns an updated runtime status. Safe to call when Bun is already present.
+/// Returns an updated runtime status. Safe to call when Bun is already present
+/// (system install or app-bundled sidecar).
 pub async fn install_bun_for_theme_builder() -> Result<ThemeBuilderRuntimeStatus, String> {
-  if resolve_bun().is_some() || resolve_bunx().is_some() {
-    return Ok(check_theme_builder_runtime());
+  install_bun_for_theme_builder_with(None).await
+}
+
+/// Like [`install_bun_for_theme_builder`], skipping download when a bundled Bun path is usable.
+pub async fn install_bun_for_theme_builder_with(
+  bundled_bun: Option<&Path>,
+) -> Result<ThemeBuilderRuntimeStatus, String> {
+  if bundled_bun.is_some_and(|p| p.is_file()) || resolve_bun().is_some() || resolve_bunx().is_some()
+  {
+    return Ok(check_theme_builder_runtime_with(bundled_bun));
   }
 
   tracing::info!("installing Bun for Theme Builder (multi-mirror)…");
   install_bun_multi_mirror().await?;
 
-  let status = check_theme_builder_runtime();
+  let status = check_theme_builder_runtime_with(bundled_bun);
   if status.has_bun || status.has_bunx {
     tracing::info!(
       runner = ?status.runner_path,
@@ -508,38 +537,58 @@ pub async fn install_bun_for_theme_builder() -> Result<ThemeBuilderRuntimeStatus
 ///
 /// Preference order:
 /// 1. `codex-acp` on PATH
-/// 2. `bunx` / `bun x` (user-installed Bun)
-/// 3. `npx -y` (user-installed Node/npm)
+/// 2. App-bundled Bun sidecar (`bun_path`) via `bun x`
+/// 3. `bunx` / `bun x` (user-installed Bun)
+/// 4. `npx -y` (user-installed Node/npm)
 ///
 /// Does **not** auto-install Bun — Theme Builder UI gates on
 /// [`check_theme_builder_runtime`] / [`install_bun_for_theme_builder`].
 ///
-/// `path_prepend` directories (e.g. folder of bundled `cdxthemex`) are put first on PATH.
+/// `path_prepend` directories (e.g. folder of bundled `cdxthemex` / `bun`) are put first on PATH.
 /// `extra_env` is merged into the agent process environment.
+/// `bun_path` is an absolute path to the preferred Bun executable when known.
 fn build_acp_agent(
   path_prepend: &[PathBuf],
   extra_env: &[(String, String)],
+  bun_path: Option<&Path>,
 ) -> Result<(AcpAgent, String), String> {
   let mut path_env = std::env::var("PATH").unwrap_or_default();
-  // Host-provided dirs first (bundled cdxthemex).
+  // Host-provided dirs first (bundled cdxthemex / bun).
   for dir in path_prepend.iter().rev() {
     prepend_path_env(&mut path_env, dir);
   }
   // Ensure ChatGPT-bundled `codex` is visible to the adapter.
-  if let Ok(codex) = find_codex_cli() {
-    if let Some(dir) = codex.parent() {
-      prepend_path_env(&mut path_env, dir);
-    }
+  if let Ok(codex) = find_codex_cli()
+    && let Some(dir) = codex.parent()
+  {
+    prepend_path_env(&mut path_env, dir);
   }
   // Prefer known Bun install dir if present (even when not yet on PATH).
   if let Some(dir) = bun_bin_dir() {
     prepend_path_env(&mut path_env, &dir);
+  }
+  // Parent of app-bundled bun (triple-suffixed in dev, plain `bun` in prod).
+  if let Some(bun) = bun_path.filter(|p| p.is_file())
+    && let Some(dir) = bun.parent()
+  {
+    prepend_path_env(&mut path_env, dir);
   }
 
   if let Some(local) = which("codex-acp") {
     return make_acp_agent(
       AcpAgentConfig::new(&local),
       local.display().to_string(),
+      &path_env,
+      extra_env,
+    );
+  }
+
+  // Preferred: absolute path to app-bundled Bun (always use `bun x`).
+  if let Some(bun) = bun_path.filter(|p| p.is_file()) {
+    let label = format!("{} x {}", bun.display(), CODEX_ACP_PKG);
+    return make_acp_agent(
+      AcpAgentConfig::new(bun).args(["x", CODEX_ACP_PKG]),
+      label,
       &path_env,
       extra_env,
     );
@@ -1019,7 +1068,7 @@ pub async fn list_sessions_async(limit: Option<usize>) -> Result<Vec<CodexSessio
 }
 
 async fn list_sessions_via_acp(limit: usize) -> Result<Vec<CodexSessionSummary>, String> {
-  let (agent, _) = build_acp_agent(&[], &[])?;
+  let (agent, _) = build_acp_agent(&[], &[], None)?;
   // List without cwd filter so all Codex history is available for intersection.
   let result = Client
     .builder()
@@ -1137,10 +1186,10 @@ pub fn rename_codex_session(session_id: &str, thread_name: &str) -> Result<(), S
   }
 
   upsert_session_index_name(session_id, name)?;
-  if let Some(path) = find_rollout_path(&codex_home(), session_id) {
-    if let Err(e) = patch_rollout_thread_name(&path, name) {
-      tracing::debug!(error = %e, path = %path.display(), "rollout thread_name patch skipped");
-    }
+  if let Some(path) = find_rollout_path(&codex_home(), session_id)
+    && let Err(e) = patch_rollout_thread_name(&path, name)
+  {
+    tracing::debug!(error = %e, path = %path.display(), "rollout thread_name patch skipped");
   }
   tracing::info!(session = %session_id, name = %name, "codex session renamed");
   Ok(())
@@ -1409,23 +1458,22 @@ pub fn load_session(session_id: &str) -> Result<CodexSessionDetail, String> {
 
   let mut title = "Untitled session".to_string();
   let mut updated_at = String::new();
-  if let Ok(list) = list_sessions_from_disk(200) {
-    if let Some(s) = list.into_iter().find(|s| s.id == session_id) {
-      title = s.title;
-      updated_at = s.updated_at;
-    }
+  if let Ok(list) = list_sessions_from_disk(200)
+    && let Some(s) = list.into_iter().find(|s| s.id == session_id)
+  {
+    title = s.title;
+    updated_at = s.updated_at;
   }
 
   let path = find_rollout_path(&home, session_id)
     .ok_or_else(|| format!("session rollout not found for id `{session_id}`"))?;
 
   let messages = parse_rollout_messages(&path)?;
-  if updated_at.is_empty() {
-    if let Ok(meta) = std::fs::metadata(&path) {
-      if let Ok(mtime) = meta.modified() {
-        updated_at = humantime_iso(mtime);
-      }
-    }
+  if updated_at.is_empty()
+    && let Ok(meta) = std::fs::metadata(&path)
+    && let Ok(mtime) = meta.modified()
+  {
+    updated_at = humantime_iso(mtime);
   }
 
   Ok(CodexSessionDetail {
@@ -1496,29 +1544,29 @@ fn read_session_meta_from_rollout(path: &Path) -> Option<CodexSessionSummary> {
     let Ok(v) = serde_json::from_str::<Value>(line) else {
       continue;
     };
-    if v.get("type").and_then(|t| t.as_str()) == Some("session_meta") {
-      if let Some(payload) = v.get("payload") {
-        if let Some(s) = payload.get("id").and_then(|x| x.as_str()) {
-          id = s.to_string();
-        }
-        if let Some(s) = payload
-          .get("thread_name")
-          .or_else(|| payload.get("title"))
-          .and_then(|x| x.as_str())
-        {
-          title = s.to_string();
-        }
+    if v.get("type").and_then(|t| t.as_str()) == Some("session_meta")
+      && let Some(payload) = v.get("payload")
+    {
+      if let Some(s) = payload.get("id").and_then(|x| x.as_str()) {
+        id = s.to_string();
+      }
+      if let Some(s) = payload
+        .get("thread_name")
+        .or_else(|| payload.get("title"))
+        .and_then(|x| x.as_str())
+      {
+        title = s.to_string();
       }
     }
   }
-  if id.is_empty() {
-    if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
-      let parts: Vec<&str> = name.split('-').collect();
-      if parts.len() >= 5 {
-        let candidate = parts[parts.len() - 5..].join("-");
-        if candidate.len() >= 32 {
-          id = candidate;
-        }
+  if id.is_empty()
+    && let Some(name) = path.file_stem().and_then(|s| s.to_str())
+  {
+    let parts: Vec<&str> = name.split('-').collect();
+    if parts.len() >= 5 {
+      let candidate = parts[parts.len() - 5..].join("-");
+      if candidate.len() >= 32 {
+        id = candidate;
       }
     }
   }
@@ -1638,13 +1686,13 @@ fn extract_message_text(payload: &Value) -> String {
         continue;
       }
       let ty = item.get("type").and_then(|t| t.as_str()).unwrap_or("");
-      if matches!(ty, "input_text" | "output_text" | "text") {
-        if let Some(t) = item.get("text").and_then(|t| t.as_str()) {
-          if !out.is_empty() {
-            out.push('\n');
-          }
-          out.push_str(t);
+      if matches!(ty, "input_text" | "output_text" | "text")
+        && let Some(t) = item.get("text").and_then(|t| t.as_str())
+      {
+        if !out.is_empty() {
+          out.push('\n');
         }
+        out.push_str(t);
       }
     }
   }
@@ -1656,10 +1704,11 @@ fn push_dedup(messages: &mut Vec<CodexSessionMessage>, role: &str, content: Stri
   if content.is_empty() {
     return;
   }
-  if let Some(last) = messages.last() {
-    if last.role == role && last.content == content {
-      return;
-    }
+  if let Some(last) = messages.last()
+    && last.role == role
+    && last.content == content
+  {
+    return;
   }
   messages.push(CodexSessionMessage {
     role: role.to_string(),
@@ -1726,6 +1775,9 @@ pub struct CodexChatOptions {
   /// Preferred model id for this turn (`session/set_config_option` id `model`).
   /// When set, applied after `session/new` or `session/load` and before `session/prompt`.
   pub model: Option<String>,
+  /// Absolute path to app-bundled Bun (`externalBin` sidecar). When set and present,
+  /// used before system Bun / npx to spawn `bun x @agentclientprotocol/codex-acp`.
+  pub bun_path: Option<PathBuf>,
 }
 
 impl std::fmt::Debug for CodexChatOptions {
@@ -1738,6 +1790,7 @@ impl std::fmt::Debug for CodexChatOptions {
       .field("extra_env", &self.extra_env)
       .field("on_stream", &self.on_stream.as_ref().map(|_| "<callback>"))
       .field("model", &self.model)
+      .field("bun_path", &self.bun_path)
       .finish()
   }
 }
@@ -1781,7 +1834,11 @@ pub async fn send_and_wait_with(
   }
 
   let wait_ms = options.wait_ms.unwrap_or(180_000).clamp(10_000, 600_000);
-  let (agent, agent_label) = build_acp_agent(&options.path_prepend, &options.extra_env)?;
+  let (agent, agent_label) = build_acp_agent(
+    &options.path_prepend,
+    &options.extra_env,
+    options.bun_path.as_deref(),
+  )?;
   let cwd = options
     .cwd
     .filter(|p| p.is_absolute())
@@ -1832,15 +1889,15 @@ pub async fn send_and_wait_with(
             String::new()
           }
         };
-        if !rendered.is_empty() {
-          if let Some(cb) = on_stream.as_ref() {
-            let mut last = last_streamed_handler
-              .lock()
-              .unwrap_or_else(|e| e.into_inner());
-            if *last != rendered {
-              *last = rendered.clone();
-              cb(rendered);
-            }
+        if !rendered.is_empty()
+          && let Some(cb) = on_stream.as_ref()
+        {
+          let mut last = last_streamed_handler
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+          if *last != rendered {
+            *last = rendered.clone();
+            cb(rendered);
           }
         }
         Ok(())
@@ -1970,17 +2027,15 @@ pub async fn send_and_wait_with(
   let mut reply = transcript.lock().map(|t| t.render()).unwrap_or_default();
 
   // Fallback: load latest assistant text from Codex rollout if stream was empty.
-  if reply.trim().is_empty() {
-    if let Ok(detail) = load_session(&session_id) {
-      if let Some(last) = detail
-        .messages
-        .iter()
-        .rev()
-        .find(|m| m.role == "assistant" && !m.content.trim().is_empty())
-      {
-        reply = summarize_for_ui(&last.content);
-      }
-    }
+  if reply.trim().is_empty()
+    && let Ok(detail) = load_session(&session_id)
+    && let Some(last) = detail
+      .messages
+      .iter()
+      .rev()
+      .find(|m| m.role == "assistant" && !m.content.trim().is_empty())
+  {
+    reply = summarize_for_ui(&last.content);
   }
 
   if reply.trim().is_empty() {

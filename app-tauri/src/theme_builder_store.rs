@@ -132,10 +132,11 @@ fn save_file(app: &AppHandle, store: &StoreFile) -> Result<(), String> {
 
 /// Locate bundled skill (resource) or dev tree `assets/skill`.
 pub fn resolve_skill_source(app: &AppHandle) -> Result<PathBuf, String> {
-  if let Ok(path) = app.path().resolve("skill", BaseDirectory::Resource) {
-    if path.is_dir() && path.join("SKILL.md").is_file() {
-      return Ok(path);
-    }
+  if let Ok(path) = app.path().resolve("skill", BaseDirectory::Resource)
+    && path.is_dir()
+    && path.join("SKILL.md").is_file()
+  {
+    return Ok(path);
   }
   // Dev: app-tauri/../assets/skill
   let dev = Path::new(env!("CARGO_MANIFEST_DIR")).join("../assets/skill");
@@ -169,53 +170,85 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
 
 /// Resolve the app-bundled `cdxthemex` sidecar (next to main binary / staged binaries).
 pub fn resolve_cdxthemex(app: &AppHandle) -> Result<PathBuf, String> {
+  resolve_external_bin(app, "cdxthemex").ok_or_else(|| {
+    "bundled cdxthemex CLI not found (expected next to CDXTheme binary, or app-tauri/binaries/)"
+      .into()
+  })
+}
+
+/// Resolve the app-bundled Bun sidecar (`bundle.externalBin` → `binaries/bun`).
+///
+/// Production: next to the main binary as `bun` / `bun.exe`
+/// (`Contents/MacOS/bun` on macOS).
+/// Dev: `app-tauri/binaries/bun-<triple>[.exe]` staged by `scripts/prepare-bun-sidecar.*`.
+pub fn resolve_bundled_bun(app: &AppHandle) -> Option<PathBuf> {
+  resolve_external_bin(app, "bun")
+}
+
+/// Locate a Tauri `externalBin` sidecar by base name (`cdxthemex`, `bun`, …).
+fn resolve_external_bin(app: &AppHandle, base: &str) -> Option<PathBuf> {
   // 1) Same directory as the running app binary (production + most `tauri dev` setups).
-  if let Ok(exe) = std::env::current_exe() {
-    if let Some(dir) = exe.parent() {
-      for name in ["cdxthemex", "cdxthemex.exe"] {
-        let p = dir.join(name);
-        if p.is_file() {
-          return Ok(p.canonicalize().unwrap_or(p));
-        }
-      }
-    }
+  //    macOS: Contents/MacOS/{name}; Windows: next to CDXTheme.exe.
+  if let Ok(exe) = std::env::current_exe()
+    && let Some(dir) = exe.parent()
+    && let Some(p) = sidecar_in_dir(dir, base)
+  {
+    return Some(p);
   }
 
-  // 2) Tauri resource / resource dir (some layouts).
+  // 2) Tauri resource dir (fallback for older layouts).
   if let Ok(dir) = app.path().resource_dir() {
-    for name in ["cdxthemex", "cdxthemex.exe"] {
-      let p = dir.join(name);
-      if p.is_file() {
-        return Ok(p.canonicalize().unwrap_or(p));
-      }
+    if let Some(p) = sidecar_in_dir(&dir.join("bin"), base) {
+      return Some(p);
+    }
+    if let Some(p) = sidecar_in_dir(&dir, base) {
+      return Some(p);
     }
   }
 
-  // 3) Dev: app-tauri/binaries/cdxthemex-<triple>
+  // 3) Dev: app-tauri/binaries/<base>-<triple>[.exe]
   let binaries = Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries");
-  if binaries.is_dir() {
-    if let Ok(rd) = fs::read_dir(&binaries) {
-      for entry in rd.flatten() {
-        let name = entry.file_name().to_string_lossy().to_string();
-        if name.starts_with("cdxthemex-") || name == "cdxthemex" || name == "cdxthemex.exe" {
-          let p = entry.path();
-          if p.is_file() {
-            return Ok(p.canonicalize().unwrap_or(p));
-          }
+  if binaries.is_dir()
+    && let Ok(rd) = fs::read_dir(&binaries)
+  {
+    let prefix = format!("{base}-");
+    let with_exe = format!("{base}.exe");
+    for entry in rd.flatten() {
+      let name = entry.file_name().to_string_lossy().to_string();
+      if name.starts_with(&prefix) || name == base || name == with_exe {
+        let p = entry.path();
+        if p.is_file() {
+          return Some(p.canonicalize().unwrap_or(p));
         }
       }
     }
   }
 
   // 4) PATH fallback (cargo install / local dev).
-  if let Some(p) = which_on_path("cdxthemex") {
-    return Ok(p);
-  }
+  which_on_path(base)
+}
 
-  Err(
-    "bundled cdxthemex CLI not found (expected next to CDXTheme binary, or app-tauri/binaries/)"
-      .into(),
-  )
+fn sidecar_in_dir(dir: &Path, base: &str) -> Option<PathBuf> {
+  if !dir.is_dir() {
+    return None;
+  }
+  #[cfg(windows)]
+  {
+    for name in [format!("{base}.exe"), base.to_string()] {
+      let p = dir.join(&name);
+      if p.is_file() {
+        return Some(p.canonicalize().unwrap_or(p));
+      }
+    }
+  }
+  #[cfg(not(windows))]
+  {
+    let p = dir.join(base);
+    if p.is_file() {
+      return Some(p.canonicalize().unwrap_or(p));
+    }
+  }
+  None
 }
 
 fn which_on_path(bin: &str) -> Option<PathBuf> {
@@ -412,17 +445,17 @@ pub fn title_from_prompt(prompt: &str) -> String {
   }
 
   // Hero-flow wire prompt embeds the user text under "Description:".
-  if let Some(rest) = after_marker(prompt, "Description:") {
-    if let Some(line) = first_title_line(rest) {
-      return truncate_title(line);
-    }
+  if let Some(rest) = after_marker(prompt, "Description:")
+    && let Some(line) = first_title_line(rest)
+  {
+    return truncate_title(line);
   }
 
   // Skill bootstrap ends with "User:\n{text}".
-  if let Some(rest) = after_marker(prompt, "User:") {
-    if let Some(line) = first_title_line(rest) {
-      return truncate_title(line);
-    }
+  if let Some(rest) = after_marker(prompt, "User:")
+    && let Some(line) = first_title_line(rest)
+  {
+    return truncate_title(line);
   }
 
   // Fall back to first meaningful non-boilerplate line.
@@ -647,21 +680,21 @@ pub fn record_session(
   let mut applied_title: Option<String> = None;
   if let Some(existing) = store.sessions.iter_mut().find(|s| s.id == session_id) {
     existing.updated_at = now;
-    if let Some(hint) = title_hint.map(str::trim).filter(|s| !s.is_empty()) {
-      if should_replace_session_title(&existing.title, hint) {
-        existing.title = hint.to_string();
-        applied_title = Some(hint.to_string());
-      }
+    if let Some(hint) = title_hint.map(str::trim).filter(|s| !s.is_empty())
+      && should_replace_session_title(&existing.title, hint)
+    {
+      existing.title = hint.to_string();
+      applied_title = Some(hint.to_string());
     }
-    if let Some(wp) = workspace_path.map(str::trim).filter(|s| !s.is_empty()) {
-      if existing.workspace_path.is_empty() {
-        existing.workspace_path = wp.to_string();
-      }
+    if let Some(wp) = workspace_path.map(str::trim).filter(|s| !s.is_empty())
+      && existing.workspace_path.is_empty()
+    {
+      existing.workspace_path = wp.to_string();
     }
-    if let Some(wid) = workspace_id.map(str::trim).filter(|s| !s.is_empty()) {
-      if existing.workspace_id.is_empty() {
-        existing.workspace_id = wid.to_string();
-      }
+    if let Some(wid) = workspace_id.map(str::trim).filter(|s| !s.is_empty())
+      && existing.workspace_id.is_empty()
+    {
+      existing.workspace_id = wid.to_string();
     }
   } else {
     let title = title_hint
@@ -685,14 +718,14 @@ pub fn record_session(
   save_file(app, &store)?;
 
   // Keep Codex history name in sync with the Theme Builder description/title.
-  if let Some(title) = applied_title.filter(|t| !t.trim().is_empty()) {
-    if let Err(e) = cdx_theme_core::rename_codex_session(session_id, &title) {
-      tracing::warn!(
-        session = %session_id,
-        error = %e,
-        "failed to rename Codex session thread_name"
-      );
-    }
+  if let Some(title) = applied_title.filter(|t| !t.trim().is_empty())
+    && let Err(e) = cdx_theme_core::rename_codex_session(session_id, &title)
+  {
+    tracing::warn!(
+      session = %session_id,
+      error = %e,
+      "failed to rename Codex session thread_name"
+    );
   }
   Ok(())
 }
@@ -888,11 +921,11 @@ pub fn find_newest_theme_package(workspace: &Path) -> Option<PathBuf> {
 
   // Prefer packed output first.
   let output = workspace.join("output");
-  if output.is_dir() {
-    if let Ok(entries) = fs::read_dir(&output) {
-      for entry in entries.flatten() {
-        consider(entry.path(), &mut best);
-      }
+  if output.is_dir()
+    && let Ok(entries) = fs::read_dir(&output)
+  {
+    for entry in entries.flatten() {
+      consider(entry.path(), &mut best);
     }
   }
   if best.is_some() {

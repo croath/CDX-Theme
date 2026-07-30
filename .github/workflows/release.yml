@@ -83,16 +83,19 @@ jobs:
         working-directory: app-ui
         run: bun install --frozen-lockfile
 
-      # Stage `cdxthemex` for Tauri bundle.externalBin (also re-run by beforeBuildCommand).
-      # Matrix macOS uses --target aarch64-apple-darwin; match that triple for the sidecar.
-      - name: Prepare CLI sidecar
+      # Stage `cdxthemex` + `bun` for Tauri bundle.externalBin (also re-run by beforeBuildCommand).
+      # Matrix macOS uses --target aarch64-apple-darwin; match that triple for the sidecars.
+      # Pin with BUN_VERSION (default latest) if a specific Bun release is required.
+      - name: Prepare CLI + Bun sidecars
         shell: bash
         run: |
           set -euo pipefail
           if [[ "${{ runner.os }}" == "macOS" ]]; then
             export CLI_SIDECAR_TARGET=aarch64-apple-darwin
+            export BUN_SIDECAR_TARGET=aarch64-apple-darwin
           fi
           bash scripts/prepare-cli-sidecar.sh
+          bash scripts/prepare-bun-sidecar.sh
           ls -la app-tauri/binaries/
 
       # beforeBuildCommand uses `python3`; Windows images sometimes only expose `python`.
