@@ -3,7 +3,7 @@ members = ["app-ui", "app-tauri", "types", "cli", "core"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.10"
+version = "0.1.11"
 edition = "2024"
 
 [workspace.dependencies]
