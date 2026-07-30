@@ -69,15 +69,17 @@ jobs:
           workspaces: '. -> target'
           shared-key: pr-ubuntu
 
-      # tauri-build validates bundle.externalBin paths exist. A zero-byte placeholder
-      # is enough for check/clippy/lib tests (real sidecar is built in release.yml).
-      - name: Stage CLI sidecar placeholder
+      # tauri-build validates bundle.externalBin paths exist. Zero-byte placeholders
+      # are enough for check/clippy/lib tests (real sidecars are built in release.yml).
+      - name: Stage CLI + Bun sidecar placeholders
         run: |
           set -euo pipefail
           triple="$(rustc --print host-tuple 2>/dev/null || rustc -vV | sed -n 's/^host: //p')"
           mkdir -p app-tauri/binaries
-          : > "app-tauri/binaries/cdxthemex-${triple}"
-          chmod +x "app-tauri/binaries/cdxthemex-${triple}"
+          for name in cdxthemex bun; do
+            : > "app-tauri/binaries/${name}-${triple}"
+            chmod +x "app-tauri/binaries/${name}-${triple}"
+          done
           ls -la app-tauri/binaries/
 
       - name: Format (rustfmt)
