@@ -81,7 +81,7 @@ CDXTheme (Tauri)
 - **Leptos 0.8 CSR**, Trunk serve on **http://localhost:1420**, Tailwind **4** (`style/tailwind.css`, Trunk tool pin `4.3.3`).
 - UI deps via Bun/npm: Tailwind CLI only (`package.json`); install with `bun install` from `app-ui/` (or root scripts).
 - Pages under `app-ui/src/pages/`: Recommend, Install, Library, Restore, Settings, Theme Builder.
-- Theme Builder UI is a module (`app-ui/src/pages/theme_builder/`): `mod.rs` (`ThemeBuilderPage` + shared types/helpers), `builder_runtime_setup.rs` (bunx/npx gate + Install Bun), `builder_home.rs`, `builder_new_build.rs`, `builder_chat.rs`. On open, probes host for `codex-acp` / `bunx` / `npx`; if missing, shows setup UI and can install Bun via multi-mirror download (official, GitHub, jsDelivr).
+- Theme Builder UI is a module (`app-ui/src/pages/theme_builder/`): `mod.rs` (`ThemeBuilderPage` + shared types/helpers), `builder_home.rs`, `builder_new_build.rs`, `builder_chat.rs`. ACP agent is spawned via the **app-bundled Bun** sidecar (`bun x @agentclientprotocol/codex-acp`), or `codex-acp` on PATH — no host bunx/npx detect or Install Bun UI.
 - Shared state: `AppCtx` in `state.rs` (page, dark mode, locale) via `provide_context` / `use_context`.
 - **All Tauri calls** go through `app-ui/src/api.rs` (`window.__TAURI__.core.invoke`). Keep invoke arg shapes in sync with backend command `rename_all` (many use `snake_case`).
 - i18n: English, Simplified Chinese, Traditional Chinese, Japanese (`i18n.rs`). Prefer adding strings there rather than hardcoding copy in pages.
@@ -106,7 +106,7 @@ Notable modules:
 
 ### IPC commands (keep UI + backend aligned)
 
-`retrieve_local_theme_list`, `fetch_remote_theme_catalog`, `resolve_cached_image`, `cdp_status`, `set_window_appearance`, `get_cdp_port`, `set_cdp_port`, `apply_theme`, `restore_theme`, `download_theme`, `install_theme`, `delete_theme`, `get_analytics_enabled`, `get_analytics_state`, `set_analytics_enabled`, `track_event`, **Theme Builder:** `check_theme_builder_runtime`, `install_bun_for_theme_builder`, `codex_chat`, `list_codex_sessions`, `list_codex_models`, `get_codex_session`.
+`retrieve_local_theme_list`, `fetch_remote_theme_catalog`, `resolve_cached_image`, `cdp_status`, `set_window_appearance`, `get_cdp_port`, `set_cdp_port`, `apply_theme`, `restore_theme`, `download_theme`, `install_theme`, `delete_theme`, `get_analytics_enabled`, `get_analytics_state`, `set_analytics_enabled`, `track_event`, **Theme Builder:** `codex_chat`, `list_codex_sessions`, `list_codex_models`, `get_codex_session`, `start_theme_build`, …
 
 Capabilities: `app-tauri/capabilities/default.json` (window drag/minimize/close/set-background-color, opener, log, updater). New privileged APIs need capability + command registration.
 
@@ -278,7 +278,7 @@ Client (CDXTheme)  ──JSON-RPC over stdio──►  Agent process (codex-acp)
                                               Codex CLI
 ```
 
-Client spawns the agent; messages go over **stdio**. Dropping the connection tears down the process group (including `npx` / `bunx` wrappers on Unix).
+Client spawns the agent; messages go over **stdio**. Dropping the connection tears down the process group (including the bundled Bun `x` child on Unix).
 
 #### CDXTheme Theme Builder path
 
@@ -286,7 +286,7 @@ Client spawns the agent; messages go over **stdio**. Dropping the connection tea
 Theme Builder UI
   ──invoke──►  codex_chat / list_codex_sessions / list_codex_models / get_codex_session
   ──core──►  agent-client-protocol Client
-  ──stdio──►  codex-acp  (PATH binary, or bunx/npx @agentclientprotocol/codex-acp)
+  ──stdio──►  codex-acp  (PATH binary, or app-bundled Bun `x @agentclientprotocol/codex-acp`)
   ──►  Codex CLI (ChatGPT-bundled `…/Resources/codex` preferred on PATH)
 ```
 
@@ -332,12 +332,12 @@ codex-acp option ids of interest: `model` (category `model`), `reasoning_effort`
 #### Agent resolution (order)
 
 1. `codex-acp` on `PATH`  
-2. `bunx` / `npx -y @agentclientprotocol/codex-acp@latest`  
+2. App-bundled Bun sidecar: `bun x @agentclientprotocol/codex-acp@latest`  
 3. Prepend ChatGPT-bundled `codex` directory onto the agent’s `PATH`  
 
 #### Runtime requirements
 
-- **Bun/Node** if using the default bunx/npx adapter (or install `codex-acp` yourself).  
+- **App-bundled Bun** sidecar (staged by `prepare-bun-sidecar`; preferred over system Bun), or `codex-acp` on PATH.  
 - **Codex CLI** (bundled with ChatGPT and/or on PATH).  
 - **Auth:** `codex login` when needed (`~/.codex/auth.json`).  
 - Theme Builder workspace cwd: app data `…/theme_builder/{id}` (absolute).  

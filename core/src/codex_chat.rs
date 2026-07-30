@@ -1,8 +1,8 @@
 //! Theme Builder → Codex via the **Agent Client Protocol** (ACP).
 //!
-//! Spawns the Codex ACP adapter (`codex-acp`, or `bunx` / `npx` of
-//! `@agentclientprotocol/codex-acp`) and talks to it with the official
-//! [`agent-client-protocol`] Rust SDK:
+//! Spawns the Codex ACP adapter via the app-bundled Bun sidecar
+//! (`bun x @agentclientprotocol/codex-acp`), or a local `codex-acp` on PATH,
+//! and talks to it with the official [`agent-client-protocol`] Rust SDK:
 //! `initialize` → `session/new` | `session/load` → `session/prompt`.
 //!
 //! Session list / transcript still fall back to `~/.codex` on disk when the
@@ -408,145 +408,15 @@ fn prepend_path_env(path_env: &mut String, dir: &Path) {
 
 const CODEX_ACP_PKG: &str = "@agentclientprotocol/codex-acp@latest";
 
-/// Host runtime needed to spawn the Codex ACP adapter (`codex-acp` / bunx / npx).
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ThemeBuilderRuntimeStatus {
-  /// True when Theme Builder can spawn the ACP adapter without installing Bun.
-  pub ready: bool,
-  pub has_codex_acp: bool,
-  pub has_bun: bool,
-  pub has_bunx: bool,
-  pub has_npx: bool,
-  /// Preferred runner label: `codex-acp` | `bunx` | `bun` | `npx`.
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub runner: Option<String>,
-  /// Absolute path of the preferred runner when known.
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub runner_path: Option<String>,
-  /// Short status for UI / logs.
-  pub message: String,
-}
-
-/// Probe host for `codex-acp`, Bun (`bun` / `bunx`), or Node (`npx`).
-pub fn check_theme_builder_runtime() -> ThemeBuilderRuntimeStatus {
-  check_theme_builder_runtime_with(None)
-}
-
-/// Like [`check_theme_builder_runtime`], but prefer an app-bundled Bun path when set.
-pub fn check_theme_builder_runtime_with(bundled_bun: Option<&Path>) -> ThemeBuilderRuntimeStatus {
-  // Include ~/.bun/bin even when the app process PATH was set before install.
-  let _ = bun_bin_dir();
-
-  let codex_acp = which("codex-acp");
-  let bun = bundled_bun
-    .filter(|p| p.is_file())
-    .map(Path::to_path_buf)
-    .or_else(resolve_bun);
-  let bunx = resolve_bunx();
-  let npx = resolve_npx();
-
-  let has_codex_acp = codex_acp.is_some();
-  let has_bun = bun.is_some();
-  let has_bunx = bunx.is_some();
-  let has_npx = npx.is_some();
-  let ready = has_codex_acp || has_bun || has_bunx || has_npx;
-  let used_bundled = bundled_bun
-    .filter(|p| p.is_file())
-    .is_some_and(|bp| bun.as_ref().is_some_and(|b| b == bp));
-
-  let (runner, runner_path) = if let Some(p) = codex_acp {
-    (Some("codex-acp".into()), Some(p.display().to_string()))
-  } else if used_bundled {
-    // Prefer reporting the bundled bun path when that is what we would run.
-    (
-      Some("bun".into()),
-      bun.as_ref().map(|p| p.display().to_string()),
-    )
-  } else if let Some(p) = bunx {
-    (Some("bunx".into()), Some(p.display().to_string()))
-  } else if let Some(p) = bun {
-    (Some("bun".into()), Some(p.display().to_string()))
-  } else if let Some(p) = npx {
-    (Some("npx".into()), Some(p.display().to_string()))
-  } else {
-    (None, None)
-  };
-
-  let message = if ready {
-    match runner.as_deref() {
-      Some("codex-acp") => "codex-acp is available".into(),
-      Some("bun") if used_bundled => "Bundled Bun is available".into(),
-      Some("bunx") | Some("bun") => "Bun is available (bunx)".into(),
-      Some("npx") => "Node.js npx is available".into(),
-      _ => "Runtime ready".into(),
-    }
-  } else {
-    "Bun (bunx) or Node.js (npx) is required to run Theme Builder".into()
-  };
-
-  ThemeBuilderRuntimeStatus {
-    ready,
-    has_codex_acp,
-    has_bun,
-    has_bunx,
-    has_npx,
-    runner,
-    runner_path,
-    message,
-  }
-}
-
-/// Download and install Bun into `~/.bun`, trying multiple mirrors (official, GitHub, jsDelivr).
-///
-/// Returns an updated runtime status. Safe to call when Bun is already present
-/// (system install or app-bundled sidecar).
-pub async fn install_bun_for_theme_builder() -> Result<ThemeBuilderRuntimeStatus, String> {
-  install_bun_for_theme_builder_with(None).await
-}
-
-/// Like [`install_bun_for_theme_builder`], skipping download when a bundled Bun path is usable.
-pub async fn install_bun_for_theme_builder_with(
-  bundled_bun: Option<&Path>,
-) -> Result<ThemeBuilderRuntimeStatus, String> {
-  if bundled_bun.is_some_and(|p| p.is_file()) || resolve_bun().is_some() || resolve_bunx().is_some()
-  {
-    return Ok(check_theme_builder_runtime_with(bundled_bun));
-  }
-
-  tracing::info!("installing Bun for Theme Builder (multi-mirror)…");
-  install_bun_multi_mirror().await?;
-
-  let status = check_theme_builder_runtime_with(bundled_bun);
-  if status.has_bun || status.has_bunx {
-    tracing::info!(
-      runner = ?status.runner_path,
-      "Bun installed for Theme Builder"
-    );
-    Ok(status)
-  } else {
-    Err(
-      "Bun installer finished but `bun`/`bunx` was not found under ~/.bun/bin. \
-       Install from https://bun.sh then restart CDXTheme."
-        .into(),
-    )
-  }
-}
-
 /// Build the ACP agent process config (Codex adapter).
 ///
 /// Preference order:
 /// 1. `codex-acp` on PATH
 /// 2. App-bundled Bun sidecar (`bun_path`) via `bun x`
-/// 3. `bunx` / `bun x` (user-installed Bun)
-/// 4. `npx -y` (user-installed Node/npm)
-///
-/// Does **not** auto-install Bun — Theme Builder UI gates on
-/// [`check_theme_builder_runtime`] / [`install_bun_for_theme_builder`].
 ///
 /// `path_prepend` directories (e.g. folder of bundled `cdxthemex` / `bun`) are put first on PATH.
 /// `extra_env` is merged into the agent process environment.
-/// `bun_path` is an absolute path to the preferred Bun executable when known.
+/// `bun_path` is the absolute path to the app-bundled Bun executable.
 fn build_acp_agent(
   path_prepend: &[PathBuf],
   extra_env: &[(String, String)],
@@ -562,10 +432,6 @@ fn build_acp_agent(
     && let Some(dir) = codex.parent()
   {
     prepend_path_env(&mut path_env, dir);
-  }
-  // Prefer known Bun install dir if present (even when not yet on PATH).
-  if let Some(dir) = bun_bin_dir() {
-    prepend_path_env(&mut path_env, &dir);
   }
   // Parent of app-bundled bun (triple-suffixed in dev, plain `bun` in prod).
   if let Some(bun) = bun_path.filter(|p| p.is_file())
@@ -583,7 +449,7 @@ fn build_acp_agent(
     );
   }
 
-  // Preferred: absolute path to app-bundled Bun (always use `bun x`).
+  // App-bundled Bun: `bun x @agentclientprotocol/codex-acp@latest`
   if let Some(bun) = bun_path.filter(|p| p.is_file()) {
     let label = format!("{} x {}", bun.display(), CODEX_ACP_PKG);
     return make_acp_agent(
@@ -594,19 +460,9 @@ fn build_acp_agent(
     );
   }
 
-  let has_bun = resolve_bun().is_some() || resolve_bunx().is_some();
-  let has_npx = resolve_npx().is_some();
-
-  if has_bun {
-    return acp_via_bunx(&path_env, extra_env);
-  }
-  if has_npx {
-    return acp_via_npx(&path_env, extra_env);
-  }
-
   Err(
-    "Theme Builder needs Bun (`bunx`) or Node.js (`npx`) to run codex-acp. \
-     Open Theme Builder and use Install Bun, or install from https://bun.sh."
+    "Theme Builder needs the app-bundled Bun sidecar to run codex-acp. \
+     Rebuild the app (prepare-bun-sidecar) or install `codex-acp` on PATH."
       .into(),
   )
 }
@@ -624,440 +480,25 @@ fn make_acp_agent(
   Ok((AcpAgent::new(cfg), label))
 }
 
-fn bun_install_root() -> Option<PathBuf> {
-  dirs_home().map(|h| h.join(".bun"))
-}
-
-fn bun_bin_dir() -> Option<PathBuf> {
-  bun_install_root()
-    .map(|h| h.join("bin"))
-    .filter(|p| p.is_dir())
-}
-
-fn resolve_bun() -> Option<PathBuf> {
-  which("bun").or_else(|| {
-    dirs_home()
-      .map(|h| h.join(".bun").join("bin").join(bun_exe_name()))
-      .filter(|p| p.is_file())
-  })
-}
-
-fn resolve_bunx() -> Option<PathBuf> {
-  which("bunx").or_else(|| {
-    dirs_home()
-      .map(|h| h.join(".bun").join("bin").join(bunx_exe_name()))
-      .filter(|p| p.is_file())
-  })
-}
-
-fn resolve_npx() -> Option<PathBuf> {
-  which("npx")
-}
-
-#[cfg(windows)]
-fn bun_exe_name() -> &'static str {
-  "bun.exe"
-}
-#[cfg(not(windows))]
-fn bun_exe_name() -> &'static str {
-  "bun"
-}
-
-#[cfg(windows)]
-fn bunx_exe_name() -> &'static str {
-  "bunx.exe"
-}
-#[cfg(not(windows))]
-fn bunx_exe_name() -> &'static str {
-  "bunx"
-}
-
-/// Platform triple used by Bun release assets / `@oven/bun-*` packages.
-fn bun_release_target() -> Result<&'static str, String> {
-  #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-  {
-    return Ok("darwin-aarch64");
-  }
-  #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-  {
-    return Ok("darwin-x64");
-  }
-  #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
-  {
-    return Ok("linux-aarch64");
-  }
-  #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-  {
-    return Ok("linux-x64");
-  }
-  #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
-  {
-    return Ok("windows-x64");
-  }
-  #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
-  {
-    return Ok("windows-aarch64");
-  }
-  #[allow(unreachable_code)]
-  Err(format!(
-    "unsupported platform for Bun install ({}-{})",
-    std::env::consts::OS,
-    std::env::consts::ARCH
-  ))
-}
-
-/// Install Bun by trying install scripts and direct binary mirrors in order.
-async fn install_bun_multi_mirror() -> Result<(), String> {
-  let mut errors: Vec<String> = Vec::new();
-
-  // 1) Official / mirrored install scripts (handle PATH, bunx shim, unzip).
-  match install_bun_via_scripts() {
-    Ok(()) if resolve_bun().is_some() || resolve_bunx().is_some() => return Ok(()),
-    Ok(()) => errors.push("install script finished but bun binary missing".into()),
-    Err(e) => {
-      tracing::warn!(error = %e, "Bun install script path failed");
-      errors.push(e);
-    }
-  }
-
-  // 2) Direct binary download (GitHub releases zip + jsDelivr / unpkg npm packages).
-  match install_bun_via_direct_download().await {
-    Ok(()) if resolve_bun().is_some() || resolve_bunx().is_some() => return Ok(()),
-    Ok(()) => errors.push("direct download finished but bun binary missing".into()),
-    Err(e) => {
-      tracing::warn!(error = %e, "Bun direct download failed");
-      errors.push(e);
-    }
-  }
-
-  Err(format!(
-    "failed to install Bun from all mirrors. Tried official script, GitHub, and jsDelivr. \
-     Last errors: {}. Install manually from https://bun.sh",
-    errors.join(" | ")
-  ))
-}
-
-fn install_bun_via_scripts() -> Result<(), String> {
-  #[cfg(windows)]
-  {
-    // PowerShell installers — try official hosts in order.
-    const SCRIPT_URLS: &[&str] = &[
-      "https://bun.sh/install.ps1",
-      "https://bun.com/install.ps1",
-      // jsDelivr mirror of oven-sh website install script when published
-      "https://cdn.jsdelivr.net/gh/oven-sh/bun@main/src/cli/install.ps1",
-    ];
-    let mut last = String::from("no script URL tried");
-    for url in SCRIPT_URLS {
-      let cmd = format!("irm {url} | iex");
-      tracing::info!(url, "trying Bun PowerShell installer");
-      match std::process::Command::new("powershell")
-        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &cmd])
-        .status()
-      {
-        Ok(status) if status.success() => {
-          if resolve_bun().is_some() || resolve_bunx().is_some() {
-            return Ok(());
-          }
-          last = format!("{url}: success but bun not found");
-        }
-        Ok(status) => last = format!("{url}: exit {status}"),
-        Err(e) => last = format!("{url}: {e}"),
-      }
-    }
-    return Err(format!("PowerShell Bun install failed ({last})"));
-  }
-
-  #[cfg(not(windows))]
-  {
-    // curl | bash installers — try multiple script hosts.
-    const SCRIPT_URLS: &[&str] = &[
-      "https://bun.sh/install",
-      "https://bun.com/install",
-      // GitHub raw (install script lives on bun.sh; also try oven-sh docs mirrors)
-      "https://raw.githubusercontent.com/oven-sh/bun/main/src/cli/install.sh",
-      "https://cdn.jsdelivr.net/gh/oven-sh/bun@main/src/cli/install.sh",
-    ];
-    let mut last = String::from("no script URL tried");
-    for url in SCRIPT_URLS {
-      tracing::info!(url, "trying Bun install script");
-      let shell = format!("curl -fsSL {url} | bash");
-      match std::process::Command::new("bash")
-        .args(["-lc", &shell])
-        .status()
-      {
-        Ok(status) if status.success() => {
-          if resolve_bun().is_some() || resolve_bunx().is_some() {
-            return Ok(());
-          }
-          last = format!("{url}: success but bun not found");
-        }
-        Ok(status) => last = format!("{url}: exit {status}"),
-        Err(e) => last = format!("{url}: {e}"),
-      }
-    }
-    Err(format!("bash Bun install failed ({last})"))
-  }
-}
-
-async fn install_bun_via_direct_download() -> Result<(), String> {
-  let target = bun_release_target()?;
-  let home = dirs_home().ok_or_else(|| "HOME/USERPROFILE not set".to_string())?;
-  let install_root = home.join(".bun");
-  let bin_dir = install_root.join("bin");
-  std::fs::create_dir_all(&bin_dir).map_err(|e| format!("create ~/.bun/bin: {e}"))?;
-
-  let dest = bin_dir.join(bun_exe_name());
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(180))
-    .redirect(reqwest::redirect::Policy::limited(10))
-    .user_agent("CDXTheme-ThemeBuilder/0.1")
-    .build()
-    .map_err(|e| format!("http client: {e}"))?;
-
-  // Prefer zip from GitHub (full release layout), then raw binary from npm CDNs.
-  let zip_urls = [
-    format!("https://github.com/oven-sh/bun/releases/latest/download/bun-{target}.zip"),
-    // jsDelivr GitHub release proxy
-    format!("https://cdn.jsdelivr.net/gh/oven-sh/bun-releases@latest/bun-{target}.zip"),
-    // ghproxy-style is unreliable; skip. npmmirror zip of GitHub:
-    format!("https://npmmirror.com/mirrors/bun/latest/bun-{target}.zip"),
-  ];
-
-  let mut last_err = String::new();
-  for url in &zip_urls {
-    tracing::info!(%url, "downloading Bun zip");
-    match download_bytes(&client, url).await {
-      Ok(bytes) if bytes.len() > 1_000_000 => match extract_bun_zip_to_bin(&bytes, &bin_dir) {
-        Ok(()) => {
-          ensure_bunx_shim(&bin_dir)?;
-          if dest.is_file() {
-            return Ok(());
-          }
-          last_err = format!("{url}: extracted but {dest:?} missing");
-        }
-        Err(e) => last_err = format!("{url}: extract failed: {e}"),
-      },
-      Ok(bytes) => last_err = format!("{url}: unexpected size {}", bytes.len()),
-      Err(e) => last_err = format!("{url}: {e}"),
-    }
-  }
-
-  // Raw executable from @oven/bun-* npm packages (jsDelivr / unpkg).
-  let npm_pkg = format!("@oven/bun-{target}");
-  let exe = bun_exe_name();
-  let binary_urls = [
-    format!("https://cdn.jsdelivr.net/npm/{npm_pkg}/bin/{exe}"),
-    format!("https://unpkg.com/{npm_pkg}/bin/{exe}"),
-    format!("https://registry.npmmirror.com/{npm_pkg}/latest"),
-  ];
-
-  for url in &binary_urls {
-    // npmmirror registry returns JSON — skip pure registry URL for binary write.
-    if url.contains("registry.npmmirror.com") {
-      continue;
-    }
-    tracing::info!(%url, "downloading Bun binary");
-    match download_bytes(&client, url).await {
-      Ok(bytes) if bytes.len() > 1_000_000 => {
-        std::fs::write(&dest, &bytes).map_err(|e| format!("write bun: {e}"))?;
-        #[cfg(unix)]
-        {
-          use std::os::unix::fs::PermissionsExt;
-          let mut perms = std::fs::metadata(&dest)
-            .map_err(|e| format!("stat bun: {e}"))?
-            .permissions();
-          perms.set_mode(0o755);
-          std::fs::set_permissions(&dest, perms).map_err(|e| format!("chmod bun: {e}"))?;
-        }
-        ensure_bunx_shim(&bin_dir)?;
-        if dest.is_file() {
-          return Ok(());
-        }
-      }
-      Ok(bytes) => last_err = format!("{url}: unexpected size {}", bytes.len()),
-      Err(e) => last_err = format!("{url}: {e}"),
-    }
-  }
-
-  Err(format!("direct Bun download failed ({last_err})"))
-}
-
-async fn download_bytes(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, String> {
-  let resp = client
-    .get(url)
-    .send()
-    .await
-    .map_err(|e| format!("GET {url}: {e}"))?;
-  if !resp.status().is_success() {
-    return Err(format!("GET {url}: HTTP {}", resp.status()));
-  }
-  resp
-    .bytes()
-    .await
-    .map(|b| b.to_vec())
-    .map_err(|e| format!("read body {url}: {e}"))
-}
-
-fn extract_bun_zip_to_bin(zip_bytes: &[u8], bin_dir: &Path) -> Result<(), String> {
-  // Write zip to a temp file and use system unzip / Expand-Archive (no zip crate dep).
-  let tmp_dir = std::env::temp_dir().join(format!("cdxtheme-bun-{}", std::process::id()));
-  let _ = std::fs::remove_dir_all(&tmp_dir);
-  std::fs::create_dir_all(&tmp_dir).map_err(|e| format!("temp dir: {e}"))?;
-  let zip_path = tmp_dir.join("bun.zip");
-  std::fs::write(&zip_path, zip_bytes).map_err(|e| format!("write zip: {e}"))?;
-
-  #[cfg(windows)]
-  {
-    let expand = format!(
-      "Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
-      zip_path.display(),
-      tmp_dir.display()
-    );
-    let status = std::process::Command::new("powershell")
-      .args(["-NoProfile", "-Command", &expand])
-      .status()
-      .map_err(|e| format!("Expand-Archive: {e}"))?;
-    if !status.success() {
-      let _ = std::fs::remove_dir_all(&tmp_dir);
-      return Err(format!("Expand-Archive exit {status}"));
-    }
-  }
-  #[cfg(not(windows))]
-  {
-    let status = std::process::Command::new("unzip")
-      .args([
-        "-o",
-        &zip_path.to_string_lossy(),
-        "-d",
-        &tmp_dir.to_string_lossy(),
-      ])
-      .status()
-      .map_err(|e| {
-        format!("unzip failed ({e}). Install `unzip` or use the official Bun installer.")
-      })?;
-    if !status.success() {
-      let _ = std::fs::remove_dir_all(&tmp_dir);
-      return Err(format!("unzip exit {status}"));
-    }
-  }
-
-  // Release zip layout: bun-<target>/bun[.exe]
-  let exe_name = bun_exe_name();
-  let found = find_file_named(&tmp_dir, exe_name)
-    .ok_or_else(|| format!("could not find {exe_name} inside downloaded zip"))?;
-  let dest = bin_dir.join(exe_name);
-  std::fs::create_dir_all(bin_dir).map_err(|e| format!("create bin dir: {e}"))?;
-  std::fs::copy(&found, &dest).map_err(|e| format!("copy bun: {e}"))?;
-  #[cfg(unix)]
-  {
-    use std::os::unix::fs::PermissionsExt;
-    let mut perms = std::fs::metadata(&dest)
-      .map_err(|e| format!("stat bun: {e}"))?
-      .permissions();
-    perms.set_mode(0o755);
-    std::fs::set_permissions(&dest, perms).map_err(|e| format!("chmod bun: {e}"))?;
-  }
-
-  let _ = std::fs::remove_dir_all(&tmp_dir);
-  Ok(())
-}
-
-fn find_file_named(root: &Path, name: &str) -> Option<PathBuf> {
-  let mut stack = vec![root.to_path_buf()];
-  while let Some(dir) = stack.pop() {
-    let entries = std::fs::read_dir(&dir).ok()?;
-    for entry in entries.flatten() {
-      let path = entry.path();
-      if path.is_dir() {
-        stack.push(path);
-      } else if path.file_name().and_then(|n| n.to_str()) == Some(name) {
-        return Some(path);
-      }
-    }
-  }
-  None
-}
-
-fn ensure_bunx_shim(bin_dir: &Path) -> Result<(), String> {
-  let bun = bin_dir.join(bun_exe_name());
-  if !bun.is_file() {
-    return Ok(());
-  }
-  let bunx = bin_dir.join(bunx_exe_name());
-  if bunx.is_file() {
-    return Ok(());
-  }
-  #[cfg(windows)]
-  {
-    std::fs::copy(&bun, &bunx).map_err(|e| format!("create bunx.exe: {e}"))?;
-  }
-  #[cfg(unix)]
-  {
-    // Official installer links bunx → bun.
-    let _ = std::fs::remove_file(&bunx);
-    if std::os::unix::fs::symlink("bun", &bunx).is_err() {
-      std::fs::copy(&bun, &bunx).map_err(|e| format!("create bunx: {e}"))?;
-    }
-  }
-  Ok(())
-}
-
-fn acp_via_bunx(
-  path_env: &str,
-  extra_env: &[(String, String)],
-) -> Result<(AcpAgent, String), String> {
-  // Prefer bunx; fall back to `bun x` when bunx shim is missing.
-  if let Some(bunx) = resolve_bunx() {
-    let label = format!("{} {}", bunx.display(), CODEX_ACP_PKG);
-    return make_acp_agent(
-      AcpAgentConfig::new(&bunx).args([CODEX_ACP_PKG]),
-      label,
-      path_env,
-      extra_env,
-    );
-  }
-  if let Some(bun) = resolve_bun() {
-    let label = format!("{} x {}", bun.display(), CODEX_ACP_PKG);
-    return make_acp_agent(
-      AcpAgentConfig::new(&bun).args(["x", CODEX_ACP_PKG]),
-      label,
-      path_env,
-      extra_env,
-    );
-  }
-  Err(
-    "Bun is required to run codex-acp but was not found after install. \
-     Install from https://bun.sh and restart CDXTheme."
-      .into(),
-  )
-}
-
-fn acp_via_npx(
-  path_env: &str,
-  extra_env: &[(String, String)],
-) -> Result<(AcpAgent, String), String> {
-  let npx = resolve_npx().ok_or_else(|| "npx not found".to_string())?;
-  let label = format!("{} -y {CODEX_ACP_PKG}", npx.display());
-  make_acp_agent(
-    AcpAgentConfig::new(&npx).args(["-y", CODEX_ACP_PKG]),
-    label,
-    path_env,
-    extra_env,
-  )
-}
-
-/// List saved sessions (ACP `session/list` when available, else `~/.codex`).
+/// List saved sessions from `~/.codex` on disk (no ACP spawn).
 pub fn list_sessions(limit: Option<usize>) -> Result<Vec<CodexSessionSummary>, String> {
   let limit = limit.unwrap_or(50).clamp(1, 200);
-  // Filesystem is reliable offline and does not require spawning npx.
   list_sessions_from_disk(limit)
 }
 
-/// Async list that prefers ACP `session/list`, falls back to disk.
+/// Async list that prefers ACP `session/list` when a Bun/agent path is available,
+/// else falls back to disk.
 pub async fn list_sessions_async(limit: Option<usize>) -> Result<Vec<CodexSessionSummary>, String> {
+  list_sessions_async_with(limit, None).await
+}
+
+/// Like [`list_sessions_async`], passing an app-bundled Bun path for ACP list.
+pub async fn list_sessions_async_with(
+  limit: Option<usize>,
+  bun_path: Option<PathBuf>,
+) -> Result<Vec<CodexSessionSummary>, String> {
   let limit = limit.unwrap_or(50).clamp(1, 200);
-  match list_sessions_via_acp(limit).await {
+  match list_sessions_via_acp(limit, bun_path.as_deref()).await {
     Ok(list) if !list.is_empty() => Ok(list),
     Ok(_) => list_sessions_from_disk(limit),
     Err(e) => {
@@ -1067,8 +508,11 @@ pub async fn list_sessions_async(limit: Option<usize>) -> Result<Vec<CodexSessio
   }
 }
 
-async fn list_sessions_via_acp(limit: usize) -> Result<Vec<CodexSessionSummary>, String> {
-  let (agent, _) = build_acp_agent(&[], &[], None)?;
+async fn list_sessions_via_acp(
+  limit: usize,
+  bun_path: Option<&Path>,
+) -> Result<Vec<CodexSessionSummary>, String> {
+  let (agent, _) = build_acp_agent(&[], &[], bun_path)?;
   // List without cwd filter so all Codex history is available for intersection.
   let result = Client
     .builder()
@@ -1775,8 +1219,8 @@ pub struct CodexChatOptions {
   /// Preferred model id for this turn (`session/set_config_option` id `model`).
   /// When set, applied after `session/new` or `session/load` and before `session/prompt`.
   pub model: Option<String>,
-  /// Absolute path to app-bundled Bun (`externalBin` sidecar). When set and present,
-  /// used before system Bun / npx to spawn `bun x @agentclientprotocol/codex-acp`.
+  /// Absolute path to app-bundled Bun (`externalBin` sidecar). Used to spawn
+  /// `bun x @agentclientprotocol/codex-acp` when `codex-acp` is not on PATH.
   pub bun_path: Option<PathBuf>,
 }
 
@@ -1992,7 +1436,7 @@ pub async fn send_and_wait_with(
         });
       }
       return Err(format!(
-        "ACP error: {e}. Install Bun (https://bun.sh) or put `codex-acp` / `npx` on PATH. \
+        "ACP error: {e}. Theme Builder uses the app-bundled Bun sidecar (or `codex-acp` on PATH). \
          Sign in with `codex login` if needed."
       ));
     }

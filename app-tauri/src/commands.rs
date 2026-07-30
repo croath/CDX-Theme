@@ -345,7 +345,8 @@ pub async fn list_codex_sessions(
   limit: Option<usize>,
   app: AppHandle,
 ) -> Result<Vec<cdx_theme_core::CodexSessionSummary>, String> {
-  let codex = cdx_theme_core::list_codex_sessions_async(Some(200)).await?;
+  let bun_path = crate::theme_builder_store::resolve_bundled_bun(&app);
+  let codex = cdx_theme_core::list_codex_sessions_async_with(Some(200), bun_path).await?;
   crate::theme_builder_store::list_intersection(&app, codex, limit)
 }
 
@@ -672,26 +673,4 @@ pub async fn save_theme_builder_hero(
   })
   .await
   .map_err(|e| format!("save hero task failed: {e}"))?
-}
-
-/// Theme Builder: probe host for `codex-acp` / `bunx` / `npx` (incl. app-bundled Bun).
-#[tauri::command]
-pub async fn check_theme_builder_runtime(
-  app: tauri::AppHandle,
-) -> Result<cdx_theme_core::ThemeBuilderRuntimeStatus, String> {
-  let bundled = crate::theme_builder_store::resolve_bundled_bun(&app);
-  tokio::task::spawn_blocking(move || {
-    cdx_theme_core::check_theme_builder_runtime_with(bundled.as_deref())
-  })
-  .await
-  .map_err(|e| format!("runtime check task failed: {e}"))
-}
-
-/// Theme Builder: download + install Bun (multi-mirror), or use app-bundled Bun if present.
-#[tauri::command]
-pub async fn install_bun_for_theme_builder(
-  app: tauri::AppHandle,
-) -> Result<cdx_theme_core::ThemeBuilderRuntimeStatus, String> {
-  let bundled = crate::theme_builder_store::resolve_bundled_bun(&app);
-  cdx_theme_core::install_bun_for_theme_builder_with(bundled.as_deref()).await
 }

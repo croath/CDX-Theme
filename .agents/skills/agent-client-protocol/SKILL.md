@@ -65,7 +65,7 @@ With ACP:
 
 1. Client **spawns** the agent (or adapter) as a subprocess.
 2. Messages are **JSON-RPC** on **stdio**.
-3. On Unix, tearing down the connection typically kills the process group (including wrappers like `npx`).
+3. On Unix, tearing down the connection typically kills the process group (including child runners like bundled Bun `x`).
 
 ### Remote (WIP)
 
@@ -79,14 +79,15 @@ Codex CLI does not expose ACP natively as the primary UX. The usual stack is:
 CDXTheme (ACP Client)
     │  agent-client-protocol Rust SDK
     ▼
-codex-acp  (ACP adapter: local binary or npx @agentclientprotocol/codex-acp)
+codex-acp  (PATH binary, or app-bundled Bun: `bun x @agentclientprotocol/codex-acp`)
     │
     ▼
 Codex CLI  (ChatGPT-bundled `codex` and/or PATH)
 ```
 
-Official SDK helper: `AcpAgent::codex()` → `npx -y @agentclientprotocol/codex-acp@latest`.  
-Prefer a local `codex-acp` on `PATH` when available. Put ChatGPT’s bundled `codex` on `PATH` so the adapter can find it.
+CDXTheme prefers a local `codex-acp` on `PATH`, else the **app-bundled Bun** sidecar
+(`bun x @agentclientprotocol/codex-acp@latest`). Put ChatGPT’s bundled `codex` on `PATH`
+so the adapter can find it.
 
 ---
 
@@ -337,15 +338,16 @@ re-applied after every `session/new` or `session/load`, not only on first open.
 ### Agent resolution (order)
 
 1. `codex-acp` on `PATH`
-2. `bunx` / `npx -y @agentclientprotocol/codex-acp@latest`
+2. App-bundled Bun sidecar: `bun x @agentclientprotocol/codex-acp@latest`
 3. Prepend ChatGPT-bundled `codex` directory onto agent `PATH`
 
 ### Runtime requirements
 
-- **Bun/Node** if using the default bunx/npx adapter (or install `codex-acp` yourself).
+- **App-bundled Bun** sidecar (staged by `prepare-bun-sidecar`), or `codex-acp` on PATH.
 - **Codex CLI** (bundled with ChatGPT app and/or on PATH).
 - **Auth**: `codex login` (or existing `~/.codex/auth.json`) when the adapter/CLI needs it.
 - Theme Builder workspace cwd: app data `…/theme_builder/{id}` (absolute path for `session/new|load`).
+- No host bunx/npx detect and no Install Bun UI — the app ships Bun.
 
 ### Security note
 

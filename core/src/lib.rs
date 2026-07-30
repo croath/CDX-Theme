@@ -57,11 +57,10 @@ pub use layout::{
 
 pub use codex_chat::{
   CodexChatOptions, CodexChatResult, CodexModelOption, CodexModelsList, CodexSessionDetail,
-  CodexSessionMessage, CodexSessionSummary, CodexStreamCallback, ThemeBuilderRuntimeStatus,
-  check_theme_builder_runtime, check_theme_builder_runtime_with, delete_codex_session,
-  find_codex_cli, install_bun_for_theme_builder, install_bun_for_theme_builder_with,
-  list_models as list_codex_models, list_sessions as list_codex_sessions,
-  list_sessions_async as list_codex_sessions_async, load_session as load_codex_session,
+  CodexSessionMessage, CodexSessionSummary, CodexStreamCallback, delete_codex_session,
+  find_codex_cli, list_models as list_codex_models, list_sessions as list_codex_sessions,
+  list_sessions_async as list_codex_sessions_async,
+  list_sessions_async_with as list_codex_sessions_async_with, load_session as load_codex_session,
   rename_codex_session, send_and_wait as codex_chat_send_and_wait,
   send_and_wait_with as codex_chat_send_and_wait_with,
 };

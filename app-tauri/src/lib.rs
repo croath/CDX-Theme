@@ -445,8 +445,6 @@ pub fn run() {
       commands::delete_theme_builder_session,
       commands::get_codex_session,
       commands::start_theme_build,
-      commands::check_theme_builder_runtime,
-      commands::install_bun_for_theme_builder,
       get_app_update_status,
       download_app_update,
       install_app_update,
