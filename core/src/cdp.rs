@@ -69,8 +69,8 @@ impl CdpSession {
         while let Some(msg) = read.next().await {
           match msg {
             Ok(Message::Text(text)) => {
-              if let Ok(value) = serde_json::from_str::<Value>(&text) {
-                if let Some(id) = value.get("id").and_then(|v| v.as_u64()) {
+              if let Ok(value) = serde_json::from_str::<Value>(&text)
+                && let Some(id) = value.get("id").and_then(|v| v.as_u64()) {
                   let result = if let Some(err) = value.get("error") {
                     let message = err
                       .get("message")
@@ -85,7 +85,6 @@ impl CdpSession {
                     let _ = tx.send(result);
                   }
                 }
-              }
             }
             Ok(Message::Close(_)) | Err(_) => break,
             _ => {}
@@ -149,7 +148,6 @@ impl CdpSession {
       .map_err(|e| {
         // Drop pending entry on send failure
         let pending = self.pending.clone();
-        let id = id;
         tokio::spawn(async move {
           pending.lock().await.remove(&id);
         });

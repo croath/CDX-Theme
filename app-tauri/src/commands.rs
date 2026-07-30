@@ -409,6 +409,8 @@ pub async fn get_codex_session(
 /// - `session_id`: resume via `session/load` (cwd taken from stored workspace when omitted)
 /// - On success, auto-saves under `{app_data_dir}/theme_builder/sessions.json`
 #[tauri::command(rename_all = "snake_case")]
+// IPC surface keeps discrete args (matches app-ui api.rs); grouping would break invoke shapes.
+#[allow(clippy::too_many_arguments)]
 pub async fn codex_chat(
   prompt: String,
   session_id: Option<String>,
@@ -427,13 +429,13 @@ pub async fn codex_chat(
     .map(|s| s.trim().to_string())
     .filter(|s| !s.is_empty());
 
-  if let Some(ref id) = resume_id {
-    if !crate::theme_builder_store::is_tracked(&app, id) {
-      return Err(
-        "session is not a Theme Builder session (not found in app data). Start a theme build first."
-          .into(),
-      );
-    }
+  if let Some(ref id) = resume_id
+    && !crate::theme_builder_store::is_tracked(&app, id)
+  {
+    return Err(
+      "session is not a Theme Builder session (not found in app data). Start a theme build first."
+        .into(),
+    );
   }
 
   // Resolve ACP cwd: explicit arg → stored workspace for resume → error for new chat.
@@ -442,11 +444,11 @@ pub async fn codex_chat(
     .map(str::trim)
     .filter(|s| !s.is_empty())
     .map(std::path::PathBuf::from);
-  if cwd_path.is_none() {
-    if let Some(ref id) = resume_id {
-      cwd_path =
-        crate::theme_builder_store::workspace_path_for(&app, id).map(std::path::PathBuf::from);
-    }
+  if cwd_path.is_none()
+    && let Some(ref id) = resume_id
+  {
+    cwd_path =
+      crate::theme_builder_store::workspace_path_for(&app, id).map(std::path::PathBuf::from);
   }
   let Some(cwd) = cwd_path else {
     return Err(
@@ -469,12 +471,12 @@ pub async fn codex_chat(
     .ok_or_else(|| "cdxthemex parent dir missing".to_string())?;
   let bun_path = crate::theme_builder_store::resolve_bundled_bun(&app);
   let mut path_prepend = vec![cli_dir];
-  if let Some(ref bun) = bun_path {
-    if let Some(dir) = bun.parent() {
-      let dir = dir.to_path_buf();
-      if !path_prepend.iter().any(|d| d == &dir) {
-        path_prepend.push(dir);
-      }
+  if let Some(ref bun) = bun_path
+    && let Some(dir) = bun.parent()
+  {
+    let dir = dir.to_path_buf();
+    if !path_prepend.iter().any(|d| d == &dir) {
+      path_prepend.push(dir);
     }
   }
 
@@ -568,14 +570,14 @@ pub async fn codex_chat(
   }
 
   // Detect packed theme for the UI Apply button (do not install/apply here).
-  if result.submitted {
-    if let Some(pkg) = crate::theme_builder_store::find_newest_theme_package(&cwd) {
-      tracing::info!(
-        package = %pkg.display(),
-        "theme builder package ready for manual apply"
-      );
-      result.package_path = Some(pkg.to_string_lossy().into_owned());
-    }
+  if result.submitted
+    && let Some(pkg) = crate::theme_builder_store::find_newest_theme_package(&cwd)
+  {
+    tracing::info!(
+      package = %pkg.display(),
+      "theme builder package ready for manual apply"
+    );
+    result.package_path = Some(pkg.to_string_lossy().into_owned());
   }
 
   Ok(result)
@@ -678,13 +680,11 @@ pub async fn check_theme_builder_runtime(
   app: tauri::AppHandle,
 ) -> Result<cdx_theme_core::ThemeBuilderRuntimeStatus, String> {
   let bundled = crate::theme_builder_store::resolve_bundled_bun(&app);
-  Ok(
-    tokio::task::spawn_blocking(move || {
-      cdx_theme_core::check_theme_builder_runtime_with(bundled.as_deref())
-    })
-    .await
-    .map_err(|e| format!("runtime check task failed: {e}"))?,
-  )
+  tokio::task::spawn_blocking(move || {
+    cdx_theme_core::check_theme_builder_runtime_with(bundled.as_deref())
+  })
+  .await
+  .map_err(|e| format!("runtime check task failed: {e}"))
 }
 
 /// Theme Builder: download + install Bun (multi-mirror), or use app-bundled Bun if present.

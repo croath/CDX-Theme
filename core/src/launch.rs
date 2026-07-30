@@ -175,7 +175,7 @@ fn chrono_like_now() -> String {
 pub fn find_chatgpt_app() -> Option<PathBuf> {
   #[cfg(target_os = "macos")]
   {
-    return find_chatgpt_app_macos();
+    find_chatgpt_app_macos()
   }
   #[cfg(target_os = "windows")]
   {
@@ -206,8 +206,7 @@ fn find_chatgpt_app_macos() -> Option<PathBuf> {
   if let Ok(output) = Command::new("mdfind")
     .arg("kMDItemCFBundleIdentifier == \"com.openai.codex\"")
     .output()
-  {
-    if output.status.success() {
+    && output.status.success() {
       let text = String::from_utf8_lossy(&output.stdout);
       for line in text.lines() {
         let p = PathBuf::from(line.trim());
@@ -217,7 +216,6 @@ fn find_chatgpt_app_macos() -> Option<PathBuf> {
         }
       }
     }
-  }
   None
 }
 
@@ -343,11 +341,11 @@ fn find_via_where(names: &[&str]) -> Option<PathBuf> {
 fn is_chatgpt_running() -> bool {
   #[cfg(target_os = "macos")]
   {
-    return Command::new("pgrep")
+    Command::new("pgrep")
       .args(["-f", "/ChatGPT.app/Contents/MacOS/ChatGPT"])
       .output()
       .map(|o| o.status.success() && !o.stdout.is_empty())
-      .unwrap_or(false);
+      .unwrap_or(false)
   }
   #[cfg(target_os = "windows")]
   {

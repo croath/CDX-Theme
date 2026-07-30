@@ -70,13 +70,11 @@ fn build_image_data_urls(theme: &LoadedTheme) -> serde_json::Map<String, Value> 
     image_map.insert(name.clone(), Value::String(art.data_url()));
   }
   // If no images.hero but art exists, use art as hero.
-  if !image_map.contains_key("hero") {
-    if let Some(art) = &theme.art {
-      if !art.base64.is_empty() {
+  if !image_map.contains_key("hero")
+    && let Some(art) = &theme.art
+      && !art.base64.is_empty() {
         image_map.insert("hero".into(), Value::String(art.data_url()));
       }
-    }
-  }
   // Last-resort 1×1 so chrome CSS vars never go missing entirely.
   if image_map.is_empty() {
     image_map.insert(

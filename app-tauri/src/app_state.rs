@@ -44,8 +44,10 @@ impl Default for AppState {
 
 impl AppState {
   pub fn new(cdp_port: u16) -> Self {
-    let mut status = CdpServerStatus::default();
-    status.port = cdp_port;
+    let status = CdpServerStatus {
+      port: cdp_port,
+      ..Default::default()
+    };
     Self {
       cdp: Mutex::new(status),
       cdp_port: Mutex::new(cdp_port),

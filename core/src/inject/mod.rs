@@ -278,7 +278,7 @@ async fn apply_expression(
   let mut results = Vec::new();
   let mut any_hard_fail = false;
   let verify_expr = verify_expression(Some(public));
-  let preflight_timeout = options.timeout_ms.min(8_000).max(2_000);
+  let preflight_timeout = options.timeout_ms.clamp(2_000, 8_000);
 
   // Drop previous early scripts (tracked ids) by opening sessions later if needed.
   let mut next_early_ids: HashMap<String, String> = HashMap::new();
@@ -320,10 +320,10 @@ async fn apply_expression(
       .lock()
       .ok()
       .and_then(|g| g.get(&target.id).cloned());
-    if let Some(old_id) = old_early_id {
-      if let Err(e) = session.remove_script_on_new_document(&old_id).await {
-        tracing::debug!("remove old early script on {}: {e}", target.id);
-      }
+    if let Some(old_id) = old_early_id
+      && let Err(e) = session.remove_script_on_new_document(&old_id).await
+    {
+      tracing::debug!("remove old early script on {}: {e}", target.id);
     }
 
     // Register early inject so SPA document reloads re-apply the skin.
@@ -464,10 +464,10 @@ pub async fn restore_default_theme(options: InjectOptions) -> Result<InjectRunRe
         continue;
       }
     };
-    if let Some(id) = early_ids.get(&target.id) {
-      if let Err(e) = session.remove_script_on_new_document(id).await {
-        tracing::debug!("remove early script on restore {}: {e}", target.id);
-      }
+    if let Some(id) = early_ids.get(&target.id)
+      && let Err(e) = session.remove_script_on_new_document(id).await
+    {
+      tracing::debug!("remove early script on restore {}: {e}", target.id);
     }
     let result = session.evaluate(REMOVE_EXPRESSION).await;
     session.close().await;

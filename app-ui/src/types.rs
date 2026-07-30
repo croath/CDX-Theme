@@ -80,7 +80,8 @@ impl Locale {
       "ko-KR" | "ko" | "kr" => Locale::KoKr,
       "de-DE" | "de" => Locale::DeDe,
       "es-ES" | "es" => Locale::EsEs,
-      "en-US" | "en" | _ => Locale::EnUs,
+      "en-US" | "en" => Locale::EnUs,
+      _ => Locale::EnUs,
     }
   }
 }

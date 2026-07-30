@@ -81,11 +81,10 @@ fn persist(key: &str, value: &str) {
 }
 
 fn load_is_dark() -> bool {
-  if let Some(s) = storage() {
-    if let Ok(Some(v)) = s.get_item(THEME_KEY) {
+  if let Some(s) = storage()
+    && let Ok(Some(v)) = s.get_item(THEME_KEY) {
       return v == "dark";
     }
-  }
   window()
     .and_then(|w| w.match_media("(prefers-color-scheme: dark)").ok().flatten())
     .map(|m| m.matches())
