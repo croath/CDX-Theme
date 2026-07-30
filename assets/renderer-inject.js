@@ -182,17 +182,17 @@
     chrome.setAttribute("data-cdxtheme-chrome", "1");
     chrome.setAttribute("role", "presentation");
 
-    var brand = document.createElement("div");
-    brand.className = "dream-brand";
-    brand.innerHTML =
-      '<span class="dream-note" aria-hidden="true">✦</span>' +
-      '<span class="dream-brand-text">' +
-      '<b class="dream-brand-title"></b>' +
-      '<small class="dream-brand-subtitle"></small>' +
-      "</span>";
+    // var brand = document.createElement("div");
+    // brand.className = "dream-brand";
+    // brand.innerHTML =
+    //   '<span class="dream-note" aria-hidden="true">✦</span>' +
+    //   '<span class="dream-brand-text">' +
+    //   '<b class="dream-brand-title"></b>' +
+    //   '<small class="dream-brand-subtitle"></small>' +
+    //   "</span>";
 
-    var signature = document.createElement("div");
-    signature.className = "dream-signature";
+    // var signature = document.createElement("div");
+    // signature.className = "dream-signature";
 
     var sparkles = document.createElement("div");
     sparkles.className = "dream-sparkles";
@@ -211,8 +211,8 @@
     polaroid.className = "dream-polaroid";
     polaroid.setAttribute("aria-hidden", "true");
 
-    chrome.appendChild(brand);
-    chrome.appendChild(signature);
+    // chrome.appendChild(brand);
+    // chrome.appendChild(signature);
     chrome.appendChild(sparkles);
     chrome.appendChild(ribbon);
     chrome.appendChild(polaroid);
@@ -349,7 +349,7 @@
     layoutChrome(chrome, shellMain);
     layoutComposerPin(shellMain);
     updateChromeCopy(chrome);
-    syncHomeChromeDecor(chrome, Boolean(home));
+    // syncHomeChromeDecor(chrome, Boolean(home));
     return true;
   }
 
