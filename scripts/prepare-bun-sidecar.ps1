@@ -100,9 +100,9 @@ try {
         $downloaded = $true
         break
       }
-      $lastErr = "$url: download too small or missing"
+      $lastErr = "${url}: download too small or missing"
     } catch {
-      $lastErr = "$url: $($_.Exception.Message)"
+      $lastErr = "${url}: $($_.Exception.Message)"
     }
   }
 
