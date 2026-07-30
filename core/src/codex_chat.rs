@@ -125,9 +125,10 @@ pub struct CodexModelsList {
 /// Used to put Codex on PATH for the ACP adapter process.
 pub fn find_codex_cli() -> Result<PathBuf, String> {
   if let Some(bundled) = find_bundled_codex_cli()
-    && bundled.is_file() {
-      return Ok(bundled);
-    }
+    && bundled.is_file()
+  {
+    return Ok(bundled);
+  }
   if let Some(path) = which("codex") {
     return Ok(path);
   }
@@ -147,9 +148,10 @@ fn find_bundled_codex_cli() -> Option<PathBuf> {
         .and_then(|p| p.parent())
         .map(|contents| contents.join("Resources").join("codex"));
       if let Some(ref p) = resources
-        && p.is_file() {
-          return Some(p.clone());
-        }
+        && p.is_file()
+      {
+        return Some(p.clone());
+      }
     }
     for app in [
       PathBuf::from("/Applications/ChatGPT.app"),
@@ -260,16 +262,18 @@ pub fn list_models() -> CodexModelsList {
   let mut models = read_models_cache(&home.join("models_cache.json"));
   // Ensure the configured model appears even if the cache omitted it.
   if let Some(ref cur) = current
-    && !cur.is_empty() && !models.iter().any(|m| m.id == *cur) {
-      models.insert(
-        0,
-        CodexModelOption {
-          id: cur.clone(),
-          name: cur.clone(),
-          description: None,
-        },
-      );
-    }
+    && !cur.is_empty()
+    && !models.iter().any(|m| m.id == *cur)
+  {
+    models.insert(
+      0,
+      CodexModelOption {
+        id: cur.clone(),
+        name: cur.clone(),
+        description: None,
+      },
+    );
+  }
   if models.is_empty() {
     // Minimal fallback so the UI still shows a menu.
     for (id, name) in [
@@ -335,9 +339,11 @@ fn read_models_cache(path: &Path) -> Vec<CodexModelOption> {
     }
     // Prefer list-visible models; keep unknowns if visibility is absent.
     if let Some(vis) = item.get("visibility").and_then(|v| v.as_str())
-      && vis != "list" && vis != "default" {
-        continue;
-      }
+      && vis != "list"
+      && vis != "default"
+    {
+      continue;
+    }
     let name = item
       .get("display_name")
       .or_else(|| item.get("name"))
@@ -553,18 +559,20 @@ fn build_acp_agent(
   }
   // Ensure ChatGPT-bundled `codex` is visible to the adapter.
   if let Ok(codex) = find_codex_cli()
-    && let Some(dir) = codex.parent() {
-      prepend_path_env(&mut path_env, dir);
-    }
+    && let Some(dir) = codex.parent()
+  {
+    prepend_path_env(&mut path_env, dir);
+  }
   // Prefer known Bun install dir if present (even when not yet on PATH).
   if let Some(dir) = bun_bin_dir() {
     prepend_path_env(&mut path_env, &dir);
   }
   // Parent of app-bundled bun (triple-suffixed in dev, plain `bun` in prod).
   if let Some(bun) = bun_path.filter(|p| p.is_file())
-    && let Some(dir) = bun.parent() {
-      prepend_path_env(&mut path_env, dir);
-    }
+    && let Some(dir) = bun.parent()
+  {
+    prepend_path_env(&mut path_env, dir);
+  }
 
   if let Some(local) = which("codex-acp") {
     return make_acp_agent(
@@ -1179,9 +1187,10 @@ pub fn rename_codex_session(session_id: &str, thread_name: &str) -> Result<(), S
 
   upsert_session_index_name(session_id, name)?;
   if let Some(path) = find_rollout_path(&codex_home(), session_id)
-    && let Err(e) = patch_rollout_thread_name(&path, name) {
-      tracing::debug!(error = %e, path = %path.display(), "rollout thread_name patch skipped");
-    }
+    && let Err(e) = patch_rollout_thread_name(&path, name)
+  {
+    tracing::debug!(error = %e, path = %path.display(), "rollout thread_name patch skipped");
+  }
   tracing::info!(session = %session_id, name = %name, "codex session renamed");
   Ok(())
 }
@@ -1450,10 +1459,11 @@ pub fn load_session(session_id: &str) -> Result<CodexSessionDetail, String> {
   let mut title = "Untitled session".to_string();
   let mut updated_at = String::new();
   if let Ok(list) = list_sessions_from_disk(200)
-    && let Some(s) = list.into_iter().find(|s| s.id == session_id) {
-      title = s.title;
-      updated_at = s.updated_at;
-    }
+    && let Some(s) = list.into_iter().find(|s| s.id == session_id)
+  {
+    title = s.title;
+    updated_at = s.updated_at;
+  }
 
   let path = find_rollout_path(&home, session_id)
     .ok_or_else(|| format!("session rollout not found for id `{session_id}`"))?;
@@ -1461,9 +1471,10 @@ pub fn load_session(session_id: &str) -> Result<CodexSessionDetail, String> {
   let messages = parse_rollout_messages(&path)?;
   if updated_at.is_empty()
     && let Ok(meta) = std::fs::metadata(&path)
-      && let Ok(mtime) = meta.modified() {
-        updated_at = humantime_iso(mtime);
-      }
+    && let Ok(mtime) = meta.modified()
+  {
+    updated_at = humantime_iso(mtime);
+  }
 
   Ok(CodexSessionDetail {
     id: session_id.to_string(),
@@ -1534,29 +1545,31 @@ fn read_session_meta_from_rollout(path: &Path) -> Option<CodexSessionSummary> {
       continue;
     };
     if v.get("type").and_then(|t| t.as_str()) == Some("session_meta")
-      && let Some(payload) = v.get("payload") {
-        if let Some(s) = payload.get("id").and_then(|x| x.as_str()) {
-          id = s.to_string();
-        }
-        if let Some(s) = payload
-          .get("thread_name")
-          .or_else(|| payload.get("title"))
-          .and_then(|x| x.as_str())
-        {
-          title = s.to_string();
-        }
+      && let Some(payload) = v.get("payload")
+    {
+      if let Some(s) = payload.get("id").and_then(|x| x.as_str()) {
+        id = s.to_string();
       }
-  }
-  if id.is_empty()
-    && let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
-      let parts: Vec<&str> = name.split('-').collect();
-      if parts.len() >= 5 {
-        let candidate = parts[parts.len() - 5..].join("-");
-        if candidate.len() >= 32 {
-          id = candidate;
-        }
+      if let Some(s) = payload
+        .get("thread_name")
+        .or_else(|| payload.get("title"))
+        .and_then(|x| x.as_str())
+      {
+        title = s.to_string();
       }
     }
+  }
+  if id.is_empty()
+    && let Some(name) = path.file_stem().and_then(|s| s.to_str())
+  {
+    let parts: Vec<&str> = name.split('-').collect();
+    if parts.len() >= 5 {
+      let candidate = parts[parts.len() - 5..].join("-");
+      if candidate.len() >= 32 {
+        id = candidate;
+      }
+    }
+  }
   if id.is_empty() {
     return None;
   }
@@ -1674,12 +1687,13 @@ fn extract_message_text(payload: &Value) -> String {
       }
       let ty = item.get("type").and_then(|t| t.as_str()).unwrap_or("");
       if matches!(ty, "input_text" | "output_text" | "text")
-        && let Some(t) = item.get("text").and_then(|t| t.as_str()) {
-          if !out.is_empty() {
-            out.push('\n');
-          }
-          out.push_str(t);
+        && let Some(t) = item.get("text").and_then(|t| t.as_str())
+      {
+        if !out.is_empty() {
+          out.push('\n');
         }
+        out.push_str(t);
+      }
     }
   }
   out
@@ -1691,9 +1705,11 @@ fn push_dedup(messages: &mut Vec<CodexSessionMessage>, role: &str, content: Stri
     return;
   }
   if let Some(last) = messages.last()
-    && last.role == role && last.content == content {
-      return;
-    }
+    && last.role == role
+    && last.content == content
+  {
+    return;
+  }
   messages.push(CodexSessionMessage {
     role: role.to_string(),
     content,
@@ -1874,15 +1890,16 @@ pub async fn send_and_wait_with(
           }
         };
         if !rendered.is_empty()
-          && let Some(cb) = on_stream.as_ref() {
-            let mut last = last_streamed_handler
-              .lock()
-              .unwrap_or_else(|e| e.into_inner());
-            if *last != rendered {
-              *last = rendered.clone();
-              cb(rendered);
-            }
+          && let Some(cb) = on_stream.as_ref()
+        {
+          let mut last = last_streamed_handler
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+          if *last != rendered {
+            *last = rendered.clone();
+            cb(rendered);
           }
+        }
         Ok(())
       },
       agent_client_protocol::on_receive_notification!(),
@@ -2012,14 +2029,14 @@ pub async fn send_and_wait_with(
   // Fallback: load latest assistant text from Codex rollout if stream was empty.
   if reply.trim().is_empty()
     && let Ok(detail) = load_session(&session_id)
-      && let Some(last) = detail
-        .messages
-        .iter()
-        .rev()
-        .find(|m| m.role == "assistant" && !m.content.trim().is_empty())
-      {
-        reply = summarize_for_ui(&last.content);
-      }
+    && let Some(last) = detail
+      .messages
+      .iter()
+      .rev()
+      .find(|m| m.role == "assistant" && !m.content.trim().is_empty())
+  {
+    reply = summarize_for_ui(&last.content);
+  }
 
   if reply.trim().is_empty() {
     reply = "Done.".into();

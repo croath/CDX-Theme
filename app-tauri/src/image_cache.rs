@@ -147,11 +147,12 @@ pub async fn resolve_to_data_url(app: &AppHandle, url: &str) -> Result<String, S
     .and_then(mime_from_content_type);
 
   if let Some(len) = response.content_length()
-    && len > MAX_PREVIEW_BYTES {
-      return Err(format!(
-        "preview image too large ({len} bytes, max {MAX_PREVIEW_BYTES})"
-      ));
-    }
+    && len > MAX_PREVIEW_BYTES
+  {
+    return Err(format!(
+      "preview image too large ({len} bytes, max {MAX_PREVIEW_BYTES})"
+    ));
+  }
 
   let bytes = response
     .bytes()

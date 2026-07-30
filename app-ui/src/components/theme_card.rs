@@ -104,9 +104,10 @@ pub fn ThemeCard(
               t.source = ThemeSource::Installed;
               t.is_applied = true;
               if t.version.is_none()
-                && let Some(rv) = t.remote_version {
-                  t.version = Some(rv);
-                }
+                && let Some(rv) = t.remote_version
+              {
+                t.version = Some(rv);
+              }
               t.update_available = t
                 .remote_version
                 .zip(t.version)

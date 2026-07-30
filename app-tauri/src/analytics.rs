@@ -164,9 +164,10 @@ impl Analytics {
 
   pub async fn shutdown() {
     if let Some(a) = Self::get()
-      && let Some(client) = a.client.as_ref() {
-        client.shutdown().await;
-      }
+      && let Some(client) = a.client.as_ref()
+    {
+      client.shutdown().await;
+    }
   }
 }
 

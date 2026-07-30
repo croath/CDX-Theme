@@ -648,12 +648,13 @@ pub async fn ensure_theme_package_path(
   // Prefer an existing local package (builtin or installed).
   if let Ok(list) = discover_themes(app)
     && let Some(meta) = list.iter().find(|t| t.id == theme_id)
-      && !meta.location.is_empty() {
-        let path = PathBuf::from(&meta.location);
-        if path.is_file() {
-          return Ok(path);
-        }
-      }
+    && !meta.location.is_empty()
+  {
+    let path = PathBuf::from(&meta.location);
+    if path.is_file() {
+      return Ok(path);
+    }
+  }
 
   let url = theme_url
     .map(str::trim)

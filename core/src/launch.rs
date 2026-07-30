@@ -206,16 +206,17 @@ fn find_chatgpt_app_macos() -> Option<PathBuf> {
   if let Ok(output) = Command::new("mdfind")
     .arg("kMDItemCFBundleIdentifier == \"com.openai.codex\"")
     .output()
-    && output.status.success() {
-      let text = String::from_utf8_lossy(&output.stdout);
-      for line in text.lines() {
-        let p = PathBuf::from(line.trim());
-        let exe = p.join("Contents/MacOS/ChatGPT");
-        if exe.is_file() {
-          return Some(exe);
-        }
+    && output.status.success()
+  {
+    let text = String::from_utf8_lossy(&output.stdout);
+    for line in text.lines() {
+      let p = PathBuf::from(line.trim());
+      let exe = p.join("Contents/MacOS/ChatGPT");
+      if exe.is_file() {
+        return Some(exe);
       }
     }
+  }
   None
 }
 

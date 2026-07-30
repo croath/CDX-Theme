@@ -352,13 +352,14 @@ fn resolve_target_base_theme(
 fn resolved_hero(assets: Option<&PackageAssetsIn>) -> Option<ImageAssetIn> {
   let assets = assets?;
   if let Some(images) = &assets.images
-    && let Some(hero) = images.get("hero") {
-      return Some(ImageAssetIn {
-        filename: hero.filename.clone(),
-        mime_type: hero.mime_type.clone(),
-        base64: hero.base64.clone(),
-      });
-    }
+    && let Some(hero) = images.get("hero")
+  {
+    return Some(ImageAssetIn {
+      filename: hero.filename.clone(),
+      mime_type: hero.mime_type.clone(),
+      base64: hero.base64.clone(),
+    });
+  }
   assets.art.as_ref().map(|a| ImageAssetIn {
     filename: a.filename.clone(),
     mime_type: a.mime_type.clone(),
@@ -389,9 +390,10 @@ fn resolve_all_images(assets: Option<&PackageAssetsIn>) -> BTreeMap<String, Load
   // Legacy single-art field becomes `hero` when not already present.
   if !out.contains_key("hero")
     && let Some(art) = &assets.art
-      && let Some(loaded) = image_asset_to_loaded(art) {
-        out.insert("hero".into(), loaded);
-      }
+    && let Some(loaded) = image_asset_to_loaded(art)
+  {
+    out.insert("hero".into(), loaded);
+  }
 
   out
 }

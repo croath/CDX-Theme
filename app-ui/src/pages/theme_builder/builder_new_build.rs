@@ -81,9 +81,10 @@ pub(super) fn BuilderNewBuild(
       return;
     };
     if let Some(files) = input.files()
-      && let Some(file) = files.get(0) {
-        accept_hero_file(file, locale);
-      }
+      && let Some(file) = files.get(0)
+    {
+      accept_hero_file(file, locale);
+    }
     // Allow re-selecting the same file later.
     input.set_value("");
   };

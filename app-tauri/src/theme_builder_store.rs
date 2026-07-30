@@ -133,9 +133,11 @@ fn save_file(app: &AppHandle, store: &StoreFile) -> Result<(), String> {
 /// Locate bundled skill (resource) or dev tree `assets/skill`.
 pub fn resolve_skill_source(app: &AppHandle) -> Result<PathBuf, String> {
   if let Ok(path) = app.path().resolve("skill", BaseDirectory::Resource)
-    && path.is_dir() && path.join("SKILL.md").is_file() {
-      return Ok(path);
-    }
+    && path.is_dir()
+    && path.join("SKILL.md").is_file()
+  {
+    return Ok(path);
+  }
   // Dev: app-tauri/../assets/skill
   let dev = Path::new(env!("CARGO_MANIFEST_DIR")).join("../assets/skill");
   let dev = dev.canonicalize().unwrap_or(dev);
@@ -189,9 +191,10 @@ fn resolve_external_bin(app: &AppHandle, base: &str) -> Option<PathBuf> {
   //    macOS: Contents/MacOS/{name}; Windows: next to CDXTheme.exe.
   if let Ok(exe) = std::env::current_exe()
     && let Some(dir) = exe.parent()
-      && let Some(p) = sidecar_in_dir(dir, base) {
-        return Some(p);
-      }
+    && let Some(p) = sidecar_in_dir(dir, base)
+  {
+    return Some(p);
+  }
 
   // 2) Tauri resource dir (fallback for older layouts).
   if let Ok(dir) = app.path().resource_dir() {
@@ -206,19 +209,20 @@ fn resolve_external_bin(app: &AppHandle, base: &str) -> Option<PathBuf> {
   // 3) Dev: app-tauri/binaries/<base>-<triple>[.exe]
   let binaries = Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries");
   if binaries.is_dir()
-    && let Ok(rd) = fs::read_dir(&binaries) {
-      let prefix = format!("{base}-");
-      let with_exe = format!("{base}.exe");
-      for entry in rd.flatten() {
-        let name = entry.file_name().to_string_lossy().to_string();
-        if name.starts_with(&prefix) || name == base || name == with_exe {
-          let p = entry.path();
-          if p.is_file() {
-            return Some(p.canonicalize().unwrap_or(p));
-          }
+    && let Ok(rd) = fs::read_dir(&binaries)
+  {
+    let prefix = format!("{base}-");
+    let with_exe = format!("{base}.exe");
+    for entry in rd.flatten() {
+      let name = entry.file_name().to_string_lossy().to_string();
+      if name.starts_with(&prefix) || name == base || name == with_exe {
+        let p = entry.path();
+        if p.is_file() {
+          return Some(p.canonicalize().unwrap_or(p));
         }
       }
     }
+  }
 
   // 4) PATH fallback (cargo install / local dev).
   which_on_path(base)
@@ -442,15 +446,17 @@ pub fn title_from_prompt(prompt: &str) -> String {
 
   // Hero-flow wire prompt embeds the user text under "Description:".
   if let Some(rest) = after_marker(prompt, "Description:")
-    && let Some(line) = first_title_line(rest) {
-      return truncate_title(line);
-    }
+    && let Some(line) = first_title_line(rest)
+  {
+    return truncate_title(line);
+  }
 
   // Skill bootstrap ends with "User:\n{text}".
   if let Some(rest) = after_marker(prompt, "User:")
-    && let Some(line) = first_title_line(rest) {
-      return truncate_title(line);
-    }
+    && let Some(line) = first_title_line(rest)
+  {
+    return truncate_title(line);
+  }
 
   // Fall back to first meaningful non-boilerplate line.
   if let Some(line) = first_title_line(prompt) {
@@ -675,18 +681,21 @@ pub fn record_session(
   if let Some(existing) = store.sessions.iter_mut().find(|s| s.id == session_id) {
     existing.updated_at = now;
     if let Some(hint) = title_hint.map(str::trim).filter(|s| !s.is_empty())
-      && should_replace_session_title(&existing.title, hint) {
-        existing.title = hint.to_string();
-        applied_title = Some(hint.to_string());
-      }
+      && should_replace_session_title(&existing.title, hint)
+    {
+      existing.title = hint.to_string();
+      applied_title = Some(hint.to_string());
+    }
     if let Some(wp) = workspace_path.map(str::trim).filter(|s| !s.is_empty())
-      && existing.workspace_path.is_empty() {
-        existing.workspace_path = wp.to_string();
-      }
+      && existing.workspace_path.is_empty()
+    {
+      existing.workspace_path = wp.to_string();
+    }
     if let Some(wid) = workspace_id.map(str::trim).filter(|s| !s.is_empty())
-      && existing.workspace_id.is_empty() {
-        existing.workspace_id = wid.to_string();
-      }
+      && existing.workspace_id.is_empty()
+    {
+      existing.workspace_id = wid.to_string();
+    }
   } else {
     let title = title_hint
       .map(str::trim)
@@ -710,13 +719,14 @@ pub fn record_session(
 
   // Keep Codex history name in sync with the Theme Builder description/title.
   if let Some(title) = applied_title.filter(|t| !t.trim().is_empty())
-    && let Err(e) = cdx_theme_core::rename_codex_session(session_id, &title) {
-      tracing::warn!(
-        session = %session_id,
-        error = %e,
-        "failed to rename Codex session thread_name"
-      );
-    }
+    && let Err(e) = cdx_theme_core::rename_codex_session(session_id, &title)
+  {
+    tracing::warn!(
+      session = %session_id,
+      error = %e,
+      "failed to rename Codex session thread_name"
+    );
+  }
   Ok(())
 }
 
@@ -912,11 +922,12 @@ pub fn find_newest_theme_package(workspace: &Path) -> Option<PathBuf> {
   // Prefer packed output first.
   let output = workspace.join("output");
   if output.is_dir()
-    && let Ok(entries) = fs::read_dir(&output) {
-      for entry in entries.flatten() {
-        consider(entry.path(), &mut best);
-      }
+    && let Ok(entries) = fs::read_dir(&output)
+  {
+    for entry in entries.flatten() {
+      consider(entry.path(), &mut best);
     }
+  }
   if best.is_some() {
     return best.map(|(p, _)| p);
   }
