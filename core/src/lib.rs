@@ -5,6 +5,7 @@ pub mod appearance;
 pub mod apply;
 pub mod cdp;
 pub mod codex_chat;
+pub mod detect;
 pub mod error;
 pub mod inject;
 pub mod launch;
@@ -18,16 +19,22 @@ pub use appearance::{
   codex_config_path, set_appearance_theme, upsert_appearance_theme,
 };
 pub use apply::{apply_theme, restore_theme};
-pub use cdp::{CdpTarget, wait_for_targets};
+pub use cdp::{CdpTarget, TargetUrlKind, wait_for_targets, wait_for_targets_with};
+pub use detect::{DetectReport, HostDetectStatus, detect_hosts};
 pub use error::{CoreError, Result};
 pub use inject::{
-  DEFAULT_CDP_PORT, InjectOptions, InjectRunResult, TargetResult, apply_loaded_theme,
-  apply_theme_package, build_inject_expression, build_inject_expression_workbuddy,
-  load_theme_package, restore_default_theme, verify_theme,
+  DEFAULT_CDP_PORT, DEFAULT_WORKBUDDY_CDP_PORT, InjectOptions, InjectRunResult, TargetResult,
+  apply_loaded_theme, apply_loaded_theme_for_app, apply_theme_package, apply_theme_package_for_app,
+  build_inject_expression, build_inject_expression_for_app, build_inject_expression_workbuddy,
+  default_cdp_port_for_app, load_theme_package, restore_default_theme,
+  restore_default_theme_for_app, verify_theme, verify_theme_for_app,
 };
 pub use launch::{
-  ensure_codex_debugging, ensure_codex_debugging_with_log, find_chatgpt_app,
-  restart_codex_debugging, restart_codex_debugging_with_log,
+  ensure_codex_debugging, ensure_codex_debugging_with_log, ensure_workbuddy_debugging,
+  ensure_workbuddy_debugging_with_log, find_chatgpt_app, find_workbuddy_app,
+  find_workbuddy_install_path, is_chatgpt_running, is_workbuddy_running, restart_codex_debugging,
+  restart_codex_debugging_with_log, restart_workbuddy_debugging,
+  restart_workbuddy_debugging_with_log,
 };
 pub use pack::{
   CSS_PARTIAL_TARGETS, CssMergeResult, EXT_CDXTHEME, FORMAT_CDXTHEME, MAX_THEME_PACKAGE_BYTES,

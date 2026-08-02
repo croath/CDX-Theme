@@ -1,10 +1,10 @@
 //! `cdxtheme apply` / `restore` — ensure host CDP, then inject or remove a theme.
 
-use crate::cdp::wait_for_targets;
+use crate::cdp::{TargetUrlKind, wait_for_targets_with};
 use crate::error::{CoreError, Result};
-use crate::inject::DEFAULT_CDP_PORT;
-use crate::inject::{self, InjectOptions, InjectRunResult};
+use crate::inject::{self, InjectOptions, InjectRunResult, default_cdp_port_for_app};
 use crate::launch;
+use cdx_theme_types::{APP_CODEX, APP_WORKBUDDY};
 use std::path::Path;
 
 fn validate_port(port: u16) -> Result<u16> {
@@ -16,22 +16,48 @@ fn validate_port(port: u16) -> Result<u16> {
   Ok(port)
 }
 
-/// Ensure Codex is reachable over CDP (launch/restart host if needed).
-async fn ensure_cdp(port: u16) -> Result<()> {
-  match wait_for_targets(port, 1_500).await {
+fn normalize_app(app: &str) -> Result<String> {
+  // APP_CODEX / APP_WORKBUDDY are already lowercase string constants.
+  match app.trim().to_ascii_lowercase().as_str() {
+    "codex" => Ok(APP_CODEX.to_string()),
+    "workbuddy" => Ok(APP_WORKBUDDY.to_string()),
+    other => Err(CoreError::msg(format!(
+      "unsupported --app `{other}` (supported: codex, workbuddy)"
+    ))),
+  }
+}
+
+fn url_kind_for_app(app: &str) -> TargetUrlKind {
+  match app {
+    APP_WORKBUDDY => TargetUrlKind::File,
+    _ => TargetUrlKind::App,
+  }
+}
+
+/// Ensure the host app is reachable over CDP (launch/restart if needed).
+async fn ensure_cdp(app: &str, port: u16) -> Result<()> {
+  let kind = url_kind_for_app(app);
+  match wait_for_targets_with(port, 1_500, kind).await {
     Ok(targets) => {
       tracing::info!(
+        app,
         port,
         targets = targets.len(),
-        "CDP connected (app:// targets)"
+        kind = kind.label(),
+        "CDP connected"
       );
       Ok(())
     }
     Err(_) => {
-      tracing::info!(port, "CDP not reachable; ensuring Codex is open");
-      let msg = launch::ensure_codex_debugging(port)
-        .await
-        .map_err(CoreError::msg)?;
+      tracing::info!(app, port, "CDP not reachable; ensuring host is open");
+      let msg = match app {
+        APP_WORKBUDDY => launch::ensure_workbuddy_debugging(port)
+          .await
+          .map_err(CoreError::msg)?,
+        _ => launch::ensure_codex_debugging(port)
+          .await
+          .map_err(CoreError::msg)?,
+      };
       tracing::info!("{msg}");
       Ok(())
     }
@@ -40,7 +66,7 @@ async fn ensure_cdp(port: u16) -> Result<()> {
 
 /// Apply a portable theme package to a host app via CDP.
 ///
-/// 1. Probe CDP on `port`
+/// 1. Probe CDP on `port` (default: 9335 for codex, 9336 for workbuddy)
 /// 2. If unreachable, launch (or restart) the host app with remote debugging
 /// 3. Inject the theme CSS/skin into live renderer targets
 pub async fn apply_theme(
@@ -49,12 +75,7 @@ pub async fn apply_theme(
   port: Option<u16>,
   timeout_ms: u64,
 ) -> Result<InjectRunResult> {
-  let app = app.trim().to_ascii_lowercase();
-  if app != "codex" {
-    return Err(CoreError::msg(format!(
-      "unsupported --app `{app}` (supported: codex)"
-    )));
-  }
+  let app = normalize_app(app)?;
 
   if !theme_path.is_file() {
     return Err(CoreError::msg(format!(
@@ -63,13 +84,11 @@ pub async fn apply_theme(
     )));
   }
 
-  let port = validate_port(port.unwrap_or(DEFAULT_CDP_PORT))?;
-  ensure_cdp(port).await?;
+  let port = validate_port(port.unwrap_or_else(|| default_cdp_port_for_app(&app)))?;
+  ensure_cdp(&app, port).await?;
 
-  // Inject theme (app currently only codex; validated above).
-  let _ = app;
   let options = InjectOptions { port, timeout_ms };
-  inject::apply_theme_package(theme_path, options)
+  inject::apply_theme_package_for_app(&app, theme_path, options)
     .await
     .map_err(CoreError::msg)
 }
@@ -78,11 +97,19 @@ pub async fn apply_theme(
 ///
 /// This is the inverse of [`apply_theme`]'s inject step. It does **not** rewrite
 /// `config.toml` appearance keys (use [`crate::set_appearance_theme`] for mode).
-pub async fn restore_theme(port: Option<u16>, timeout_ms: u64) -> Result<InjectRunResult> {
-  let port = validate_port(port.unwrap_or(DEFAULT_CDP_PORT))?;
-  ensure_cdp(port).await?;
+///
+/// Default host is Codex (`app://` on port 9335). Pass `app = "workbuddy"` for
+/// WorkBuddy (`file://` on port 9336).
+pub async fn restore_theme(
+  app: Option<&str>,
+  port: Option<u16>,
+  timeout_ms: u64,
+) -> Result<InjectRunResult> {
+  let app = normalize_app(app.unwrap_or(APP_CODEX))?;
+  let port = validate_port(port.unwrap_or_else(|| default_cdp_port_for_app(&app)))?;
+  ensure_cdp(&app, port).await?;
   let options = InjectOptions { port, timeout_ms };
-  inject::restore_default_theme(options)
+  inject::restore_default_theme_for_app(&app, options)
     .await
     .map_err(CoreError::msg)
 }

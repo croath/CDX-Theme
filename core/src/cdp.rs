@@ -248,8 +248,49 @@ impl CdpSession {
   }
 }
 
-/// Poll Codex CDP `/json/list` until page targets with `app://` URLs appear.
+/// Which renderer URL schemes to accept when listing CDP page targets.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TargetUrlKind {
+  /// Codex / ChatGPT desktop (`app://…`).
+  #[default]
+  App,
+  /// WorkBuddy desktop (`file://…` or `vscode-file://…` asar renderer).
+  File,
+}
+
+impl TargetUrlKind {
+  pub fn matches(self, url: &str) -> bool {
+    if url.is_empty() {
+      return false;
+    }
+    match self {
+      TargetUrlKind::App => url.starts_with("app://"),
+      TargetUrlKind::File => {
+        (url.starts_with("file://") || url.starts_with("vscode-file://"))
+          && !url.contains("devtools")
+      }
+    }
+  }
+
+  pub fn label(self) -> &'static str {
+    match self {
+      TargetUrlKind::App => "app://",
+      TargetUrlKind::File => "file://",
+    }
+  }
+}
+
+/// Poll CDP `/json/list` until page targets with `app://` URLs appear (Codex).
 pub async fn wait_for_targets(port: u16, timeout_ms: u64) -> Result<Vec<CdpTarget>, String> {
+  wait_for_targets_with(port, timeout_ms, TargetUrlKind::App).await
+}
+
+/// Poll CDP `/json/list` until matching page targets appear.
+pub async fn wait_for_targets_with(
+  port: u16,
+  timeout_ms: u64,
+  kind: TargetUrlKind,
+) -> Result<Vec<CdpTarget>, String> {
   let deadline = tokio::time::Instant::now() + Duration::from_millis(timeout_ms);
   let client = reqwest::Client::builder()
     .timeout(Duration::from_millis(1500))
@@ -265,12 +306,12 @@ pub async fn wait_for_targets(port: u16, timeout_ms: u64) -> Result<Vec<CdpTarge
           Ok(targets) => {
             let pages: Vec<CdpTarget> = targets
               .into_iter()
-              .filter(|t| t.r#type == "page" && t.url.starts_with("app://"))
+              .filter(|t| t.r#type == "page" && kind.matches(&t.url))
               .collect();
             if !pages.is_empty() {
               return Ok(pages);
             }
-            last_error = "no app:// page targets".into();
+            last_error = format!("no {} page targets", kind.label());
           }
           Err(e) => last_error = e.to_string(),
         }
@@ -282,6 +323,6 @@ pub async fn wait_for_targets(port: u16, timeout_ms: u64) -> Result<Vec<CdpTarge
   }
 
   Err(format!(
-    "No Codex renderer target on 127.0.0.1:{port}: {last_error}"
+    "No renderer target on 127.0.0.1:{port}: {last_error}"
   ))
 }

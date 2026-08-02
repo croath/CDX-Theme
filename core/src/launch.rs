@@ -1,7 +1,7 @@
-//! Launch Codex / ChatGPT desktop with remote debugging for CDP injection.
-//! Cross-platform: macOS (ChatGPT.app) and Windows (desktop + Microsoft Store Appx).
+//! Launch host desktop apps with remote debugging for CDP injection.
+//! Cross-platform: macOS and Windows (ChatGPT / WorkBuddy Electron apps).
 
-use crate::cdp::wait_for_targets;
+use crate::cdp::{TargetUrlKind, wait_for_targets, wait_for_targets_with};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -10,6 +10,8 @@ use std::time::Duration;
 
 /// Default Codex desktop remote-debugging port (matches app).
 pub const DEFAULT_CDP_PORT: u16 = 9335;
+/// Default WorkBuddy desktop remote-debugging port.
+pub const DEFAULT_WORKBUDDY_CDP_PORT: u16 = 9336;
 
 /// Ensure Codex is reachable on `port`, launching (or restarting) ChatGPT if needed.
 /// Uses the default log path under `~/.cdxtheme/codex-launch.log`.
@@ -339,7 +341,8 @@ fn find_via_where(names: &[&str]) -> Option<PathBuf> {
   None
 }
 
-fn is_chatgpt_running() -> bool {
+/// Whether ChatGPT / Codex desktop appears to be running.
+pub fn is_chatgpt_running() -> bool {
   #[cfg(target_os = "macos")]
   {
     Command::new("pgrep")
@@ -431,3 +434,346 @@ fn apply_no_window(cmd: &mut Command) {
 #[cfg(not(target_os = "windows"))]
 #[allow(dead_code)]
 fn apply_no_window(_cmd: &mut Command) {}
+
+// ── WorkBuddy AI (Electron) ─────────────────────────────────────────────────
+
+/// Ensure WorkBuddy is reachable on `port`, launching (or restarting) if needed.
+pub async fn ensure_workbuddy_debugging(port: u16) -> Result<String, String> {
+  ensure_workbuddy_debugging_with_log(port, None).await
+}
+
+/// Like [`ensure_workbuddy_debugging`], with an optional launch log path.
+pub async fn ensure_workbuddy_debugging_with_log(
+  port: u16,
+  log_path: Option<PathBuf>,
+) -> Result<String, String> {
+  if wait_for_targets_with(port, 1_500, TargetUrlKind::File)
+    .await
+    .is_ok()
+  {
+    return Ok(format!("WorkBuddy already exposing CDP on port {port}"));
+  }
+
+  if is_workbuddy_running() {
+    tracing::info!("WorkBuddy is running without CDP on {port}; restarting with remote debugging");
+    return restart_workbuddy_debugging_with_log(port, log_path).await;
+  }
+
+  tracing::info!("Opening WorkBuddy with remote debugging on port {port}");
+  launch_workbuddy_debugging(port, log_path.as_deref()).await
+}
+
+/// Force-quit and relaunch WorkBuddy with remote debugging.
+pub async fn restart_workbuddy_debugging(port: u16) -> Result<String, String> {
+  restart_workbuddy_debugging_with_log(port, None).await
+}
+
+/// Like [`restart_workbuddy_debugging`], with an optional launch log path.
+pub async fn restart_workbuddy_debugging_with_log(
+  port: u16,
+  log_path: Option<PathBuf>,
+) -> Result<String, String> {
+  if is_workbuddy_running() {
+    quit_workbuddy();
+    tokio::time::sleep(Duration::from_millis(800)).await;
+    wait_until_workbuddy_exited(Duration::from_secs(15)).await;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+  }
+  launch_workbuddy_debugging(port, log_path.as_deref()).await
+}
+
+async fn launch_workbuddy_debugging(port: u16, log_path: Option<&Path>) -> Result<String, String> {
+  for _ in 0..20 {
+    if !port_in_use(port) {
+      break;
+    }
+    tokio::time::sleep(Duration::from_millis(250)).await;
+  }
+  if port_in_use(port) {
+    return Err(format!("port {port} is already in use by another process"));
+  }
+
+  let (exe, app_arg) = find_workbuddy_launch().ok_or_else(|| {
+    #[cfg(target_os = "windows")]
+    {
+      "WorkBuddy app not found. Install WorkBuddy AI desktop, then try again.".to_string()
+    }
+    #[cfg(target_os = "macos")]
+    {
+      "WorkBuddy app not found (looked for com.workbuddy.workbuddy-ai / WorkBuddy AI.app)"
+        .to_string()
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+      "WorkBuddy app not found on this platform".to_string()
+    }
+  })?;
+
+  if !exe.is_file() {
+    return Err(format!("WorkBuddy executable missing: {}", exe.display()));
+  }
+
+  let log_path = log_path
+    .map(Path::to_path_buf)
+    .unwrap_or_else(default_workbuddy_launch_log_path);
+  if let Some(parent) = log_path.parent() {
+    let _ = fs::create_dir_all(parent);
+  }
+
+  let log_file = OpenOptions::new()
+    .create(true)
+    .append(true)
+    .open(&log_path)
+    .map_err(|e| format!("open launch log: {e}"))?;
+  let log_err = log_file
+    .try_clone()
+    .map_err(|e| format!("clone launch log: {e}"))?;
+
+  {
+    let mut f = OpenOptions::new()
+      .create(true)
+      .append(true)
+      .open(&log_path)
+      .ok();
+    if let Some(ref mut f) = f {
+      let _ = writeln!(
+        f,
+        "\n--- workbuddy launch {} port={port} exe={} ---",
+        chrono_like_now(),
+        exe.display()
+      );
+    }
+  }
+
+  let mut cmd = Command::new(&exe);
+  // Electron apps often need the .app path when the binary is named Electron.
+  if let Some(app) = app_arg.as_ref() {
+    cmd.arg(app);
+  }
+  cmd
+    .arg("--remote-debugging-address=127.0.0.1")
+    .arg(format!("--remote-debugging-port={port}"))
+    .stdout(Stdio::from(log_file))
+    .stderr(Stdio::from(log_err));
+
+  #[cfg(target_os = "windows")]
+  {
+    use std::os::windows::process::CommandExt;
+    const DETACHED_PROCESS: u32 = 0x0000_0008;
+    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+    cmd.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+  }
+
+  cmd
+    .spawn()
+    .map_err(|e| format!("failed to launch WorkBuddy ({}): {e}", exe.display()))?;
+
+  for _ in 0..90 {
+    if wait_for_targets_with(port, 400, TargetUrlKind::File)
+      .await
+      .is_ok()
+    {
+      tokio::time::sleep(Duration::from_millis(1_200)).await;
+      return Ok(format!(
+        "Launched WorkBuddy with --remote-debugging-port={port}"
+      ));
+    }
+    tokio::time::sleep(Duration::from_millis(400)).await;
+  }
+
+  Err(format!(
+    "WorkBuddy launched but CDP on port {port} not ready within ~35s (see {})",
+    log_path.display()
+  ))
+}
+
+fn default_workbuddy_launch_log_path() -> PathBuf {
+  let base = std::env::var_os("HOME")
+    .or_else(|| std::env::var_os("USERPROFILE"))
+    .map(PathBuf::from)
+    .unwrap_or_else(std::env::temp_dir);
+  base.join(".cdxtheme").join("workbuddy-launch.log")
+}
+
+/// Locate WorkBuddy executable (Electron host binary when packaged that way).
+pub fn find_workbuddy_app() -> Option<PathBuf> {
+  find_workbuddy_launch().map(|(exe, _)| exe)
+}
+
+/// User-facing WorkBuddy install path (`.app` bundle on macOS when available).
+pub fn find_workbuddy_install_path() -> Option<PathBuf> {
+  find_workbuddy_launch().map(|(exe, app)| app.unwrap_or(exe))
+}
+
+fn find_workbuddy_launch() -> Option<(PathBuf, Option<PathBuf>)> {
+  #[cfg(target_os = "macos")]
+  {
+    find_workbuddy_launch_macos()
+  }
+  #[cfg(target_os = "windows")]
+  {
+    find_workbuddy_launch_windows()
+  }
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  {
+    None
+  }
+}
+
+#[cfg(target_os = "macos")]
+fn find_workbuddy_launch_macos() -> Option<(PathBuf, Option<PathBuf>)> {
+  let home = std::env::var_os("HOME").map(PathBuf::from);
+  let candidates = [
+    PathBuf::from("/Applications/WorkBuddy AI.app"),
+    PathBuf::from("/Applications/WorkBuddy.app"),
+    home
+      .as_ref()
+      .map(|h| h.join("Applications/WorkBuddy AI.app"))
+      .unwrap_or_default(),
+    home
+      .as_ref()
+      .map(|h| h.join("Applications/WorkBuddy.app"))
+      .unwrap_or_default(),
+  ];
+  for app in candidates {
+    if app.as_os_str().is_empty() {
+      continue;
+    }
+    // Prefer Contents/MacOS/Electron (common Electron packaging), else CFBundleExecutable.
+    let electron = app.join("Contents/MacOS/Electron");
+    if electron.is_file() {
+      return Some((electron, Some(app)));
+    }
+    let named = app.join("Contents/MacOS/WorkBuddy AI");
+    if named.is_file() {
+      return Some((named, None));
+    }
+    let named2 = app.join("Contents/MacOS/WorkBuddy");
+    if named2.is_file() {
+      return Some((named2, None));
+    }
+  }
+  if let Ok(output) = Command::new("mdfind")
+    .arg("kMDItemCFBundleIdentifier == \"com.workbuddy.workbuddy-ai\"")
+    .output()
+    && output.status.success()
+  {
+    let text = String::from_utf8_lossy(&output.stdout);
+    for line in text.lines() {
+      let app = PathBuf::from(line.trim());
+      let electron = app.join("Contents/MacOS/Electron");
+      if electron.is_file() {
+        return Some((electron, Some(app)));
+      }
+    }
+  }
+  None
+}
+
+#[cfg(target_os = "windows")]
+fn find_workbuddy_launch_windows() -> Option<(PathBuf, Option<PathBuf>)> {
+  let mut candidates: Vec<PathBuf> = Vec::new();
+
+  if let Some(local) = std::env::var_os("LOCALAPPDATA").map(PathBuf::from) {
+    candidates.push(
+      local
+        .join("Programs")
+        .join("WorkBuddy AI")
+        .join("WorkBuddy AI.exe"),
+    );
+    candidates.push(
+      local
+        .join("Programs")
+        .join("WorkBuddy")
+        .join("WorkBuddy.exe"),
+    );
+    candidates.push(
+      local
+        .join("Programs")
+        .join("workbuddy")
+        .join("WorkBuddy AI.exe"),
+    );
+  }
+  if let Some(pf) = std::env::var_os("ProgramFiles").map(PathBuf::from) {
+    candidates.push(pf.join("WorkBuddy AI").join("WorkBuddy AI.exe"));
+    candidates.push(pf.join("WorkBuddy").join("WorkBuddy.exe"));
+  }
+
+  for c in &candidates {
+    if c.is_file() {
+      return Some((c.clone(), None));
+    }
+  }
+
+  if let Some(exe) = find_via_where(&["WorkBuddy AI.exe", "WorkBuddy.exe"]) {
+    return Some((exe, None));
+  }
+
+  None
+}
+
+/// Whether WorkBuddy desktop appears to be running.
+pub fn is_workbuddy_running() -> bool {
+  #[cfg(target_os = "macos")]
+  {
+    Command::new("pgrep")
+      .args(["-f", "WorkBuddy AI.app"])
+      .output()
+      .map(|o| o.status.success() && !o.stdout.is_empty())
+      .unwrap_or(false)
+      || Command::new("pgrep")
+        .args(["-f", "/WorkBuddy.app/"])
+        .output()
+        .map(|o| o.status.success() && !o.stdout.is_empty())
+        .unwrap_or(false)
+  }
+  #[cfg(target_os = "windows")]
+  {
+    process_image_running("WorkBuddy AI.exe") || process_image_running("WorkBuddy.exe")
+  }
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  {
+    false
+  }
+}
+
+fn quit_workbuddy() {
+  #[cfg(target_os = "macos")]
+  {
+    let _ = Command::new("osascript")
+      .args([
+        "-e",
+        "tell application id \"com.workbuddy.workbuddy-ai\" to quit",
+      ])
+      .status();
+    let _ = Command::new("pkill")
+      .args(["-f", "WorkBuddy AI.app"])
+      .status();
+    let _ = Command::new("pkill")
+      .args(["-f", "/WorkBuddy.app/"])
+      .status();
+  }
+  #[cfg(target_os = "windows")]
+  {
+    for image in ["WorkBuddy AI.exe", "WorkBuddy.exe"] {
+      let mut cmd = Command::new("taskkill");
+      cmd
+        .args(["/IM", image, "/F", "/T"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+      apply_no_window(&mut cmd);
+      let _ = cmd.status();
+    }
+  }
+}
+
+async fn wait_until_workbuddy_exited(timeout: Duration) {
+  let deadline = tokio::time::Instant::now() + timeout;
+  while tokio::time::Instant::now() < deadline {
+    if !is_workbuddy_running() {
+      return;
+    }
+    tokio::time::sleep(Duration::from_millis(250)).await;
+  }
+}

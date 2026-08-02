@@ -40,13 +40,13 @@ pub fn load_theme_package(package_path: impl AsRef<Path>) -> Result<LoadedTheme,
 
 /// Build the Runtime.evaluate expression for the **Codex** host target.
 ///
-/// Payload: `{ theme, cssText, imageDataUrls }` with **cdxtheme** branding.
+/// Payload: `{ host, theme, cssText, imageDataUrls }` with **cdxtheme** branding.
 pub fn build_inject_expression(theme: &LoadedTheme) -> Result<(String, PublicTheme), String> {
   let target = theme.codex()?;
   build_inject_from_css(theme, &target.css, cdx_theme_types::APP_CODEX)
 }
 
-/// Build inject expression for the WorkBuddy host (when wired up).
+/// Build inject expression for the WorkBuddy host.
 pub fn build_inject_expression_workbuddy(
   theme: &LoadedTheme,
 ) -> Result<(String, PublicTheme), String> {
@@ -58,6 +58,39 @@ pub fn build_inject_expression_workbuddy(
     )
   })?;
   build_inject_from_css(theme, &target.css, cdx_theme_types::APP_WORKBUDDY)
+}
+
+/// Build inject expression for a known host app id (`codex` / `workbuddy`).
+pub fn build_inject_expression_for_app(
+  theme: &LoadedTheme,
+  app_id: &str,
+) -> Result<(String, PublicTheme), String> {
+  match app_id {
+    "codex" => build_inject_expression(theme),
+    "workbuddy" => build_inject_expression_workbuddy(theme),
+    other => Err(format!(
+      "unsupported host app `{other}` (supported: codex, workbuddy)"
+    )),
+  }
+}
+
+fn host_payload(app_id: &str) -> serde_json::Value {
+  match app_id {
+    cdx_theme_types::APP_WORKBUDDY => serde_json::json!({
+      "id": "workbuddy",
+      "className": "cdxtheme-host-workbuddy",
+      "skinClass": "cdxtheme-workbuddy-skin",
+      "enableChrome": false,
+      "profileId": "workbuddy-theme-v1",
+    }),
+    _ => serde_json::json!({
+      "id": "codex",
+      "className": "cdxtheme-host-codex",
+      "skinClass": "cdxtheme-codex-skin",
+      "enableChrome": true,
+      "profileId": "codex-theme-v1",
+    }),
+  }
 }
 
 /// Collect package images as data-URL map (`imageDataUrls` + optional art→hero).
@@ -100,10 +133,15 @@ fn build_inject_from_css(
 
   let images = Value::Object(build_image_data_urls(theme));
   let public = theme.public();
+  let host = host_payload(app_id);
   let template = include_str!("../../../assets/renderer-inject.js");
   // Placeholders must be valid JS literals (JSON-encoded). Raw CSS breaks the
   // Runtime.evaluate expression: `var cssText = :root { ... }` is a syntax error.
   let expression = template
+    .replace(
+      "__DREAM_HOST_JSON__",
+      &serde_json::to_string(&host).map_err(|e| format!("encode host: {e}"))?,
+    )
     .replace(
       "__DREAM_CSS_JSON__",
       &serde_json::to_string(&css).map_err(|e| format!("encode css: {e}"))?,
@@ -207,8 +245,14 @@ mod tests {
       "texture image must be in inject payload"
     );
     assert!(
-      expression.contains("cdxtheme-codex-skin-chrome"),
-      "chrome id must be cdxtheme"
+      expression.contains("cdxtheme-codex-skin-chrome")
+        || expression.contains("cdxtheme-\" + host.id + \"-skin-chrome")
+        || expression.contains("cdxtheme-\" + host.id"),
+      "chrome id must derive from host (cdxtheme)"
+    );
+    assert!(
+      expression.contains("\"id\":\"codex\"") || expression.contains(r#""id":"codex""#),
+      "host payload must be codex"
     );
     assert!(
       expression.contains("--cdxtheme-image-"),

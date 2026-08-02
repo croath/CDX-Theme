@@ -5,16 +5,20 @@
 //!   cdxtheme theme unpack ferrari-1.0.0.cdxtheme themes/ferrari
 //!   cdxtheme theme merge-css themes/my-theme
 //!   cdxtheme apply --app codex --theme ferrari-1.0.0.cdxtheme
+//!   cdxtheme apply --app workbuddy --theme ferrari-1.0.0.cdxtheme
 //!   cdxtheme restore
+//!   cdxtheme restore --app workbuddy
+//!   cdxtheme detect
 //!   cdxtheme appearance dark
 //!   cdxtheme verify layout
 //!   cdxtheme probe --tab Work
 //!   cdxtheme screenshot -o /tmp/work.jpg --tab Work
 
 use cdx_theme_core::{
-  AppearanceTheme, DEFAULT_CDP_PORT, InjectOptions, apply_theme, layout_default_options,
-  load_theme_package, merge_theme_css, pack_theme_dir_with_options, probe, restart_codex_debugging,
-  restore_theme, screenshot, set_appearance_theme, unpack_package, verify_layout, verify_theme,
+  AppearanceTheme, DEFAULT_CDP_PORT, InjectOptions, apply_theme, default_cdp_port_for_app,
+  detect_hosts, layout_default_options, load_theme_package, merge_theme_css,
+  pack_theme_dir_with_options, probe, restart_codex_debugging, restore_theme, screenshot,
+  set_appearance_theme, unpack_package, verify_layout, verify_theme,
 };
 use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
@@ -42,7 +46,7 @@ enum Commands {
 
   /// Apply a theme package to a host app (ensure CDP, then inject).
   Apply {
-    /// Host app id (currently only `codex`).
+    /// Host app id: `codex` (default CDP 9335) or `workbuddy` (default CDP 9336).
     #[arg(long, default_value = "codex")]
     app: String,
 
@@ -50,9 +54,9 @@ enum Commands {
     #[arg(long, short = 't')]
     theme: PathBuf,
 
-    /// CDP remote-debugging port (default 9335).
-    #[arg(long, default_value_t = DEFAULT_CDP_PORT)]
-    port: u16,
+    /// CDP remote-debugging port (default: 9335 codex / 9336 workbuddy).
+    #[arg(long)]
+    port: Option<u16>,
 
     /// Timeout for CDP wait / inject (milliseconds).
     #[arg(long, default_value_t = 120_000)]
@@ -61,13 +65,24 @@ enum Commands {
 
   /// Restore default skin (ensure CDP, then remove injected theme DOM/CSS).
   Restore {
-    /// CDP remote-debugging port (default 9335).
-    #[arg(long, default_value_t = DEFAULT_CDP_PORT)]
-    port: u16,
+    /// Host app id: `codex` (default) or `workbuddy`.
+    #[arg(long, default_value = "codex")]
+    app: String,
+
+    /// CDP remote-debugging port (default: 9335 codex / 9336 workbuddy).
+    #[arg(long)]
+    port: Option<u16>,
 
     /// Timeout for CDP wait / restore (milliseconds).
     #[arg(long, default_value_t = 120_000)]
     timeout_ms: u64,
+  },
+
+  /// Detect Codex / WorkBuddy install, process, and default CDP status.
+  Detect {
+    /// Print full report as JSON.
+    #[arg(long)]
+    json: bool,
   },
 
   /// Adjust ChatGPT / Codex appearance mode (`dark` / `light` / `system`).
@@ -378,7 +393,8 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
       timeout_ms,
     } => {
       let rt = runtime()?;
-      let result = rt.block_on(apply_theme(&app, &theme, Some(port), timeout_ms))?;
+      let port = port.or_else(|| Some(default_cdp_port_for_app(&app)));
+      let result = rt.block_on(apply_theme(&app, &theme, port, timeout_ms))?;
       println!(
         "applied theme `{}` to {app} on port {} ({} target(s))",
         result.theme_id,
@@ -388,14 +404,65 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
       Ok(ExitCode::SUCCESS)
     }
 
-    Commands::Restore { port, timeout_ms } => {
+    Commands::Restore {
+      app,
+      port,
+      timeout_ms,
+    } => {
       let rt = runtime()?;
-      let result = rt.block_on(restore_theme(Some(port), timeout_ms))?;
+      let port = port.or_else(|| Some(default_cdp_port_for_app(&app)));
+      let result = rt.block_on(restore_theme(Some(&app), port, timeout_ms))?;
       println!(
-        "restored default skin on port {} ({} target(s))",
+        "restored default skin for {app} on port {} ({} target(s))",
         result.port,
         result.targets.len()
       );
+      Ok(ExitCode::SUCCESS)
+    }
+
+    Commands::Detect { json } => {
+      let rt = runtime()?;
+      let report = rt.block_on(detect_hosts());
+      if json {
+        println!("{}", serde_json::to_string_pretty(&report)?);
+      } else {
+        println!("Host app detection");
+        println!();
+        for host in &report.hosts {
+          let status = if host.installed {
+            "installed"
+          } else {
+            "not found"
+          };
+          println!("{} ({})", host.display_name, host.app_id);
+          println!("  status:     {status}");
+          if let Some(path) = &host.path {
+            println!("  path:       {}", path.display());
+          }
+          if let Some(exe) = &host.executable {
+            if host.path.as_ref().map(|p| p.as_path()) != Some(exe.as_path()) {
+              println!("  executable: {}", exe.display());
+            }
+          }
+          println!("  running:    {}", if host.running { "yes" } else { "no" });
+          println!(
+            "  cdp:        {} (port {}, {} target(s))",
+            if host.cdp_reachable {
+              "reachable"
+            } else {
+              "not reachable"
+            },
+            host.default_cdp_port,
+            host.cdp_targets
+          );
+          println!();
+        }
+        let installed = report.hosts.iter().filter(|h| h.installed).count();
+        println!(
+          "summary: {installed}/{} host(s) installed",
+          report.hosts.len()
+        );
+      }
       Ok(ExitCode::SUCCESS)
     }
 

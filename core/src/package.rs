@@ -9,8 +9,8 @@
 //!
 //! # App targets
 //! Packages may declare multiple host apps under `targets` (e.g. `codex`, `workbuddy`).
-//! **Runtime currently only reads and applies `targets.codex`.**
-//! `workbuddy` is reserved for a future host adapter.
+//! CLI apply supports both: `codex` (CDP 9335, `app://`) and `workbuddy` (CDP 9336, `file://`).
+//! Desktop UI still focuses on Codex inject paths.
 
 use crate::util::{is_named_theme, merge_copy};
 use cdx_theme_types::{
@@ -37,8 +37,8 @@ pub const THEME_EXTENSION: &str = EXT_CDXTHEME;
 // Re-export app ids from shared types.
 pub use cdx_theme_types::{APP_CODEX, APP_WORKBUDDY};
 
-/// Host app id used for inject + host settings **today**.
-/// Switch / parameterize this when WorkBuddy support lands.
+/// Default host app id for desktop UI inject paths that still target Codex only.
+/// CLI apply can select `workbuddy` via `--app workbuddy`.
 pub const ACTIVE_APP_ID: &str = cdx_theme_types::APP_CODEX;
 
 /// Back-compat alias for call sites.

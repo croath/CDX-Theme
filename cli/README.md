@@ -26,8 +26,9 @@ Binary: **`cdxtheme`**.
 cdxtheme theme pack <SOURCE> [OPTIONS]
 cdxtheme theme unpack <INPUT> <OUTPUT>
 cdxtheme theme merge-css <SOURCE> [-t codex|workbuddy]
-cdxtheme apply --app codex --theme <PACKAGE> [OPTIONS]
-cdxtheme restore [OPTIONS]
+cdxtheme apply --app codex|workbuddy --theme <PACKAGE> [OPTIONS]
+cdxtheme restore [--app codex|workbuddy] [OPTIONS]
+cdxtheme detect [--json]
 cdxtheme appearance <dark|light|system> [OPTIONS]
 cdxtheme verify inject [-t PACKAGE]
 cdxtheme verify layout [--contexts chat,work]
@@ -144,41 +145,68 @@ src/my-theme/
 
 Inject a theme package into a live host app over CDP.
 
-1. Probe CDP on the remote-debugging port (default **9335**)
-2. If not connected, launch (or restart) ChatGPT/Codex with `--remote-debugging-port`
-3. Inject the package CSS/skin into all `app://` page targets
+1. Probe CDP on the remote-debugging port
+2. If not connected, launch (or restart) the host with `--remote-debugging-port`
+3. Inject the package CSS/skin into live page targets
+
+| Host | Default CDP | Targets | Notes |
+|------|-------------|---------|--------|
+| `codex` | **9335** | `app://` | ChatGPT / Codex desktop |
+| `workbuddy` | **9336** | `file://` (asar renderer) | WorkBuddy AI Electron app |
+
+The package must declare the matching `targets.codex` / `targets.workbuddy` CSS.
 
 ```bash
 cdxtheme apply --app codex --theme ferrari-1.0.0.cdxtheme
 cdxtheme apply -t themes/doll-sister.cdxtheme --port 9335
+cdxtheme apply --app workbuddy -t ferrari-1.0.0.cdxtheme
+cdxtheme apply --app workbuddy -t ferrari-1.0.0.cdxtheme --port 9336
 ```
 
 | Flag | Description |
 |------|-------------|
-| `--app` | Host app id (currently only `codex`) |
+| `--app` | Host app id: `codex` (default) or `workbuddy` |
 | `-t`, `--theme` | Path to `.cdxtheme` |
-| `--port` | CDP port (default `9335`) |
+| `--port` | CDP port (default `9335` codex / `9336` workbuddy) |
 | `--timeout-ms` | Wait / inject timeout (default `120000`) |
 
 ### `restore`
 
-Remove the injected CSS/skin from live Codex renderer targets (inverse of `apply` inject).
+Remove the injected CSS/skin from live renderer targets (inverse of `apply` inject).
 
-1. Probe CDP on the remote-debugging port (default **9335**)
-2. If not connected, launch (or restart) ChatGPT/Codex with `--remote-debugging-port`
-3. Strip injected theme DOM / early scripts from all `app://` page targets
+1. Probe CDP on the remote-debugging port
+2. If not connected, launch (or restart) the host with remote debugging
+3. Strip injected theme DOM / early scripts from matching page targets
 
 Does **not** rewrite `~/.codex/config.toml` appearance keys (use `appearance` for mode).
 
 ```bash
 cdxtheme restore
 cdxtheme restore --port 9335 --timeout-ms 120000
+cdxtheme restore --app workbuddy
 ```
 
 | Flag | Description |
 |------|-------------|
-| `--port` | CDP port (default `9335`) |
+| `--app` | Host app id: `codex` (default) or `workbuddy` |
+| `--port` | CDP port (default `9335` codex / `9336` workbuddy) |
 | `--timeout-ms` | Wait / restore timeout (default `120000`) |
+
+### `detect`
+
+Probe whether host apps are installed, running, and exposing CDP on their default ports.
+
+| Host | Default CDP port |
+|------|------------------|
+| Codex / ChatGPT | `9335` |
+| WorkBuddy AI | `9336` |
+
+```bash
+cdxtheme detect
+cdxtheme detect --json
+```
+
+Human output shows install path, process state, and CDP reachability per host. `--json` prints the full report.
 
 ### `appearance`
 

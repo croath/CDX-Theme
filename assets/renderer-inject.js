@@ -1,16 +1,18 @@
 (() => {
-  // CDXTheme apply payload for the Codex host.
-  // Placeholders (JSON literals): theme, cssText, imageDataUrls
-  var host = { id: "codex", className: "cdxtheme-host-codex" };
+  // CDXTheme apply payload for a host app (codex / workbuddy).
+  // Placeholders (JSON literals): host, theme, cssText, imageDataUrls
+  // host: { id, className, skinClass, enableChrome, profileId }
+  var host = __DREAM_HOST_JSON__;
   var theme = __DREAM_THEME_JSON__;
   var cssText = __DREAM_CSS_JSON__;
   var imageDataUrls = __DREAM_IMAGES_JSON__;
-  var profileId = "codex-theme-v1";
+  var profileId = (host && host.profileId) || (host && host.id === "workbuddy" ? "workbuddy-theme-v1" : "codex-theme-v1");
+  var ENABLE_CHROME = !host || host.enableChrome !== false;
 
   var STYLE_ID = "cdxtheme-theme-style-" + host.id;
-  var CHROME_ID = "cdxtheme-codex-skin-chrome";
-  var CLASS_HOST = "cdxtheme-host-codex";
-  var CLASS_SKIN = "cdxtheme-codex-skin";
+  var CHROME_ID = "cdxtheme-" + host.id + "-skin-chrome";
+  var CLASS_HOST = host.className || ("cdxtheme-host-" + host.id);
+  var CLASS_SKIN = host.skinClass || ("cdxtheme-" + host.id + "-skin");
 
   if (!window.__CDXTHEME__) window.__CDXTHEME__ = { hosts: {} };
   if (!window.__CDXTHEME__.hosts) window.__CDXTHEME__.hosts = {};
@@ -324,13 +326,18 @@
     if (!root) return false;
 
     root.classList.add(CLASS_SKIN);
-    root.dataset.codexSkinTheme = theme.id;
-    root.dataset.codexSkinBrand = "cdxtheme";
+    if (host.id === "codex") {
+      root.dataset.codexSkinTheme = theme.id;
+      root.dataset.codexSkinBrand = "cdxtheme";
+    }
 
     setArtCssVars(root, artUrl);
     root.style.setProperty("--dream-tagline", cssString(copy.tagline));
     root.style.setProperty("--dream-project-prefix", cssString(copy.projectPrefix));
     root.style.setProperty("--dream-project-label", cssString(copy.projectLabel));
+
+    // WorkBuddy (and other css-only hosts): host class + CSS vars only; no chrome overlay.
+    if (!ENABLE_CHROME) return true;
 
     var shellMain =
       document.querySelector("main.main-surface") || document.querySelector("main");
@@ -385,10 +392,12 @@
     if (!root || !root.classList.contains(CLASS_SKIN)) {
       missing.push({
         name: "root-class",
-        selectors: ["html.cdxtheme-codex-skin"],
+        selectors: ["html." + CLASS_SKIN],
       });
     }
-    if (!chrome) missing.push({ name: "chrome", selectors: ["#" + CHROME_ID] });
+    if (ENABLE_CHROME && !chrome) {
+      missing.push({ name: "chrome", selectors: ["#" + CHROME_ID] });
+    }
     if (artDataUrl && root) {
       var hasArt =
         root.style.getPropertyValue("--dream-art") ||
@@ -406,7 +415,7 @@
       pass: missing.length === 0,
       missing: missing,
       rootClassPresent: Boolean(root && root.classList.contains(CLASS_SKIN)),
-      chromePresent: Boolean(chrome),
+      chromePresent: ENABLE_CHROME ? Boolean(chrome) : true,
     };
   }
 

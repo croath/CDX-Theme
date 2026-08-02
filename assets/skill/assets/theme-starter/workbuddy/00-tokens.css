@@ -1,17 +1,46 @@
 /* workbuddy/00-tokens.css
  *
- * Semantic aliases + decorative copy. Primary palette lives in 00-palette.css.
- * Keep structure in sync with codex/00-tokens.css (bridges optional on WorkBuddy).
+ * Semantic aliases + decorative copy + layout knobs.
+ * Primary palette lives in 00-palette.css.
+ *
+ * Layout contracts (from production WorkBuddy polish):
+ *   chips 36 + gap ≥24 + slot ~200 → composer height
+ *   header / tabs / composer sizes via tokens (do not hardcode in partials)
+ *   chat-container max width + centered
+ *   workbuddy-topbar height via --theme-workbuddy-topbar
+ *   polaroid hidden; corner badge only
  */
 
 :root.cdxtheme-host-workbuddy {
-  --theme-surface: color-mix(in srgb, var(--theme-panel) 92%, transparent);
+  --theme-surface: color-mix(in srgb, var(--theme-panel) 96%, transparent);
   --theme-surface-strong: var(--theme-panel);
-  --theme-sidebar: color-mix(in srgb, var(--theme-panel-mid) 94%, transparent);
+  --theme-sidebar: color-mix(in srgb, var(--theme-panel) 96%, var(--theme-panel-mid));
   --theme-border: color-mix(in srgb, var(--theme-accent) 22%, transparent);
-  --theme-shadow: color-mix(in srgb, var(--theme-black) 12%, transparent);
-  --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 15%, transparent);
+  --theme-shadow: color-mix(in srgb, var(--theme-black) 9%, transparent);
+  --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 12%, transparent);
   --theme-accent-strong: var(--theme-accent-deep);
 
+  /* Decorative (theme-owned; default English) */
   --theme-badge: "✦";
+  --theme-eyebrow: "STARTER";
+  /* Inject does not set --dream-brand-title; keep a fallback for header content */
+  --dream-brand-title: "My Theme";
+
+  /* Layout knobs — chips 36 + gap 24 + slot 200 = 260 */
+  --theme-composer-chips-gap: 24px;
+  --theme-composer-height: 260px;
+  --theme-input-slot-height: 200px;
+  --theme-header-height: 228px;
+  --theme-tabs-height: 52px;
+  --theme-home-pad-bottom: 14px;
+  --theme-home-gap: 16px;
+  --theme-home-max: 900px;
+  /* Host topbar strip under titlebar; set 0 to collapse */
+  --theme-workbuddy-topbar: 0px;
+
+  --theme-radius-lg: 18px;
+  --theme-radius-md: 14px;
+  --theme-radius-sm: 10px;
+  --theme-glow: color-mix(in srgb, var(--theme-accent) 22%, transparent);
+  --theme-ring: color-mix(in srgb, var(--theme-accent) 28%, transparent);
 }

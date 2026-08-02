@@ -1,20 +1,23 @@
-//! CDP theme injector for Codex.
+//! CDP theme injector for host apps (Codex + WorkBuddy).
 //!
 //! Apply flow (inspired by [Codex-Dream-Skin](https://github.com/Fei-Away/Codex-Dream-Skin)):
-//! wait `app://` targets → probe shell markers → evaluate inject → register
+//! wait page targets → probe shell markers → evaluate inject → register
 //! `Page.addScriptToEvaluateOnNewDocument` so SPA reloads keep the skin → verify.
 //!
 //! Inject sets **cdxtheme-only** multi-image CSS vars: `--cdxtheme-image-{name}`.
 
 pub mod theme;
 
-pub use crate::cdp::{CdpTarget, wait_for_targets};
-pub use theme::{build_inject_expression, build_inject_expression_workbuddy, load_theme_package};
+pub use crate::cdp::{CdpTarget, TargetUrlKind, wait_for_targets, wait_for_targets_with};
+pub use theme::{
+  build_inject_expression, build_inject_expression_for_app, build_inject_expression_workbuddy,
+  load_theme_package,
+};
 // Loaded theme model lives in `cdx-theme-types`.
 pub use cdx_theme_types::{
-  BaseTheme, BaseThemeFonts, CodexLoadedTarget, CodexTargetOptions, CodexVerification,
-  LoadedTargets, LoadedTheme, PublicTheme, SelectorCheck, SemanticColors, ThemeCopy,
-  VerificationContext, VerificationWhen, WorkBuddyLoadedTarget, WorkBuddyVerification,
+  APP_CODEX, APP_WORKBUDDY, BaseTheme, BaseThemeFonts, CodexLoadedTarget, CodexTargetOptions,
+  CodexVerification, LoadedTargets, LoadedTheme, PublicTheme, SelectorCheck, SemanticColors,
+  ThemeCopy, VerificationContext, VerificationWhen, WorkBuddyLoadedTarget, WorkBuddyVerification,
 };
 
 use crate::cdp::CdpSession;
@@ -31,6 +34,8 @@ static EARLY_SCRIPT_IDS: LazyLock<Mutex<HashMap<String, String>>> =
 
 /// Default Codex desktop remote-debugging port.
 pub const DEFAULT_CDP_PORT: u16 = 9335;
+/// Default WorkBuddy desktop remote-debugging port.
+pub const DEFAULT_WORKBUDDY_CDP_PORT: u16 = 9336;
 
 #[derive(Clone, Debug)]
 pub struct InjectOptions {
@@ -45,6 +50,63 @@ impl Default for InjectOptions {
       // Allow large multi-image inject payloads over CDP.
       timeout_ms: 120_000,
     }
+  }
+}
+
+/// Host-specific CDP inject/restore/verify behavior.
+#[derive(Clone, Copy, Debug)]
+struct HostProfile {
+  app_id: &'static str,
+  url_kind: TargetUrlKind,
+  probe_expression: &'static str,
+  /// JS condition body that returns true when the shell is ready for early inject.
+  early_ready_js: &'static str,
+  remove_expression: &'static str,
+  /// Class used for soft verify when host state is missing.
+  skin_class: &'static str,
+}
+
+const CODEX_HOST: HostProfile = HostProfile {
+  app_id: APP_CODEX,
+  url_kind: TargetUrlKind::App,
+  probe_expression: PROBE_EXPRESSION_CODEX,
+  early_ready_js: r#"
+    const shell = document.querySelector("main.main-surface") || document.querySelector("main");
+    const sidebar = document.querySelector("aside.app-shell-left-panel") || document.querySelector("aside");
+    return Boolean(shell && sidebar);
+  "#,
+  remove_expression: REMOVE_EXPRESSION_CODEX,
+  skin_class: "cdxtheme-codex-skin",
+};
+
+const WORKBUDDY_HOST: HostProfile = HostProfile {
+  app_id: APP_WORKBUDDY,
+  url_kind: TargetUrlKind::File,
+  probe_expression: PROBE_EXPRESSION_WORKBUDDY,
+  // More `#` delimiters so JS `#root` does not end the raw string.
+  early_ready_js: r##"
+    const shell = document.querySelector(".teams-container") || document.querySelector("#root");
+    return Boolean(shell);
+  "##,
+  remove_expression: REMOVE_EXPRESSION_WORKBUDDY,
+  skin_class: "cdxtheme-workbuddy-skin",
+};
+
+fn host_profile(app_id: &str) -> Result<&'static HostProfile, String> {
+  match app_id.trim().to_ascii_lowercase().as_str() {
+    "codex" => Ok(&CODEX_HOST),
+    "workbuddy" => Ok(&WORKBUDDY_HOST),
+    other => Err(format!(
+      "unsupported host app `{other}` (supported: codex, workbuddy)"
+    )),
+  }
+}
+
+/// Default CDP port for a host app id.
+pub fn default_cdp_port_for_app(app_id: &str) -> u16 {
+  match app_id.trim().to_ascii_lowercase().as_str() {
+    "workbuddy" => DEFAULT_WORKBUDDY_CDP_PORT,
+    _ => DEFAULT_CDP_PORT,
   }
 }
 
@@ -70,7 +132,7 @@ pub struct InjectRunResult {
 
 /// Codex host preflight — Dream-Skin style: require shell + sidebar.
 /// Soft gate: still inject if incomplete (SPA may finish after first paint).
-const PROBE_EXPRESSION: &str = r#"(() => {
+const PROBE_EXPRESSION_CODEX: &str = r#"(() => {
   const shell = Boolean(document.querySelector('main.main-surface') || document.querySelector('main'));
   const sidebar = Boolean(document.querySelector('aside.app-shell-left-panel') || document.querySelector('aside'));
   const composer = Boolean(document.querySelector('.composer-surface-chrome') || document.querySelector("[class*='composer']"));
@@ -90,11 +152,39 @@ const PROBE_EXPRESSION: &str = r#"(() => {
   };
 })()"#;
 
-/// Wrap inject payload so it waits for Codex shell markers before applying.
+/// WorkBuddy host preflight — shell landmarks from theme skill notes.
+/// Uses `r##` so CSS/DOM selectors like `#root` do not terminate the raw string.
+const PROBE_EXPRESSION_WORKBUDDY: &str = r##"(() => {
+  const shell = Boolean(
+    document.querySelector('.teams-container') || document.querySelector('#root')
+  );
+  const sidebar = Boolean(
+    document.querySelector('.conversation-sidebar') || document.querySelector('.conversation-list')
+  );
+  const composer = Boolean(
+    document.querySelector('[role="textbox"][contenteditable="true"]')
+  );
+  const missing = [];
+  if (!shell) missing.push({ name: "shell", selectors: [".teams-container", "#root"] });
+  return {
+    appId: "workbuddy",
+    // Shell is enough to inject; sidebar/composer appear on some routes only.
+    compatible: shell,
+    shell,
+    sidebar,
+    composer,
+    missing,
+    readyState: document.readyState,
+    href: location.href,
+  };
+})()"##;
+
+/// Wrap inject payload so it waits for host shell markers before applying.
 /// Port of Dream-Skin `earlyPayloadFor` (Page.addScriptToEvaluateOnNewDocument).
-fn early_payload_for(payload: &str, generation: &str) -> String {
+fn early_payload_for(payload: &str, generation: &str, host: &HostProfile) -> String {
   // generation is JSON-encoded for safe embedding
   let gen_json = serde_json::to_string(generation).unwrap_or_else(|_| "\"cdxtheme\"".into());
+  let ready = host.early_ready_js;
   format!(
     r#"(() => {{
   const generationKey = "__CDXTHEME_EARLY_GENERATION__";
@@ -109,12 +199,13 @@ fn early_payload_for(payload: &str, generation: &str) -> String {
     if (timeout) clearTimeout(timeout);
     timeout = null;
   }};
+  const hostReady = () => {{
+    {ready}
+  }};
   const install = () => {{
     if (window[generationKey] !== generation) {{ stop(); return true; }}
     if (!document.documentElement) return false;
-    const shell = document.querySelector("main.main-surface") || document.querySelector("main");
-    const sidebar = document.querySelector("aside.app-shell-left-panel") || document.querySelector("aside");
-    if (!shell || !sidebar) return false;
+    if (!hostReady()) return false;
     stop();
     try {{
       {payload}
@@ -134,8 +225,8 @@ fn early_payload_for(payload: &str, generation: &str) -> String {
   )
 }
 
-/// Remove skin: prefer live host cleanup, else static teardown of current cdxtheme nodes.
-const REMOVE_EXPRESSION: &str = r#"(() => {
+/// Remove Codex skin: prefer live host cleanup, else static teardown.
+const REMOVE_EXPRESSION_CODEX: &str = r#"(() => {
   const appId = "codex";
   const state = window.__CDXTHEME__ && window.__CDXTHEME__.hosts && window.__CDXTHEME__.hosts[appId];
   if (state && typeof state.cleanup === "function") return state.cleanup();
@@ -176,16 +267,58 @@ const REMOVE_EXPRESSION: &str = r#"(() => {
   return true;
 })()"#;
 
-fn verify_expression(expected_theme: Option<&PublicTheme>) -> String {
+/// Remove WorkBuddy skin: prefer live host cleanup, else static teardown.
+const REMOVE_EXPRESSION_WORKBUDDY: &str = r#"(() => {
+  const appId = "workbuddy";
+  const state = window.__CDXTHEME__ && window.__CDXTHEME__.hosts && window.__CDXTHEME__.hosts[appId];
+  if (state && typeof state.cleanup === "function") return state.cleanup();
+
+  const ids = [
+    "cdxtheme-theme-style-workbuddy",
+    "cdxtheme-workbuddy-skin-chrome",
+  ];
+  for (const id of ids) {
+    const node = document.getElementById(id);
+    if (node) node.remove();
+  }
+  const root = document.documentElement;
+  if (root) {
+    root.classList.remove("cdxtheme-workbuddy-skin", "cdxtheme-host-workbuddy", "cdxtheme-theme");
+    delete root.dataset.cdxthemeHost;
+    delete root.dataset.cdxthemeTheme;
+    delete root.dataset.cdxthemeThemeVersion;
+    root.style.removeProperty("--dream-art");
+    root.style.removeProperty("--cdxtheme-art");
+    root.style.removeProperty("--dream-tagline");
+    root.style.removeProperty("--dream-project-prefix");
+    root.style.removeProperty("--dream-project-label");
+    if (root.style) {
+      for (let i = root.style.length - 1; i >= 0; i -= 1) {
+        const name = root.style.item(i);
+        if (name.startsWith("--cdxtheme-image-")) {
+          root.style.removeProperty(name);
+        }
+      }
+    }
+  }
+  if (window.__CDXTHEME__ && window.__CDXTHEME__.hosts) delete window.__CDXTHEME__.hosts[appId];
+  return true;
+})()"#;
+
+fn verify_expression(expected_theme: Option<&PublicTheme>, host: &HostProfile) -> String {
   let expected = expected_theme
     .map(|t| serde_json::to_string(t).unwrap_or_else(|_| "null".into()))
     .unwrap_or_else(|| "null".into());
+  let app_id = serde_json::to_string(host.app_id).unwrap_or_else(|_| "\"codex\"".into());
+  let skin_class =
+    serde_json::to_string(host.skin_class).unwrap_or_else(|_| "\"cdxtheme-codex-skin\"".into());
 
   // Core success: installed + style + theme id/version.
   // Profile details are warnings only (themes may overflow slightly, chrome may lag).
   format!(
     r#"(() => {{
-    const appId = "codex";
+    const appId = {app_id};
+    const skinClass = {skin_class};
     const expected = {expected};
     const hosts = window.__CDXTHEME__ && window.__CDXTHEME__.hosts;
     const state = (hosts && hosts[appId]) || null;
@@ -193,8 +326,14 @@ fn verify_expression(expected_theme: Option<&PublicTheme>) -> String {
     const stylePresent = Boolean(
       document.getElementById("cdxtheme-theme-style-" + appId)
     );
-    const classPresent = document.documentElement.classList.contains("cdxtheme-codex-skin");
-    const themeId = state ? state.themeId : (document.documentElement.dataset.codexSkinTheme || null);
+    const classPresent =
+      document.documentElement.classList.contains(skinClass) ||
+      document.documentElement.classList.contains("cdxtheme-host-" + appId);
+    const themeId = state
+      ? state.themeId
+      : (document.documentElement.dataset.cdxthemeTheme ||
+         document.documentElement.dataset.codexSkinTheme ||
+         null);
     const versionRaw = state ? state.version : (document.documentElement.dataset.cdxthemeThemeVersion || null);
     const version = versionRaw == null || versionRaw === "" ? null : Number(versionRaw);
     const expectedVersion = expected && expected.version != null ? Number(expected.version) : null;
@@ -223,11 +362,15 @@ fn verify_expression(expected_theme: Option<&PublicTheme>) -> String {
   )
 }
 
-async fn wait_for_compatibility(session: &CdpSession, timeout_ms: u64) -> Result<Value, String> {
+async fn wait_for_compatibility(
+  session: &CdpSession,
+  timeout_ms: u64,
+  host: &HostProfile,
+) -> Result<Value, String> {
   let deadline = tokio::time::Instant::now() + std::time::Duration::from_millis(timeout_ms);
   let mut last = Value::Null;
   while tokio::time::Instant::now() < deadline {
-    last = session.evaluate(PROBE_EXPRESSION).await?;
+    last = session.evaluate(host.probe_expression).await?;
     if last.get("compatible").and_then(|v| v.as_bool()) == Some(true) {
       return Ok(last);
     }
@@ -236,48 +379,70 @@ async fn wait_for_compatibility(session: &CdpSession, timeout_ms: u64) -> Result
   Ok(last)
 }
 
-/// Apply using an already-loaded theme (preferred; avoids double disk IO).
+/// Apply using an already-loaded theme (Codex target; preferred for Tauri).
 pub async fn apply_loaded_theme(
   theme: &LoadedTheme,
   options: InjectOptions,
 ) -> Result<InjectRunResult, String> {
-  let (expression, public) = build_inject_expression(theme)?;
-  apply_expression(&expression, &public, options).await
+  apply_loaded_theme_for_app(APP_CODEX, theme, options).await
 }
 
-/// Apply a theme package directory or portable package path.
+/// Apply a loaded theme to a specific host app (`codex` / `workbuddy`).
+pub async fn apply_loaded_theme_for_app(
+  app_id: &str,
+  theme: &LoadedTheme,
+  options: InjectOptions,
+) -> Result<InjectRunResult, String> {
+  let host = host_profile(app_id)?;
+  let (expression, public) = build_inject_expression_for_app(theme, host.app_id)?;
+  apply_expression(&expression, &public, options, host).await
+}
+
+/// Apply a theme package to the Codex host.
 pub async fn apply_theme_package(
   package_path: impl AsRef<Path>,
   options: InjectOptions,
 ) -> Result<InjectRunResult, String> {
+  apply_theme_package_for_app(APP_CODEX, package_path, options).await
+}
+
+/// Apply a theme package to a specific host app (`codex` / `workbuddy`).
+pub async fn apply_theme_package_for_app(
+  app_id: &str,
+  package_path: impl AsRef<Path>,
+  options: InjectOptions,
+) -> Result<InjectRunResult, String> {
   let theme = load_theme_package(package_path)?;
-  apply_loaded_theme(&theme, options).await
+  apply_loaded_theme_for_app(app_id, &theme, options).await
 }
 
 async fn apply_expression(
   expression: &str,
   public: &PublicTheme,
   options: InjectOptions,
+  host: &HostProfile,
 ) -> Result<InjectRunResult, String> {
-  let targets = wait_for_targets(options.port, options.timeout_ms).await?;
+  let targets = wait_for_targets_with(options.port, options.timeout_ms, host.url_kind).await?;
   if targets.is_empty() {
-    return Err("no Codex page targets found".into());
+    return Err(format!("no {} page targets found", host.app_id));
   }
 
   tracing::info!(
-    "CDP inject: {} app:// target(s) on port {}, payload {} bytes, theme={}",
+    "CDP inject: {} {} target(s) on port {}, host={}, payload {} bytes, theme={}",
     targets.len(),
+    host.url_kind.label(),
     options.port,
+    host.app_id,
     expression.len(),
     public.id
   );
 
   // Dream-Skin: one connected session per target — probe, early-script, inject, verify.
   let generation = format!("{}@{}", public.id, public.version);
-  let early_source = early_payload_for(expression, &generation);
+  let early_source = early_payload_for(expression, &generation, host);
   let mut results = Vec::new();
   let mut any_hard_fail = false;
-  let verify_expr = verify_expression(Some(public));
+  let verify_expr = verify_expression(Some(public), host);
   let preflight_timeout = options.timeout_ms.clamp(2_000, 8_000);
 
   // Drop previous early scripts (tracked ids) by opening sessions later if needed.
@@ -299,20 +464,21 @@ async fn apply_expression(
       }
     };
 
-    // Wait for Codex shell markers (shell + sidebar), inject even if incomplete.
-    match wait_for_compatibility(&session, preflight_timeout).await {
+    // Wait for host shell markers; inject even if incomplete.
+    match wait_for_compatibility(&session, preflight_timeout, host).await {
       Ok(value) => {
         if value.get("compatible").and_then(|v| v.as_bool()) == Some(true) {
-          tracing::info!("Codex probe ok on {} ({})", target.id, value);
+          tracing::info!("{} probe ok on {} ({})", host.app_id, target.id, value);
         } else {
           tracing::warn!(
-            "Codex probe incomplete on {} (injecting anyway): {}",
+            "{} probe incomplete on {} (injecting anyway): {}",
+            host.app_id,
             target.id,
             value
           );
         }
       }
-      Err(e) => tracing::warn!("Codex probe error on {}: {e}", target.id),
+      Err(e) => tracing::warn!("{} probe error on {}: {e}", host.app_id, target.id),
     }
 
     // Remove previous early script for this target if we still know the id.
@@ -418,7 +584,7 @@ async fn apply_expression(
   }
 
   if results.is_empty() {
-    return Err("no Codex page targets found".into());
+    return Err(format!("no {} page targets found", host.app_id));
   }
   if any_hard_fail {
     return Err(format!(
@@ -437,7 +603,16 @@ async fn apply_expression(
 
 /// Remove the injected skin from all live Codex renderer targets.
 pub async fn restore_default_theme(options: InjectOptions) -> Result<InjectRunResult, String> {
-  let targets = wait_for_targets(options.port, options.timeout_ms).await?;
+  restore_default_theme_for_app(APP_CODEX, options).await
+}
+
+/// Remove the injected skin from a specific host app.
+pub async fn restore_default_theme_for_app(
+  app_id: &str,
+  options: InjectOptions,
+) -> Result<InjectRunResult, String> {
+  let host = host_profile(app_id)?;
+  let targets = wait_for_targets_with(options.port, options.timeout_ms, host.url_kind).await?;
   let mut results = Vec::new();
   let mut any_fail = false;
 
@@ -469,7 +644,7 @@ pub async fn restore_default_theme(options: InjectOptions) -> Result<InjectRunRe
     {
       tracing::debug!("remove early script on restore {}: {e}", target.id);
     }
-    let result = session.evaluate(REMOVE_EXPRESSION).await;
+    let result = session.evaluate(host.remove_expression).await;
     session.close().await;
     match result {
       Ok(value) => {
@@ -496,7 +671,7 @@ pub async fn restore_default_theme(options: InjectOptions) -> Result<InjectRunRe
   }
 
   if results.is_empty() {
-    return Err("no Codex page targets found".into());
+    return Err(format!("no {} page targets found", host.app_id));
   }
   if any_fail {
     return Err(format!(
@@ -513,13 +688,23 @@ pub async fn restore_default_theme(options: InjectOptions) -> Result<InjectRunRe
   })
 }
 
-/// Verify currently injected theme state on all targets.
+/// Verify currently injected theme state on Codex targets.
 pub async fn verify_theme(
   expected: Option<&PublicTheme>,
   options: InjectOptions,
 ) -> Result<InjectRunResult, String> {
-  let targets = wait_for_targets(options.port, options.timeout_ms).await?;
-  let expr = verify_expression(expected);
+  verify_theme_for_app(APP_CODEX, expected, options).await
+}
+
+/// Verify currently injected theme state for a specific host app.
+pub async fn verify_theme_for_app(
+  app_id: &str,
+  expected: Option<&PublicTheme>,
+  options: InjectOptions,
+) -> Result<InjectRunResult, String> {
+  let host = host_profile(app_id)?;
+  let targets = wait_for_targets_with(options.port, options.timeout_ms, host.url_kind).await?;
+  let expr = verify_expression(expected, host);
   let mut results = Vec::new();
 
   for target in &targets {
