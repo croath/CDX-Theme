@@ -84,6 +84,8 @@ pub fn ThemeBuilderPage() -> impl IntoView {
   // Shared Codex model selection (NewBuild + Chat).
   let models = RwSignal::new(Vec::<CodexModelOption>::new());
   let selected_model = RwSignal::new(String::new());
+  // Host app for Apply: `codex` (default) or `workbuddy`.
+  let target_app = RwSignal::new(String::from("codex"));
 
   let refresh_sessions = move || {
     if sessions_loading.get_untracked() {
@@ -300,6 +302,7 @@ pub fn ThemeBuilderPage() -> impl IntoView {
             applied_name=applied_name
             models=models
             selected_model=selected_model
+            target_app=target_app
             on_back=Callback::new(move |_| back_home())
           />
         }.into_any(),
@@ -319,6 +322,7 @@ pub fn ThemeBuilderPage() -> impl IntoView {
             applied_name=applied_name
             models=models
             selected_model=selected_model
+            target_app=target_app
             list_ref=list_ref
             on_back=Callback::new(move |_| back_home())
           />
@@ -445,6 +449,134 @@ pub(super) fn BuilderModelSelect(
         </ul>
       </Show>
     </div>
+  }
+}
+
+/// Host app dropdown for Theme Builder Apply (`codex` / `workbuddy`).
+///
+/// Only shown when both host apps are installed (same rule as Recommend / Library).
+#[component]
+pub(super) fn BuilderTargetAppSelect(
+  target_app: RwSignal<String>,
+  /// When true, the menu is non-interactive (apply in flight).
+  disabled: Signal<bool>,
+) -> impl IntoView {
+  let ctx = AppCtx::use_ctx();
+  let open = RwSignal::new(false);
+
+  // Keep builder target aligned when only one host is installed.
+  Effect::new(move |_| {
+    let detect = ctx.host_apps.get();
+    if let Some(sole) = detect.sole_target() {
+      if target_app.get_untracked() != sole {
+        target_app.set(sole.to_string());
+      }
+    }
+  });
+
+  const OPTIONS: [(&str, &str); 2] = [
+    ("codex", "builder.target.codex"),
+    ("workbuddy", "builder.target.workbuddy"),
+  ];
+
+  view! {
+    <Show when=move || ctx.show_target_select()>
+      <div class="relative shrink-0">
+        <Show when=move || open.get()>
+          <div
+            class="fixed inset-0 z-20 cursor-default"
+            on:click=move |_| open.set(false)
+          />
+        </Show>
+
+        <button
+          type="button"
+          class="no-drag group relative z-30 inline-flex h-9 max-w-[11rem] items-center gap-1.5 rounded-xl border border-border/70 bg-card/90 px-2.5 text-left text-xs font-medium text-foreground shadow-sm backdrop-blur transition-all hover:border-primary/35 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 sm:max-w-[14rem]"
+          prop:disabled=move || disabled.get()
+          aria-haspopup="listbox"
+          prop:aria-expanded=move || open.get()
+          aria-label=move || {
+            let i18n = I18n { locale: ctx.locale.get() };
+            i18n.t("builder.target.label")
+          }
+          on:click=move |_| {
+            if disabled.get_untracked() {
+              return;
+            }
+            open.update(|v| *v = !*v);
+          }
+        >
+          <span class="min-w-0 flex-1 truncate">
+            {move || {
+              let id = target_app.get();
+              let i18n = I18n { locale: ctx.locale.get() };
+              match id.as_str() {
+                "workbuddy" => i18n.t("builder.target.workbuddy").to_string(),
+                _ => i18n.t("builder.target.codex").to_string(),
+              }
+            }}
+          </span>
+          <span class=move || {
+            if open.get() {
+              "inline-flex shrink-0 text-muted-foreground transition-transform duration-200 rotate-180"
+            } else {
+              "inline-flex shrink-0 text-muted-foreground transition-transform duration-200"
+            }
+          }>
+            <ChevronDown class="size-3.5" />
+          </span>
+        </button>
+
+        <Show when=move || open.get()>
+          <ul
+            class="absolute right-0 top-full z-40 mt-1.5 w-48 list-none overflow-hidden rounded-2xl border border-border/70 bg-popover p-1.5 shadow-2xl shadow-black/25 ring-1 ring-border/40"
+            role="listbox"
+          >
+            {OPTIONS
+              .into_iter()
+              .map(|(id, label_key)| {
+                let id_owned = id.to_string();
+                let id_active = id_owned.clone();
+                let id_class = id_owned.clone();
+                let id_click = id_owned.clone();
+                let id_check = id_owned;
+                view! {
+                  <li>
+                    <button
+                      type="button"
+                      role="option"
+                      prop:aria-selected=move || target_app.get() == id_active
+                      class=move || {
+                        let active = target_app.get() == id_class;
+                        if active {
+                          "flex w-full items-center justify-between gap-2 rounded-xl bg-primary/12 px-2.5 py-2 text-left transition-colors"
+                        } else {
+                          "flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-accent/60"
+                        }
+                      }
+                      on:click=move |_| {
+                        target_app.set(id_click.clone());
+                        open.set(false);
+                      }
+                    >
+                      <span class="truncate text-xs font-medium text-foreground">
+                        {move || {
+                          let i18n = I18n { locale: ctx.locale.get() };
+                          i18n.t(label_key)
+                        }}
+                      </span>
+                      <Show when=move || target_app.get() == id_check>
+                        <Check class="size-3.5 shrink-0 text-primary" />
+                      </Show>
+                    </button>
+                  </li>
+                }
+              })
+              .collect_view()}
+          </ul>
+        </Show>
+      </div>
+    </Show>
   }
 }
 

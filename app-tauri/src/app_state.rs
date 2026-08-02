@@ -1,6 +1,8 @@
 use serde::Serialize;
 use std::sync::Mutex;
 
+use crate::injector::{DEFAULT_CDP_PORT, DEFAULT_WORKBUDDY_CDP_PORT};
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CdpTargetInfo {
@@ -12,6 +14,9 @@ pub struct CdpTargetInfo {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CdpServerStatus {
+  /// Host app id: `codex` or `workbuddy`.
+  #[serde(default)]
+  pub app: String,
   pub connected: bool,
   pub port: u16,
   pub target_count: usize,
@@ -19,11 +24,25 @@ pub struct CdpServerStatus {
   pub message: String,
 }
 
+impl CdpServerStatus {
+  pub fn disconnected(app: &str, port: u16, message: impl Into<String>) -> Self {
+    Self {
+      app: app.to_string(),
+      connected: false,
+      port,
+      target_count: 0,
+      targets: vec![],
+      message: message.into(),
+    }
+  }
+}
+
 impl Default for CdpServerStatus {
   fn default() -> Self {
     Self {
+      app: "codex".into(),
       connected: false,
-      port: crate::injector::DEFAULT_CDP_PORT,
+      port: DEFAULT_CDP_PORT,
       target_count: 0,
       targets: vec![],
       message: "Starting CDP monitor…".into(),
@@ -31,35 +50,78 @@ impl Default for CdpServerStatus {
   }
 }
 
+/// Combined CDP reachability for both host apps.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DualCdpStatus {
+  pub codex: CdpServerStatus,
+  pub workbuddy: CdpServerStatus,
+}
+
+impl Default for DualCdpStatus {
+  fn default() -> Self {
+    Self {
+      codex: CdpServerStatus {
+        app: "codex".into(),
+        port: DEFAULT_CDP_PORT,
+        message: "Starting CDP monitor…".into(),
+        ..Default::default()
+      },
+      workbuddy: CdpServerStatus {
+        app: "workbuddy".into(),
+        port: DEFAULT_WORKBUDDY_CDP_PORT,
+        message: "Starting CDP monitor…".into(),
+        ..Default::default()
+      },
+    }
+  }
+}
+
 pub struct AppState {
-  cdp: Mutex<CdpServerStatus>,
+  cdp: Mutex<DualCdpStatus>,
   cdp_port: Mutex<u16>,
+  workbuddy_cdp_port: Mutex<u16>,
 }
 
 impl Default for AppState {
   fn default() -> Self {
-    Self::new(crate::injector::DEFAULT_CDP_PORT)
+    Self::new(DEFAULT_CDP_PORT, DEFAULT_WORKBUDDY_CDP_PORT)
   }
 }
 
 impl AppState {
-  pub fn new(cdp_port: u16) -> Self {
-    let status = CdpServerStatus {
-      port: cdp_port,
-      ..Default::default()
+  pub fn new(cdp_port: u16, workbuddy_cdp_port: u16) -> Self {
+    let dual = DualCdpStatus {
+      codex: CdpServerStatus {
+        app: "codex".into(),
+        port: cdp_port,
+        message: "Starting CDP monitor…".into(),
+        ..Default::default()
+      },
+      workbuddy: CdpServerStatus {
+        app: "workbuddy".into(),
+        port: workbuddy_cdp_port,
+        message: "Starting CDP monitor…".into(),
+        ..Default::default()
+      },
     };
     Self {
-      cdp: Mutex::new(status),
+      cdp: Mutex::new(dual),
       cdp_port: Mutex::new(cdp_port),
+      workbuddy_cdp_port: Mutex::new(workbuddy_cdp_port),
     }
   }
 
   pub fn cdp_port(&self) -> u16 {
+    self.cdp_port.lock().map(|g| *g).unwrap_or(DEFAULT_CDP_PORT)
+  }
+
+  pub fn workbuddy_cdp_port(&self) -> u16 {
     self
-      .cdp_port
+      .workbuddy_cdp_port
       .lock()
       .map(|g| *g)
-      .unwrap_or(crate::injector::DEFAULT_CDP_PORT)
+      .unwrap_or(DEFAULT_WORKBUDDY_CDP_PORT)
   }
 
   pub fn set_cdp_port(&self, port: u16) {
@@ -67,17 +129,31 @@ impl AppState {
       *guard = port;
     }
     if let Ok(mut status) = self.cdp.lock() {
-      status.port = port;
+      status.codex.port = port;
     }
   }
 
-  pub fn set_cdp_status(&self, status: CdpServerStatus) {
+  pub fn set_workbuddy_cdp_port(&self, port: u16) {
+    if let Ok(mut guard) = self.workbuddy_cdp_port.lock() {
+      *guard = port;
+    }
+    if let Ok(mut status) = self.cdp.lock() {
+      status.workbuddy.port = port;
+    }
+  }
+
+  pub fn set_dual_cdp_status(&self, status: DualCdpStatus) {
     if let Ok(mut guard) = self.cdp.lock() {
       *guard = status;
     }
   }
 
-  pub fn cdp_status(&self) -> CdpServerStatus {
+  pub fn dual_cdp_status(&self) -> DualCdpStatus {
     self.cdp.lock().map(|g| g.clone()).unwrap_or_default()
+  }
+
+  /// Codex-only snapshot (back-compat for callers that only care about Codex).
+  pub fn cdp_status(&self) -> CdpServerStatus {
+    self.dual_cdp_status().codex
   }
 }

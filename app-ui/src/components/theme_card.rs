@@ -15,6 +15,8 @@ pub fn ThemeCard(
   applied_theme_id: RwSignal<Option<String>>,
   /// Shared list so delete can remove the card without a full reload.
   themes: RwSignal<Vec<ThemeMetadata>>,
+  /// Page-level host for Apply (`codex` | `workbuddy`).
+  target_app: RwSignal<String>,
   /// When false (e.g. Recommend page), hide delete even for installed entries.
   #[prop(default = true)]
   allow_delete: bool,
@@ -35,6 +37,10 @@ pub fn ThemeCard(
   let local_version = theme.version;
   let remote_version = theme.remote_version;
   let can_delete = allow_delete && source == ThemeSource::Installed;
+
+  // Local package on disk (builtin or installed) — can apply to host apps.
+  // Remote-only catalog entries must be downloaded first.
+  let can_apply = matches!(source, ThemeSource::Installed | ThemeSource::Builtin);
 
   // Preview: prefer already-local data URLs; resolve remote HTTP(S) through disk cache.
   let preview_src = RwSignal::new(Option::<String>::None);
@@ -85,20 +91,23 @@ pub fn ThemeCard(
   };
 
   let on_apply = move |_| {
-    if applying.get_untracked() || downloading.get_untracked() || deleting.get_untracked() {
+    if !can_apply
+      || applying.get_untracked()
+      || downloading.get_untracked()
+      || deleting.get_untracked()
+    {
       return;
     }
+    let host = target_app.get_untracked();
     applying.set(true);
     let name = theme_name.get_value();
     let id = this_id.get_value();
-    let url = theme_url.get_value();
+    // Local packages only — do not pass remote URL (download is a separate action).
     let locale = ctx.locale.get_untracked();
     spawn_local(async move {
-      match api::apply_theme(id.clone(), url).await {
+      match api::apply_theme_to(id.clone(), None, Some(host.clone())).await {
         Ok(_) => {
           applied_theme_id.set(Some(id.clone()));
-          // Apply downloads remote packages — mark card as installed / up to date.
-          // Keep local package version when known; only fill from remote if missing.
           themes.update(|list| {
             if let Some(t) = list.iter_mut().find(|t| t.id == id) {
               t.source = ThemeSource::Installed;
@@ -121,7 +130,14 @@ pub fn ThemeCard(
           });
           applying.set(false);
           let i18n = I18n { locale };
-          toast_success(i18n.t("recommend.apply.success"), &name);
+          let host_label = match host.as_str() {
+            "workbuddy" => i18n.t("recommend.apply.workbuddy"),
+            _ => i18n.t("recommend.apply.codex"),
+          };
+          toast_success(
+            i18n.t("recommend.apply.success"),
+            &format!("{name} → {host_label}"),
+          );
         }
         Err(e) => {
           applying.set(false);
@@ -446,27 +462,41 @@ pub fn ThemeCard(
             view! { <span class="hidden" /> }.into_any()
           }}
 
-          <button
-            type="button"
-            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-3.5 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60"
-            disabled=busy
-            on:click=on_apply
-          >
-            {move || {
-              let i18n = I18n { locale: ctx.locale.get() };
-              if applying.get() {
-                view! {
-                  <LoaderCircle class="size-4 animate-spin" />
-                  <span>{i18n.t("recommend.applying")}</span>
-                }.into_any()
-              } else {
-                // Always re-applyable, even when this theme is already marked applied.
-                view! {
-                  <span>{i18n.t("recommend.apply")}</span>
-                }.into_any()
-              }
-            }}
-          </button>
+          // Apply only for local packages (builtin / installed). Host comes from page-level select.
+          {if can_apply {
+            view! {
+              <button
+                type="button"
+                class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-3.5 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60"
+                disabled=busy
+                on:click=on_apply
+                title=move || {
+                  let i18n = I18n { locale: ctx.locale.get() };
+                  let host = match target_app.get().as_str() {
+                    "workbuddy" => i18n.t("recommend.apply.workbuddy"),
+                    _ => i18n.t("recommend.apply.codex"),
+                  };
+                  format!("{} · {host}", i18n.t("recommend.apply"))
+                }
+              >
+                {move || {
+                  let i18n = I18n { locale: ctx.locale.get() };
+                  if applying.get() {
+                    view! {
+                      <LoaderCircle class="size-4 animate-spin" />
+                      <span>{i18n.t("recommend.applying")}</span>
+                    }.into_any()
+                  } else {
+                    view! {
+                      <span>{i18n.t("recommend.apply")}</span>
+                    }.into_any()
+                  }
+                }}
+              </button>
+            }.into_any()
+          } else {
+            view! { <span class="hidden" /> }.into_any()
+          }}
         </div>
       </div>
 

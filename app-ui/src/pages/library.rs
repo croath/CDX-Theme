@@ -1,6 +1,7 @@
 //! Library page — installed / downloaded themes under local_data/themes (+ builtin).
 
 use crate::api;
+use crate::components::target_app_select::TargetAppSelect;
 use crate::components::theme_card::ThemeCard;
 use crate::components::ui::sonner::toast_error;
 use crate::i18n::I18n;
@@ -12,6 +13,7 @@ use leptos::prelude::*;
 #[component]
 pub fn LibraryPage() -> impl IntoView {
   let ctx = AppCtx::use_ctx();
+  let target_app = ctx.target_app;
 
   let themes = LocalResource::new(|| async move { api::retrieve_local_theme_list().await });
   let load_error_toasted = RwSignal::new(false);
@@ -30,19 +32,22 @@ pub fn LibraryPage() -> impl IntoView {
 
   view! {
     <div class="flex h-full flex-col">
-      <header class="mb-6">
-        <h1 class="bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-2xl font-semibold tracking-tight text-transparent sm:text-3xl">
-          {move || {
-            let i18n = I18n { locale: ctx.locale.get() };
-            i18n.t("library.title")
-          }}
-        </h1>
-        <p class="mt-1.5 max-w-xl text-sm text-muted-foreground">
-          {move || {
-            let i18n = I18n { locale: ctx.locale.get() };
-            i18n.t("library.subtitle")
-          }}
-        </p>
+      <header class="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0 flex-1">
+          <h1 class="bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-2xl font-semibold tracking-tight text-transparent sm:text-3xl">
+            {move || {
+              let i18n = I18n { locale: ctx.locale.get() };
+              i18n.t("library.title")
+            }}
+          </h1>
+          <p class="mt-1.5 max-w-xl text-sm text-muted-foreground">
+            {move || {
+              let i18n = I18n { locale: ctx.locale.get() };
+              i18n.t("library.subtitle")
+            }}
+          </p>
+        </div>
+        <TargetAppSelect target_app=target_app />
       </header>
 
       <div class="min-h-0 flex-1 overflow-y-auto pr-1">
@@ -70,7 +75,11 @@ pub fn LibraryPage() -> impl IntoView {
                   .find(|t| t.is_applied)
                   .map(|t| t.id.clone());
                 view! {
-                  <ThemeGrid themes=list applied_theme_id=applied />
+                  <ThemeGrid
+                    themes=list
+                    applied_theme_id=applied
+                    target_app=target_app
+                  />
                 }.into_any()
               }
               Some(Err(_)) => {
@@ -95,7 +104,11 @@ pub fn LibraryPage() -> impl IntoView {
 }
 
 #[component]
-fn ThemeGrid(themes: Vec<ThemeMetadata>, applied_theme_id: Option<String>) -> impl IntoView {
+fn ThemeGrid(
+  themes: Vec<ThemeMetadata>,
+  applied_theme_id: Option<String>,
+  target_app: RwSignal<String>,
+) -> impl IntoView {
   let themes = RwSignal::new(themes);
   let applied_theme_id = RwSignal::new(applied_theme_id);
   view! {
@@ -114,6 +127,7 @@ fn ThemeGrid(themes: Vec<ThemeMetadata>, applied_theme_id: Option<String>) -> im
                   theme=theme
                   applied_theme_id=applied_theme_id
                   themes=themes
+                  target_app=target_app
                 />
               }
             })

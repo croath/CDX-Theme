@@ -397,9 +397,10 @@ pub fn run() {
 
       let settings = settings_store::load(app.handle());
       let port = settings.cdp_port;
-      app.manage(AppState::new(port));
+      let workbuddy_port = settings.workbuddy_cdp_port;
+      app.manage(AppState::new(port, workbuddy_port));
       app.manage(UpdaterState::new());
-      tracing::debug!("CDP port from settings: {port}");
+      tracing::debug!("CDP ports from settings: codex={port} workbuddy={workbuddy_port}");
 
       // Ensure user theme drop-in folder exists: {local_data}/themes
       if let Err(e) = theme_catalog::ensure_user_themes_dir(app.handle()) {
@@ -425,9 +426,12 @@ pub fn run() {
       commands::fetch_remote_theme_catalog,
       commands::resolve_cached_image,
       commands::cdp_status,
+      commands::detect_host_apps,
       commands::set_window_appearance,
       commands::get_cdp_port,
       commands::set_cdp_port,
+      commands::get_workbuddy_cdp_port,
+      commands::set_workbuddy_cdp_port,
       commands::apply_theme,
       commands::restore_theme,
       commands::download_theme,

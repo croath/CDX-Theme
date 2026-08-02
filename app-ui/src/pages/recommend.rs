@@ -1,4 +1,5 @@
 use crate::api;
+use crate::components::target_app_select::TargetAppSelect;
 use crate::components::theme_card::ThemeCard;
 use crate::components::ui::sonner::{toast_error, toast_success};
 use crate::i18n::I18n;
@@ -10,6 +11,7 @@ use leptos::prelude::*;
 #[component]
 pub fn RecommendPage() -> impl IntoView {
   let ctx = AppCtx::use_ctx();
+  let target_app = ctx.target_app;
 
   // Bump to re-run the resource; tick > 0 forces a cache-busting network fetch.
   let refresh_tick = RwSignal::new(0u32);
@@ -90,35 +92,38 @@ pub fn RecommendPage() -> impl IntoView {
             }}
           </p>
         </div>
-        <button
-          type="button"
-          class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border bg-background/80 px-3 text-sm font-medium text-foreground shadow-sm transition-all hover:bg-accent active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60"
-          disabled=move || refreshing.get() || themes.get().is_none()
-          on:click=on_refresh
-          title=move || {
-            let i18n = I18n { locale: ctx.locale.get() };
-            i18n.t("recommend.refresh")
-          }
-        >
-          {move || {
-            let i18n = I18n { locale: ctx.locale.get() };
-            let spinning = refreshing.get();
-            view! {
-              <RefreshCw class=if spinning {
-                "size-4 animate-spin"
-              } else {
-                "size-4"
-              } />
-              <span>
-                {if spinning {
-                  i18n.t("recommend.refreshing")
-                } else {
-                  i18n.t("recommend.refresh")
-                }}
-              </span>
+        <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <TargetAppSelect target_app=target_app />
+          <button
+            type="button"
+            class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border bg-background/80 px-3 text-sm font-medium text-foreground shadow-sm transition-all hover:bg-accent active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60"
+            disabled=move || refreshing.get() || themes.get().is_none()
+            on:click=on_refresh
+            title=move || {
+              let i18n = I18n { locale: ctx.locale.get() };
+              i18n.t("recommend.refresh")
             }
-          }}
-        </button>
+          >
+            {move || {
+              let i18n = I18n { locale: ctx.locale.get() };
+              let spinning = refreshing.get();
+              view! {
+                <RefreshCw class=if spinning {
+                  "size-4 animate-spin"
+                } else {
+                  "size-4"
+                } />
+                <span>
+                  {if spinning {
+                    i18n.t("recommend.refreshing")
+                  } else {
+                    i18n.t("recommend.refresh")
+                  }}
+                </span>
+              }
+            }}
+          </button>
+        </div>
       </header>
 
       // Full-width scroll so the scrollbar sits on the main panel's right edge
@@ -150,7 +155,11 @@ pub fn RecommendPage() -> impl IntoView {
                   .find(|t| t.is_applied)
                   .map(|t| t.id.clone());
                 view! {
-                  <ThemeGrid themes=list applied_theme_id=applied />
+                  <ThemeGrid
+                    themes=list
+                    applied_theme_id=applied
+                    target_app=target_app
+                  />
                 }.into_any()
               }
               Some(Err(_)) => {
@@ -186,7 +195,11 @@ pub fn RecommendPage() -> impl IntoView {
 }
 
 #[component]
-fn ThemeGrid(themes: Vec<ThemeMetadata>, applied_theme_id: Option<String>) -> impl IntoView {
+fn ThemeGrid(
+  themes: Vec<ThemeMetadata>,
+  applied_theme_id: Option<String>,
+  target_app: RwSignal<String>,
+) -> impl IntoView {
   let themes = RwSignal::new(themes);
   let applied_theme_id = RwSignal::new(applied_theme_id);
   view! {
@@ -205,6 +218,7 @@ fn ThemeGrid(themes: Vec<ThemeMetadata>, applied_theme_id: Option<String>) -> im
                   theme=theme
                   applied_theme_id=applied_theme_id
                   themes=themes
+                  target_app=target_app
                   allow_delete=false
                 />
               }

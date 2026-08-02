@@ -1,6 +1,6 @@
 //! Persist app settings under Tauri app data dir.
 
-use crate::injector::DEFAULT_CDP_PORT;
+use crate::injector::{DEFAULT_CDP_PORT, DEFAULT_WORKBUDDY_CDP_PORT};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -12,6 +12,9 @@ const SETTINGS_FILE: &str = "settings.json";
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
   pub cdp_port: u16,
+  /// WorkBuddy desktop remote-debugging port (default 9336).
+  #[serde(default = "default_workbuddy_cdp_port")]
+  pub workbuddy_cdp_port: u16,
   /// Last successfully applied theme `manifest.id`, if any.
   #[serde(default)]
   pub applied_theme_id: Option<String>,
@@ -28,10 +31,15 @@ fn default_analytics_enabled() -> bool {
   true
 }
 
+fn default_workbuddy_cdp_port() -> u16 {
+  DEFAULT_WORKBUDDY_CDP_PORT
+}
+
 impl Default for AppSettings {
   fn default() -> Self {
     Self {
       cdp_port: DEFAULT_CDP_PORT,
+      workbuddy_cdp_port: DEFAULT_WORKBUDDY_CDP_PORT,
       applied_theme_id: None,
       analytics_enabled: true,
       analytics_distinct_id: None,
@@ -59,6 +67,9 @@ pub fn load(app: &AppHandle) -> AppSettings {
   if !is_valid_port(settings.cdp_port) {
     settings.cdp_port = DEFAULT_CDP_PORT;
   }
+  if !is_valid_port(settings.workbuddy_cdp_port) {
+    settings.workbuddy_cdp_port = DEFAULT_WORKBUDDY_CDP_PORT;
+  }
   settings
 }
 
@@ -67,6 +78,12 @@ pub fn save(app: &AppHandle, settings: &AppSettings) -> Result<(), String> {
     return Err(format!(
       "invalid CDP port {} (allowed 1024–65535)",
       settings.cdp_port
+    ));
+  }
+  if !is_valid_port(settings.workbuddy_cdp_port) {
+    return Err(format!(
+      "invalid WorkBuddy CDP port {} (allowed 1024–65535)",
+      settings.workbuddy_cdp_port
     ));
   }
   let path = settings_path(app)?;

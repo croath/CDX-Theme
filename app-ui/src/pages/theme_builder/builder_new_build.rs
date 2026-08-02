@@ -15,7 +15,8 @@ use crate::types::Locale;
 use crate::api::CodexModelOption;
 
 use super::{
-  BuilderModelSelect, is_allowed_hero_file, path_basename, read_file_data_url, short_id,
+  BuilderModelSelect, BuilderTargetAppSelect, is_allowed_hero_file, path_basename,
+  read_file_data_url, short_id,
 };
 
 /// New theme build: hero image + description → Generate → reply + Apply.
@@ -35,6 +36,7 @@ pub(super) fn BuilderNewBuild(
   applied_name: RwSignal<Option<String>>,
   models: RwSignal<Vec<CodexModelOption>>,
   selected_model: RwSignal<String>,
+  target_app: RwSignal<String>,
   on_back: Callback<()>,
 ) -> impl IntoView {
   let ctx = AppCtx::use_ctx();
@@ -280,9 +282,10 @@ pub(super) fn BuilderNewBuild(
       return;
     };
     let pkg = package_path.get_untracked();
+    let host = target_app.get_untracked();
     applying.set(true);
     spawn_local(async move {
-      match api::apply_built_theme(ws, pkg).await {
+      match api::apply_built_theme(ws, pkg, Some(host)).await {
         Ok(result) => {
           applied_name.set(Some(result.theme_name.clone()));
           let i18n = I18n { locale };
@@ -354,11 +357,17 @@ pub(super) fn BuilderNewBuild(
             }}
           </p>
         </div>
-        <BuilderModelSelect
-          models=models
-          selected_model=selected_model
-          disabled=Signal::derive(move || generating.get() || applying.get())
-        />
+        <div class="flex shrink-0 items-center gap-2">
+          <BuilderTargetAppSelect
+            target_app=target_app
+            disabled=Signal::derive(move || generating.get() || applying.get())
+          />
+          <BuilderModelSelect
+            models=models
+            selected_model=selected_model
+            disabled=Signal::derive(move || generating.get() || applying.get())
+          />
+        </div>
       </header>
 
       // Step pills
@@ -730,6 +739,11 @@ pub(super) fn BuilderNewBuild(
                     }}
                   </p>
                 </div>
+                <div class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+                  <BuilderTargetAppSelect
+                    target_app=target_app
+                    disabled=Signal::derive(move || applying.get())
+                  />
                 <button
                   type="button"
                   class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
@@ -770,6 +784,7 @@ pub(super) fn BuilderNewBuild(
                     }
                   }}
                 </button>
+                </div>
               </div>
             </div>
           </Show>

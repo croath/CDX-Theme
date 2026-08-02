@@ -69,7 +69,7 @@ pub fn SettingsPage() -> impl IntoView {
             </div>
           </section>
 
-          // CDP port
+          // Codex CDP port
           <section class="relative z-10 overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-md">
             <div class="flex items-start gap-4 border-b border-border/50 px-5 py-4">
               <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/20">
@@ -91,7 +91,41 @@ pub fn SettingsPage() -> impl IntoView {
               </div>
             </div>
             <div class="p-4">
-              <CdpPortSetting />
+              <CdpPortSetting
+                default_port="9335"
+                load_port=api::get_cdp_port
+                save_port=api::set_cdp_port
+              />
+            </div>
+          </section>
+
+          // WorkBuddy CDP port
+          <section class="relative z-10 overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-md">
+            <div class="flex items-start gap-4 border-b border-border/50 px-5 py-4">
+              <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/20">
+                <Globe class="size-5" />
+              </div>
+              <div>
+                <h2 class="text-sm font-semibold text-foreground">
+                  {move || {
+                    let i18n = I18n { locale: ctx.locale.get() };
+                    i18n.t("settings.cdp.workbuddy")
+                  }}
+                </h2>
+                <p class="mt-0.5 text-xs text-muted-foreground">
+                  {move || {
+                    let i18n = I18n { locale: ctx.locale.get() };
+                    i18n.t("settings.cdp.workbuddy.port.hint")
+                  }}
+                </p>
+              </div>
+            </div>
+            <div class="p-4">
+              <CdpPortSetting
+                default_port="9336"
+                load_port=api::get_workbuddy_cdp_port
+                save_port=api::set_workbuddy_cdp_port
+              />
             </div>
           </section>
 
@@ -256,14 +290,27 @@ fn AnalyticsSetting() -> impl IntoView {
 }
 
 #[component]
-fn CdpPortSetting() -> impl IntoView {
+fn CdpPortSetting<LF, SF, LFut, SFut>(
+  /// Placeholder / initial value before load (e.g. `"9335"`).
+  default_port: &'static str,
+  /// Async loader for the persisted port.
+  load_port: LF,
+  /// Async saver that returns the saved port.
+  save_port: SF,
+) -> impl IntoView
+where
+  LF: Fn() -> LFut + Copy + 'static,
+  SF: Fn(u16) -> SFut + Copy + 'static,
+  LFut: std::future::Future<Output = Result<u16, String>> + 'static,
+  SFut: std::future::Future<Output = Result<u16, String>> + 'static,
+{
   let ctx = AppCtx::use_ctx();
-  let port_input = RwSignal::new("9335".to_string());
+  let port_input = RwSignal::new(default_port.to_string());
   let saving = RwSignal::new(false);
 
   Effect::new(move |_| {
     spawn_local(async move {
-      if let Ok(port) = api::get_cdp_port().await {
+      if let Ok(port) = load_port().await {
         port_input.set(port.to_string());
       }
     });
@@ -287,7 +334,7 @@ fn CdpPortSetting() -> impl IntoView {
 
     saving.set(true);
     spawn_local(async move {
-      match api::set_cdp_port(port).await {
+      match save_port(port).await {
         Ok(saved) => {
           port_input.set(saved.to_string());
           toast(
