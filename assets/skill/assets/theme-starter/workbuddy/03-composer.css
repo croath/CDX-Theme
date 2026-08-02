@@ -1,30 +1,50 @@
 /* workbuddy/03-composer.css
  *
- * Home composer (chips, input, polaroid) and conversation-detail composer.
+ * Home composer (chips + input-slot) and conversation-detail composer.
  *
- * Merge: `/path/to/cdxthemex theme merge-css <theme-dir>` → workbuddy.css
- * Pack still reads the merged root file declared in theme.json.
+ * Layout contracts:
+ *   - chips 36 + gap ≥24 (--theme-composer-chips-gap) + slot height token
+ *   - host shell is CSS-module `_container_*` (not always section)
+ *   - composer flex-shrink: 0; margin-top: auto (dock bottom)
+ *   - overflow:visible on container so dropdown menus (_menu_*) are not clipped
+ *   - polaroid hidden on all WorkBuddy pages (corner badge only)
+ *   - footer min-height for Select workspace controls
+ *
+ * Merge: … → 03-composer
  */
 
-/* —— Composer —— */
 html.cdxtheme-host-workbuddy .wb-home-composer {
   position: relative !important;
   box-sizing: border-box !important;
   width: 100% !important;
-  height: 303px !important;
-  min-height: 303px !important;
+  height: var(--theme-composer-height, 260px) !important;
+  min-height: var(--theme-composer-height, 260px) !important;
+  max-height: var(--theme-composer-height, 260px) !important;
   display: flex !important;
-  flex: 0 0 303px !important;
+  flex: 0 0 var(--theme-composer-height, 260px) !important;
+  flex-shrink: 0 !important;
+  order: 2;
+  margin-top: auto !important;
+  margin-bottom: 0 !important;
   flex-direction: column !important;
-  gap: 10px !important;
+  gap: 0 !important;
+  row-gap: 0 !important;
   padding: 0 !important;
+  overflow: visible !important;
+  z-index: 6;
 }
 
 html.cdxtheme-host-workbuddy .wb-home-composer__chips {
-  width: calc(100% - 126px) !important;
+  width: 100% !important;
   height: 36px !important;
   min-height: 36px !important;
+  margin: 0 !important;
   overflow: visible !important;
+  flex: 0 0 auto !important;
+}
+
+html.cdxtheme-host-workbuddy .wb-home-composer__chips + .wb-home-composer__input-slot {
+  margin-top: max(24px, var(--theme-composer-chips-gap, 24px)) !important;
 }
 
 html.cdxtheme-host-workbuddy .quick-actions,
@@ -33,100 +53,178 @@ html.cdxtheme-host-workbuddy .quick-actions__list {
   width: 100% !important;
   height: 36px !important;
   overflow: visible !important;
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
 }
 
 html.cdxtheme-host-workbuddy .quick-actions__item {
-  min-height: 34px !important;
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
-  border-radius: 8px !important;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-panel) 96%, transparent), color-mix(in srgb, var(--theme-bg-elevated) 94%, transparent)) !important;
+  min-height: 32px !important;
+  padding: 0 14px !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 22%, transparent) !important;
+  border-radius: 999px !important;
+  background:
+    linear-gradient(
+      180deg,
+      var(--theme-panel),
+      color-mix(in srgb, var(--theme-panel-mid) 40%, var(--theme-panel))
+    ) !important;
   color: var(--theme-muted) !important;
-  box-shadow: 0 3px 12px color-mix(in srgb, var(--theme-black) 30%, transparent) !important;
-  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, color .14s ease !important;
+  box-shadow:
+    0 2px 8px var(--theme-shadow),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-white) 80%, transparent) !important;
+  transition:
+    transform .14s ease,
+    border-color .14s ease,
+    color .14s ease,
+    box-shadow .14s ease,
+    background .14s ease !important;
 }
 
 html.cdxtheme-host-workbuddy .quick-actions__item:hover {
-  transform: translateY(-2px) !important;
-  border-color: color-mix(in srgb, var(--theme-accent-2) 45%, transparent) !important;
+  transform: translateY(-1px) !important;
+  border-color: color-mix(in srgb, var(--theme-accent) 42%, transparent) !important;
   color: var(--theme-text) !important;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--theme-accent) 22%, transparent) !important;
+  background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-panel)) !important;
+  box-shadow: 0 6px 16px var(--theme-glow) !important;
 }
 
 html.cdxtheme-host-workbuddy .quick-actions__item :is(span, svg) {
-  color: var(--theme-muted) !important;
+  color: inherit !important;
   stroke: currentColor !important;
 }
 
-html.cdxtheme-host-workbuddy .quick-actions__item:hover :is(span, svg) {
-  color: var(--theme-text) !important;
-}
-
+/* Slot / host `_container_*` — tall enough for full select-workspace footer */
 html.cdxtheme-host-workbuddy .wb-home-composer__input-slot {
   position: relative !important;
   box-sizing: border-box !important;
   width: 100% !important;
-  height: 247px !important;
-  min-height: 247px !important;
+  height: var(--theme-input-slot-height, 200px) !important;
+  min-height: var(--theme-input-slot-height, 200px) !important;
+  max-height: var(--theme-input-slot-height, 200px) !important;
+  margin-bottom: 0 !important;
   padding: 0 !important;
+  overflow: visible !important;
+  flex: 0 0 var(--theme-input-slot-height, 200px) !important;
+}
+
+/* Host root is CSS-modules container (e.g. _container_pf4c4_2), sometimes also section */
+html.cdxtheme-host-workbuddy .wb-home-composer__input-slot > section,
+html.cdxtheme-host-workbuddy .wb-home-composer__input-slot > [class*="_container_"] {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
+  border-radius: var(--theme-radius-lg, 18px) !important;
+  background:
+    linear-gradient(
+      165deg,
+      var(--theme-panel) 0%,
+      color-mix(in srgb, var(--theme-panel-mid) 25%, var(--theme-panel)) 100%
+    ) !important;
+  color: var(--theme-text) !important;
+  box-shadow:
+    0 16px 40px var(--theme-shadow),
+    0 0 0 1px color-mix(in srgb, var(--theme-accent) 8%, transparent),
+    0 0 32px color-mix(in srgb, var(--theme-accent) 8%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-white) 92%, transparent) !important;
+  backdrop-filter: none !important;
+  /* visible so dropdown menus (e.g. _menu_*) are not clipped */
   overflow: visible !important;
 }
 
-html.cdxtheme-host-workbuddy .wb-home-composer__input-slot > section {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: 236px !important;
-  min-height: 236px !important;
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent) !important;
-  border-radius: 14px !important;
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--theme-panel-mid) 98%, transparent), var(--theme-bg)) !important;
-  color: var(--theme-text) !important;
-  box-shadow:
-    0 12px 28px color-mix(in srgb, var(--theme-black) 45%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--theme-accent-2) 8%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--theme-accent) 12%, transparent) !important;
-  backdrop-filter: none !important;
-  overflow: hidden !important;
+/* Host menu popovers inside composer */
+html.cdxtheme-host-workbuddy .wb-home-composer [class*="_menu_"],
+html.cdxtheme-host-workbuddy .wb-home-composer__input-slot [class*="_menu_"] {
+  z-index: 1200 !important;
+  overflow: visible !important;
+  max-height: none !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
+html.cdxtheme-host-workbuddy .wb-home-composer [class*="_menuContainer_"],
+html.cdxtheme-host-workbuddy .wb-home-composer [class*="_popover_"] {
+  overflow: visible !important;
+  z-index: 1200 !important;
+}
+
+/* Inner host wrappers — fill container so footer sits on the bottom edge */
+html.cdxtheme-host-workbuddy .wb-home-composer__input-slot [class*="_contentOverlayWrapper_"],
+html.cdxtheme-host-workbuddy .wb-home-composer__input-slot [class*="_content_"] {
+  box-sizing: border-box !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html.cdxtheme-host-workbuddy .wb-home-composer__input-slot [class*="_contentWrapper_"] {
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+html.cdxtheme-host-workbuddy .wb-home-composer__input-slot [class*="_resizeHandle_"] {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: 4px !important;
+  margin: 0 !important;
+  z-index: 5 !important;
+}
+
+html.cdxtheme-host-workbuddy .wb-home-composer__input-slot .wb-input-footer,
+html.cdxtheme-host-workbuddy .wb-home-composer .wb-input-footer {
+  margin-top: auto !important;
+  margin-bottom: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Corner badge only (no polaroid) */
 html.cdxtheme-host-workbuddy .wb-home-composer__input-slot::before {
   content: var(--theme-badge, "✦");
   position: absolute;
-  left: -11px;
-  top: -11px;
-  z-index: 20;
+  left: -10px;
+  top: -10px;
+  z-index: 100;
   width: 26px;
   height: 26px;
   display: grid;
   place-items: center;
-  border-radius: 4px;
-  color: var(--theme-bg);
+  border-radius: 8px;
+  color: var(--theme-on-accent);
   font-size: 12px;
   font-weight: 900;
-  background: linear-gradient(145deg, var(--theme-accent-2), var(--theme-accent-2));
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-black) 40%, transparent), 0 0 12px color-mix(in srgb, var(--theme-accent-2) 25%, transparent);
+  background: linear-gradient(145deg, var(--theme-accent-2-hot), var(--theme-accent-2));
+  border: 1px solid color-mix(in srgb, var(--theme-accent-3) 50%, transparent);
+  box-shadow:
+    0 4px 12px color-mix(in srgb, var(--theme-black) 18%, transparent),
+    0 0 12px color-mix(in srgb, var(--theme-accent-2) 25%, transparent);
   pointer-events: none;
 }
 
-/* Polaroid widget in corner */
-html.cdxtheme-host-workbuddy .wb-home-composer__input-slot::after {
-  content: "";
-  position: absolute;
-  right: 19px;
-  top: -95px;
-  z-index: 10;
-  width: 91px;
-  height: 116px;
-  border: 7px solid var(--theme-bg-elevated);
-  border-bottom-width: 19px;
-  border-radius: 3px;
-  background-image: var(--cdxtheme-image-hero);
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center center;
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--theme-black) 50%, transparent), 0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent);
-  transform: rotate(5deg);
-  pointer-events: none;
+/* Hide polaroid all pages */
+html.cdxtheme-host-workbuddy .wb-home-composer__input-slot::after,
+html.cdxtheme-host-workbuddy .wb-home-composer::after,
+html.cdxtheme-host-workbuddy .dream-polaroid,
+html.cdxtheme-host-workbuddy [class*="dream-polaroid"],
+html.cdxtheme-host-workbuddy [class*="polaroid"] {
+  content: none !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
 }
 
 html.cdxtheme-host-workbuddy .wb-home-composer__input-slot img {
@@ -134,109 +232,169 @@ html.cdxtheme-host-workbuddy .wb-home-composer__input-slot img {
   pointer-events: none !important;
 }
 
-html.cdxtheme-host-workbuddy .wb-home-composer [role="textbox"][contenteditable="true"] {
-  color: var(--theme-text) !important;
-  caret-color: var(--theme-accent) !important;
-}
-
+html.cdxtheme-host-workbuddy .wb-home-composer [role="textbox"][contenteditable="true"],
 html.cdxtheme-host-workbuddy .wb-home-composer [role="textbox"][contenteditable="true"] :is(p, span) {
   color: var(--theme-text) !important;
+  caret-color: var(--theme-accent) !important;
 }
 
 html.cdxtheme-host-workbuddy .wb-home-composer button,
 html.cdxtheme-host-workbuddy .wb-input-footer button {
-  border-color: color-mix(in srgb, var(--theme-accent) 25%, transparent) !important;
-  border-radius: 8px !important;
+  border-color: var(--theme-border) !important;
+  border-radius: var(--theme-radius-sm, 10px) !important;
   color: var(--theme-text) !important;
 }
 
-html.cdxtheme-host-workbuddy .wb-input-footer {
-  border-top-color: color-mix(in srgb, var(--theme-accent) 18%, transparent) !important;
-  background: color-mix(in srgb, var(--theme-bg-elevated) 50%, transparent) !important;
+html.cdxtheme-host-workbuddy .wb-home-composer button:hover,
+html.cdxtheme-host-workbuddy .wb-input-footer button:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 40%, transparent) !important;
+  background: var(--theme-accent-soft) !important;
+  box-shadow: 0 2px 10px var(--theme-glow) !important;
 }
 
+html.cdxtheme-host-workbuddy .wb-input-footer {
+  border-top: 1px solid color-mix(in srgb, var(--theme-accent) 14%, transparent) !important;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--theme-panel-mid) 30%, transparent),
+    color-mix(in srgb, var(--theme-panel-mid) 50%, transparent)
+  ) !important;
+  min-height: 44px !important;
+  padding-top: 6px !important;
+  padding-bottom: 8px !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+}
+
+html.cdxtheme-host-workbuddy .wb-input-footer :is(button, [role="button"], [class*="_chip_"]) {
+  min-height: 32px !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* Conversation */
 html.cdxtheme-host-workbuddy .main-content:not(.main-content--welcome),
 html.cdxtheme-host-workbuddy .chat-container:not(.chat-container--welcome) {
   background:
-    radial-gradient(ellipse 70% 40% at 90% 0%, color-mix(in srgb, var(--theme-accent) 8%, transparent), transparent 50%),
-    linear-gradient(180deg, var(--theme-bg-elevated) 0%, var(--theme-bg) 100%) !important;
+    radial-gradient(
+      ellipse 55% 30% at 90% 0%,
+      color-mix(in srgb, var(--theme-accent) 10%, transparent),
+      transparent 50%
+    ),
+    linear-gradient(180deg, var(--theme-bg-elevated), var(--theme-bg)) !important;
 }
 
-html.cdxtheme-host-workbuddy .chat-container:not(.chat-container--welcome) [role="textbox"][contenteditable="true"] {
+html.cdxtheme-host-workbuddy .chat-container:not(.chat-container--welcome)
+  [role="textbox"][contenteditable="true"] {
   color: var(--theme-text) !important;
   caret-color: var(--theme-accent) !important;
 }
 
-html.cdxtheme-host-workbuddy .chat-container:not(.chat-container--welcome) section:has([role="textbox"][contenteditable="true"]) {
+html.cdxtheme-host-workbuddy .chat-container:not(.chat-container--welcome)
+  section:has([role="textbox"][contenteditable="true"]) {
   position: relative !important;
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent) !important;
-  border-radius: 14px !important;
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--theme-panel-mid) 98%, transparent), var(--theme-bg)) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
+  border-radius: var(--theme-radius-lg, 18px) !important;
+  background: var(--theme-panel) !important;
   color: var(--theme-text) !important;
   box-shadow:
-    0 12px 28px color-mix(in srgb, var(--theme-black) 45%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--theme-accent-2) 8%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--theme-accent) 12%, transparent) !important;
+    0 14px 32px var(--theme-shadow),
+    0 0 24px color-mix(in srgb, var(--theme-accent) 6%, transparent) !important;
   overflow: visible !important;
 }
 
-html.cdxtheme-host-workbuddy .chat-container:not(.chat-container--welcome) section:has([role="textbox"][contenteditable="true"])::before {
+html.cdxtheme-host-workbuddy .chat-container:not(.chat-container--welcome)
+  section:has([role="textbox"][contenteditable="true"])::before {
   content: var(--theme-badge, "✦");
   position: absolute;
-  left: -11px;
-  top: -11px;
-  z-index: 10;
+  left: -10px;
+  top: -10px;
+  z-index: 100;
   width: 26px;
   height: 26px;
   display: grid;
   place-items: center;
-  border-radius: 4px;
-  color: var(--theme-bg);
+  border-radius: 8px;
+  color: var(--theme-on-accent);
   font-size: 12px;
   font-weight: 900;
-  background: linear-gradient(145deg, var(--theme-accent-2), var(--theme-accent-2));
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-black) 40%, transparent), 0 0 12px color-mix(in srgb, var(--theme-accent-2) 25%, transparent);
+  background: linear-gradient(145deg, var(--theme-accent-2-hot), var(--theme-accent-2));
+  border: 1px solid color-mix(in srgb, var(--theme-accent-3) 50%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--theme-black) 18%, transparent);
   pointer-events: none;
 }
 
+html.cdxtheme-host-workbuddy .chat-container section:has([role="textbox"])::after {
+  content: none !important;
+  display: none !important;
+}
+
 html.cdxtheme-host-workbuddy .chat-container:not(.chat-container--welcome) :is(table, th, td) {
-  border-color: color-mix(in srgb, var(--theme-accent) 25%, transparent) !important;
+  border-color: color-mix(in srgb, var(--theme-accent) 20%, transparent) !important;
 }
 
 html.cdxtheme-host-workbuddy .chat-container:not(.chat-container--welcome) th {
-  background: color-mix(in srgb, var(--theme-panel) 98%, transparent) !important;
+  background: var(--theme-panel-mid) !important;
   color: var(--theme-text) !important;
 }
 
-@media (max-width: 1050px) {
-  html.cdxtheme-host-workbuddy .wb-home-page {
-    width: calc(100% - 24px) !important;
-  }
+html.cdxtheme-host-workbuddy .chat-container:not(.chat-container--welcome) blockquote {
+  border-left: 3px solid var(--theme-accent) !important;
+  background: color-mix(in srgb, var(--theme-accent) 7%, var(--theme-panel)) !important;
 }
 
+html.cdxtheme-host-workbuddy [role="textbox"][contenteditable="true"] {
+  color: var(--theme-text) !important;
+  caret-color: var(--theme-accent) !important;
+}
+
+html.cdxtheme-host-workbuddy :is(button, [role="button"]):focus-visible,
+html.cdxtheme-host-workbuddy :is(a, input, textarea, [contenteditable="true"]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 55%, transparent) !important;
+  outline-offset: 2px !important;
+}
+
+html.cdxtheme-host-workbuddy :is(a, button, input, textarea, [contenteditable="true"]) {
+  accent-color: var(--theme-accent);
+}
+
+html.cdxtheme-host-workbuddy * {
+  scrollbar-color: color-mix(in srgb, var(--theme-accent) 35%, transparent) transparent;
+}
+
+/* Short windows: shrink hero first, never clip select-workspace footer */
 @media (max-height: 720px) {
-  html.cdxtheme-host-workbuddy .wb-home-page {
-    min-height: 566px !important;
-    height: 566px !important;
+  html.cdxtheme-host-workbuddy .wb-home-header {
+    height: 170px !important;
+    min-height: 170px !important;
+    flex-basis: 170px !important;
   }
 
-  html.cdxtheme-host-workbuddy .wb-home-header {
-    height: 195px !important;
-    min-height: 195px !important;
-    flex-basis: 195px !important;
+  html.cdxtheme-host-workbuddy .wb-home-page {
+    gap: 10px !important;
+    padding-bottom: 8px !important;
   }
 
   html.cdxtheme-host-workbuddy .wb-home-composer {
-    height: 254px !important;
-    min-height: 254px !important;
-    flex-basis: 254px !important;
+    height: 248px !important;
+    min-height: 248px !important;
+    max-height: 248px !important;
+    flex-basis: 248px !important;
+    margin-top: auto !important;
   }
 
-  html.cdxtheme-host-workbuddy .wb-home-composer__input-slot,
-  html.cdxtheme-host-workbuddy .wb-home-composer__input-slot > section {
-    height: 198px !important;
-    min-height: 198px !important;
+  html.cdxtheme-host-workbuddy .wb-home-composer__input-slot {
+    height: 188px !important;
+    min-height: 188px !important;
+    max-height: 188px !important;
+    flex-basis: 188px !important;
+  }
+
+  html.cdxtheme-host-workbuddy .wb-home-composer__input-slot > section,
+  html.cdxtheme-host-workbuddy .wb-home-composer__input-slot > [class*="_container_"] {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
   }
 }
 
