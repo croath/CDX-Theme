@@ -36,10 +36,10 @@ pub fn discover_themes(app: &AppHandle) -> Result<Vec<ThemeMetadata>, String> {
     Err(e) => tracing::warn!("user themes dir unavailable: {e}"),
   }
 
-  let applied = settings_store::applied_theme_id(app);
+  let applied = settings_store::applied_themes(app);
   let mut list: Vec<ThemeMetadata> = by_id.into_values().collect();
   for item in &mut list {
-    item.is_applied = applied.as_ref().is_some_and(|id| id == &item.id);
+    item.is_applied = applied.contains_theme(&item.id);
   }
 
   list.sort_by(|a, b| match (a.source, b.source) {
@@ -509,7 +509,6 @@ fn map_remote_entries_to_metadata(
   app: &AppHandle,
   entries: Vec<RemoteThemeIndexEntry>,
 ) -> Vec<ThemeMetadata> {
-  let applied = settings_store::applied_theme_id(app);
   let local = discover_themes(app).unwrap_or_default();
   let local_by_id: std::collections::HashMap<_, _> =
     local.into_iter().map(|t| (t.id.clone(), t)).collect();
@@ -546,7 +545,7 @@ fn map_remote_entries_to_metadata(
       location: String::new(),
       preview_img: entry.hero.filter(|s| !s.is_empty()),
       preview_colors: vec![],
-      is_applied: applied.as_ref().is_some_and(|a| a == &id),
+      is_applied: settings_store::theme_is_applied(app, &id),
       source: ThemeSource::Remote,
       version: None,
       remote_version: Some(remote_ver),
@@ -637,6 +636,23 @@ pub async fn download_theme_to_library(
   Ok(meta)
 }
 
+/// Resolve a **local** package path for `theme_id` (builtin or installed). No download.
+pub fn local_theme_package_path(app: &AppHandle, theme_id: &str) -> Result<PathBuf, String> {
+  let list = discover_themes(app)?;
+  let meta = list
+    .iter()
+    .find(|t| t.id == theme_id)
+    .ok_or_else(|| format!("theme `{theme_id}` is not installed locally"))?;
+  if meta.location.is_empty() {
+    return Err(format!("theme `{theme_id}` has no local package path"));
+  }
+  let path = PathBuf::from(&meta.location);
+  if !path.is_file() {
+    return Err(format!("theme package missing on disk: {}", path.display()));
+  }
+  Ok(path)
+}
+
 /// Ensure a theme is available as a local package file, downloading if needed.
 ///
 /// Returns the absolute package path.
@@ -646,14 +662,8 @@ pub async fn ensure_theme_package_path(
   theme_url: Option<&str>,
 ) -> Result<PathBuf, String> {
   // Prefer an existing local package (builtin or installed).
-  if let Ok(list) = discover_themes(app)
-    && let Some(meta) = list.iter().find(|t| t.id == theme_id)
-    && !meta.location.is_empty()
-  {
-    let path = PathBuf::from(&meta.location);
-    if path.is_file() {
-      return Ok(path);
-    }
+  if let Ok(path) = local_theme_package_path(app, theme_id) {
+    return Ok(path);
   }
 
   let url = theme_url
@@ -744,8 +754,13 @@ pub fn delete_installed_theme(app: &AppHandle, theme_id: &str) -> Result<(), Str
     let _ = fs::remove_dir_all(&extract_root);
   }
 
-  if settings_store::applied_theme_id(app).as_deref() == Some(theme_id) {
-    settings_store::set_applied_theme_id(app, None)?;
+  // Drop applied markers for any host that was using this theme.
+  let applied = settings_store::applied_themes(app);
+  if applied.codex.as_deref() == Some(theme_id) {
+    settings_store::set_applied_theme(app, "codex", None)?;
+  }
+  if applied.workbuddy.as_deref() == Some(theme_id) {
+    settings_store::set_applied_theme(app, "workbuddy", None)?;
   }
 
   Ok(())

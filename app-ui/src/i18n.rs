@@ -221,6 +221,30 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::DeDe, "recommend.apply") => "Anwenden",
     (Locale::EsEs, "recommend.apply") => "Aplicar",
 
+    (Locale::EnUs, "recommend.apply.target") => "Target app",
+    (Locale::ZhHans, "recommend.apply.target") => "目标应用",
+    (Locale::ZhHant, "recommend.apply.target") => "目標應用",
+    (Locale::JaJp, "recommend.apply.target") => "対象アプリ",
+    (Locale::KoKr, "recommend.apply.target") => "대상 앱",
+    (Locale::DeDe, "recommend.apply.target") => "Ziel-App",
+    (Locale::EsEs, "recommend.apply.target") => "App de destino",
+
+    (Locale::EnUs, "recommend.apply.codex") => "Codex / ChatGPT",
+    (Locale::ZhHans, "recommend.apply.codex") => "Codex / ChatGPT",
+    (Locale::ZhHant, "recommend.apply.codex") => "Codex / ChatGPT",
+    (Locale::JaJp, "recommend.apply.codex") => "Codex / ChatGPT",
+    (Locale::KoKr, "recommend.apply.codex") => "Codex / ChatGPT",
+    (Locale::DeDe, "recommend.apply.codex") => "Codex / ChatGPT",
+    (Locale::EsEs, "recommend.apply.codex") => "Codex / ChatGPT",
+
+    (Locale::EnUs, "recommend.apply.workbuddy") => "WorkBuddy",
+    (Locale::ZhHans, "recommend.apply.workbuddy") => "WorkBuddy",
+    (Locale::ZhHant, "recommend.apply.workbuddy") => "WorkBuddy",
+    (Locale::JaJp, "recommend.apply.workbuddy") => "WorkBuddy",
+    (Locale::KoKr, "recommend.apply.workbuddy") => "WorkBuddy",
+    (Locale::DeDe, "recommend.apply.workbuddy") => "WorkBuddy",
+    (Locale::EsEs, "recommend.apply.workbuddy") => "WorkBuddy",
+
     (Locale::EnUs, "recommend.apply.success") => "Theme applied",
     (Locale::ZhHans, "recommend.apply.success") => "主题已应用",
     (Locale::ZhHant, "recommend.apply.success") => "主題已套用",
@@ -597,17 +621,31 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::DeDe, "restore.title") => "Standard-Theme wiederherstellen",
     (Locale::EsEs, "restore.title") => "Restaurar tema predeterminado",
 
-    (Locale::EnUs, "restore.subtitle") => "Undo custom theme changes and bring Codex back to stock",
-    (Locale::ZhHans, "restore.subtitle") => "撤销自定义主题，将 Codex 恢复为原始外观",
-    (Locale::ZhHant, "restore.subtitle") => "撤銷自訂主題，將 Codex 還原為原始外觀",
-    (Locale::JaJp, "restore.subtitle") => "カスタムテーマを取り消し、Codex を標準に戻します",
-    (Locale::KoKr, "restore.subtitle") => "사용자 테마를 취소하고 Codex를 기본 상태로 되돌립니다",
+    (Locale::EnUs, "restore.subtitle") => {
+      "Undo custom theme changes and bring the selected app back to stock"
+    }
+    (Locale::ZhHans, "restore.subtitle") => "撤销自定义主题，将所选应用恢复为原始外观",
+    (Locale::ZhHant, "restore.subtitle") => "撤銷自訂主題，將所選應用還原為原始外觀",
+    (Locale::JaJp, "restore.subtitle") => {
+      "カスタムテーマを取り消し、選択したアプリを標準に戻します"
+    }
+    (Locale::KoKr, "restore.subtitle") => {
+      "사용자 테마를 취소하고 선택한 앱을 기본 상태로 되돌립니다"
+    }
     (Locale::DeDe, "restore.subtitle") => {
-      "Benutzerdefinierte Themes rückgängig machen und Codex zurücksetzen"
+      "Benutzerdefinierte Themes rückgängig machen und die gewählte App zurücksetzen"
     }
     (Locale::EsEs, "restore.subtitle") => {
-      "Deshacer temas personalizados y devolver Codex al estado original"
+      "Deshacer temas personalizados y devolver la app seleccionada al estado original"
     }
+
+    (Locale::EnUs, "restore.target") => "Target",
+    (Locale::ZhHans, "restore.target") => "目标应用",
+    (Locale::ZhHant, "restore.target") => "目標應用",
+    (Locale::JaJp, "restore.target") => "対象",
+    (Locale::KoKr, "restore.target") => "대상",
+    (Locale::DeDe, "restore.target") => "Ziel",
+    (Locale::EsEs, "restore.target") => "Destino",
 
     (Locale::EnUs, "restore.action") => "Restore now",
     (Locale::ZhHans, "restore.action") => "立即恢复",
@@ -771,6 +809,52 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::KoKr, "settings.cdp.port.invalid") => "1024–65535 사이의 포트를 입력하세요",
     (Locale::DeDe, "settings.cdp.port.invalid") => "Port zwischen 1024 und 65535 eingeben",
     (Locale::EsEs, "settings.cdp.port.invalid") => "Introduce un puerto entre 1024 y 65535",
+
+    (Locale::EnUs, "settings.cdp.workbuddy") => "WorkBuddy CDP server",
+    (Locale::ZhHans, "settings.cdp.workbuddy") => "WorkBuddy CDP 服务",
+    (Locale::ZhHant, "settings.cdp.workbuddy") => "WorkBuddy CDP 服務",
+    (Locale::JaJp, "settings.cdp.workbuddy") => "WorkBuddy CDP サーバー",
+    (Locale::KoKr, "settings.cdp.workbuddy") => "WorkBuddy CDP 서버",
+    (Locale::DeDe, "settings.cdp.workbuddy") => "WorkBuddy-CDP-Server",
+    (Locale::EsEs, "settings.cdp.workbuddy") => "Servidor CDP de WorkBuddy",
+
+    (Locale::EnUs, "settings.cdp.workbuddy.port.hint") => {
+      "WorkBuddy launches with this remote-debugging port (default 9336)"
+    }
+    (Locale::ZhHans, "settings.cdp.workbuddy.port.hint") => {
+      "启动 WorkBuddy 时使用此远程调试端口（默认 9336）"
+    }
+    (Locale::ZhHant, "settings.cdp.workbuddy.port.hint") => {
+      "啟動 WorkBuddy 時使用此遠端偵錯埠（預設 9336）"
+    }
+    (Locale::JaJp, "settings.cdp.workbuddy.port.hint") => {
+      "WorkBuddy はこのリモートデバッグポートで起動します（既定 9336）"
+    }
+    (Locale::KoKr, "settings.cdp.workbuddy.port.hint") => {
+      "WorkBuddy가 이 원격 디버깅 포트로 실행됩니다 (기본 9336)"
+    }
+    (Locale::DeDe, "settings.cdp.workbuddy.port.hint") => {
+      "WorkBuddy startet mit diesem Remote-Debugging-Port (Standard 9336)"
+    }
+    (Locale::EsEs, "settings.cdp.workbuddy.port.hint") => {
+      "WorkBuddy se inicia con este puerto de depuración remota (predeterminado 9336)"
+    }
+
+    (Locale::EnUs, "status.cdp.codex") => "Codex",
+    (Locale::ZhHans, "status.cdp.codex") => "Codex",
+    (Locale::ZhHant, "status.cdp.codex") => "Codex",
+    (Locale::JaJp, "status.cdp.codex") => "Codex",
+    (Locale::KoKr, "status.cdp.codex") => "Codex",
+    (Locale::DeDe, "status.cdp.codex") => "Codex",
+    (Locale::EsEs, "status.cdp.codex") => "Codex",
+
+    (Locale::EnUs, "status.cdp.workbuddy") => "WorkBuddy",
+    (Locale::ZhHans, "status.cdp.workbuddy") => "WorkBuddy",
+    (Locale::ZhHant, "status.cdp.workbuddy") => "WorkBuddy",
+    (Locale::JaJp, "status.cdp.workbuddy") => "WorkBuddy",
+    (Locale::KoKr, "status.cdp.workbuddy") => "WorkBuddy",
+    (Locale::DeDe, "status.cdp.workbuddy") => "WorkBuddy",
+    (Locale::EsEs, "status.cdp.workbuddy") => "WorkBuddy",
 
     (Locale::EnUs, "settings.theme") => "Theme",
     (Locale::ZhHans, "settings.theme") => "主题",
@@ -1248,6 +1332,30 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::KoKr, "builder.model.label") => "모델",
     (Locale::DeDe, "builder.model.label") => "Modell",
     (Locale::EsEs, "builder.model.label") => "Modelo",
+
+    (Locale::EnUs, "builder.target.label") => "Target app",
+    (Locale::ZhHans, "builder.target.label") => "目标应用",
+    (Locale::ZhHant, "builder.target.label") => "目標應用",
+    (Locale::JaJp, "builder.target.label") => "対象アプリ",
+    (Locale::KoKr, "builder.target.label") => "대상 앱",
+    (Locale::DeDe, "builder.target.label") => "Ziel-App",
+    (Locale::EsEs, "builder.target.label") => "App de destino",
+
+    (Locale::EnUs, "builder.target.codex") => "Codex / ChatGPT",
+    (Locale::ZhHans, "builder.target.codex") => "Codex / ChatGPT",
+    (Locale::ZhHant, "builder.target.codex") => "Codex / ChatGPT",
+    (Locale::JaJp, "builder.target.codex") => "Codex / ChatGPT",
+    (Locale::KoKr, "builder.target.codex") => "Codex / ChatGPT",
+    (Locale::DeDe, "builder.target.codex") => "Codex / ChatGPT",
+    (Locale::EsEs, "builder.target.codex") => "Codex / ChatGPT",
+
+    (Locale::EnUs, "builder.target.workbuddy") => "WorkBuddy",
+    (Locale::ZhHans, "builder.target.workbuddy") => "WorkBuddy",
+    (Locale::ZhHant, "builder.target.workbuddy") => "WorkBuddy",
+    (Locale::JaJp, "builder.target.workbuddy") => "WorkBuddy",
+    (Locale::KoKr, "builder.target.workbuddy") => "WorkBuddy",
+    (Locale::DeDe, "builder.target.workbuddy") => "WorkBuddy",
+    (Locale::EsEs, "builder.target.workbuddy") => "WorkBuddy",
 
     (Locale::EnUs, "builder.chat.new") => "New theme chat",
     (Locale::ZhHans, "builder.chat.new") => "新主题对话",

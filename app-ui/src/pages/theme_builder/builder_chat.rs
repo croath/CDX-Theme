@@ -9,7 +9,7 @@ use crate::i18n::I18n;
 use crate::state::AppCtx;
 use crate::types::Locale;
 
-use super::{BuilderModelSelect, ChatMessage, ChatRole, short_id};
+use super::{BuilderModelSelect, BuilderTargetAppSelect, ChatMessage, ChatRole, short_id};
 
 /// Reopened session: chat + optional apply when a package exists in the workspace.
 #[component]
@@ -28,6 +28,7 @@ pub(super) fn BuilderChat(
   applied_name: RwSignal<Option<String>>,
   models: RwSignal<Vec<CodexModelOption>>,
   selected_model: RwSignal<String>,
+  target_app: RwSignal<String>,
   list_ref: NodeRef<leptos::html::Div>,
   on_back: Callback<()>,
 ) -> impl IntoView {
@@ -158,9 +159,10 @@ pub(super) fn BuilderChat(
       return;
     };
     let pkg = package_path.get_untracked();
+    let host = target_app.get_untracked();
     applying.set(true);
     spawn_local(async move {
-      match api::apply_built_theme(ws, pkg).await {
+      match api::apply_built_theme(ws, pkg, Some(host)).await {
         Ok(result) => {
           applied_name.set(Some(result.theme_name.clone()));
           let i18n = I18n { locale };
@@ -218,11 +220,17 @@ pub(super) fn BuilderChat(
           }}
         </p>
       </div>
-      <BuilderModelSelect
-        models=models
-        selected_model=selected_model
-        disabled=Signal::derive(move || sending.get() || chat_loading.get() || applying.get())
-      />
+      <div class="flex shrink-0 items-center gap-2">
+        <BuilderTargetAppSelect
+          target_app=target_app
+          disabled=Signal::derive(move || sending.get() || chat_loading.get() || applying.get())
+        />
+        <BuilderModelSelect
+          models=models
+          selected_model=selected_model
+          disabled=Signal::derive(move || sending.get() || chat_loading.get() || applying.get())
+        />
+      </div>
     </header>
 
     <div class="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-card/70 shadow-xl shadow-black/5 backdrop-blur-md">
@@ -311,36 +319,42 @@ pub(super) fn BuilderChat(
                 }
               }}
             </p>
-            <button
-              type="button"
-              class="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all hover:bg-primary/90 disabled:opacity-50"
-              disabled=move || applying.get()
-              on:click=move |_| run_apply(ctx.locale.get_untracked())
-            >
-              {move || {
-                if applying.get() {
-                  view! {
-                    <LoaderCircle class="size-4 animate-spin" />
-                    <span>
-                      {move || {
-                        let i18n = I18n { locale: ctx.locale.get() };
-                        i18n.t("builder.applying")
-                      }}
-                    </span>
-                  }.into_any()
-                } else {
-                  view! {
-                    <Play class="size-4" />
-                    <span>
-                      {move || {
-                        let i18n = I18n { locale: ctx.locale.get() };
-                        i18n.t("builder.apply")
-                      }}
-                    </span>
-                  }.into_any()
-                }
-              }}
-            </button>
+            <div class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+              <BuilderTargetAppSelect
+                target_app=target_app
+                disabled=Signal::derive(move || applying.get())
+              />
+              <button
+                type="button"
+                class="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all hover:bg-primary/90 disabled:opacity-50"
+                disabled=move || applying.get()
+                on:click=move |_| run_apply(ctx.locale.get_untracked())
+              >
+                {move || {
+                  if applying.get() {
+                    view! {
+                      <LoaderCircle class="size-4 animate-spin" />
+                      <span>
+                        {move || {
+                          let i18n = I18n { locale: ctx.locale.get() };
+                          i18n.t("builder.applying")
+                        }}
+                      </span>
+                    }.into_any()
+                  } else {
+                    view! {
+                      <Play class="size-4" />
+                      <span>
+                        {move || {
+                          let i18n = I18n { locale: ctx.locale.get() };
+                          i18n.t("builder.apply")
+                        }}
+                      </span>
+                    }.into_any()
+                  }
+                }}
+              </button>
+            </div>
           </div>
         </div>
       </Show>

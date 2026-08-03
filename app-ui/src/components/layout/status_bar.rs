@@ -1,4 +1,4 @@
-use crate::api::{self, CdpServerStatus};
+use crate::api::{self, DualCdpStatus};
 use crate::i18n::I18n;
 use crate::state::AppCtx;
 use leptos::prelude::*;
@@ -10,8 +10,7 @@ const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Thin status bar for the bottom of the main (right) panel.
 #[component]
 pub fn StatusBar() -> impl IntoView {
-  let ctx = AppCtx::use_ctx();
-  let status = RwSignal::new(CdpServerStatus::default());
+  let status = RwSignal::new(DualCdpStatus::default());
 
   Effect::new(move |_| {
     spawn_local(async move {
@@ -24,10 +23,14 @@ pub fn StatusBar() -> impl IntoView {
           Ok(s) => status.set(s),
           Err(e) => {
             status.update(|cur| {
-              cur.connected = false;
-              cur.target_count = 0;
-              cur.targets.clear();
-              cur.message = e;
+              cur.codex.connected = false;
+              cur.codex.target_count = 0;
+              cur.codex.targets.clear();
+              cur.codex.message = e.clone();
+              cur.workbuddy.connected = false;
+              cur.workbuddy.target_count = 0;
+              cur.workbuddy.targets.clear();
+              cur.workbuddy.message = e;
             });
           }
         }
@@ -40,7 +43,13 @@ pub fn StatusBar() -> impl IntoView {
       class="status-bar no-drag flex h-8 shrink-0 items-center justify-end gap-3 border-t border-border/40 bg-background/60 px-4 backdrop-blur-md"
       title=move || {
         let s = status.get();
-        format!("v{APP_VERSION} · port {} — {}", s.port, s.message)
+        format!(
+          "v{APP_VERSION} · Codex :{} — {} · WorkBuddy :{} — {}",
+          s.codex.port,
+          s.codex.message,
+          s.workbuddy.port,
+          s.workbuddy.message
+        )
       }
     >
       <span class="font-mono text-[11px] text-muted-foreground">
@@ -49,30 +58,57 @@ pub fn StatusBar() -> impl IntoView {
 
       <span class="text-border/80 text-[11px]" aria-hidden="true">"·"</span>
 
+      <CdpStatusChip
+        label_key="status.cdp.codex"
+        connected=Signal::derive(move || status.get().codex.connected)
+      />
+
+      <span class="text-border/80 text-[11px]" aria-hidden="true">"·"</span>
+
+      <CdpStatusChip
+        label_key="status.cdp.workbuddy"
+        connected=Signal::derive(move || status.get().workbuddy.connected)
+      />
+    </footer>
+  }
+}
+
+#[component]
+fn CdpStatusChip(label_key: &'static str, connected: Signal<bool>) -> impl IntoView {
+  let ctx = AppCtx::use_ctx();
+
+  view! {
+    <span class=move || {
+      if connected.get() {
+        "inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-primary"
+      } else {
+        "inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-destructive"
+      }
+    }>
       <span class=move || {
-        if status.get().connected {
-          "inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-primary"
+        if connected.get() {
+          "size-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_6px] shadow-primary"
         } else {
-          "inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-destructive"
+          "size-1.5 shrink-0 rounded-full bg-destructive"
         }
-      }>
-        <span class=move || {
-          if status.get().connected {
-            "size-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_6px] shadow-primary"
-          } else {
-            "size-1.5 shrink-0 rounded-full bg-destructive"
-          }
-        } />
+      } />
+      <span class="text-muted-foreground">
         {move || {
           let i18n = I18n { locale: ctx.locale.get() };
-          if status.get().connected {
+          i18n.t(label_key)
+        }}
+      </span>
+      <span>
+        {move || {
+          let i18n = I18n { locale: ctx.locale.get() };
+          if connected.get() {
             i18n.t("settings.cdp.connected")
           } else {
             i18n.t("settings.cdp.disconnected")
           }
         }}
       </span>
-    </footer>
+    </span>
   }
 }
 

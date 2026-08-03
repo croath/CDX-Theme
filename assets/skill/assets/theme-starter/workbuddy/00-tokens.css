@@ -1,17 +1,21 @@
 /* workbuddy/00-tokens.css
  *
  * Semantic aliases + decorative copy + layout knobs.
- * Primary palette lives in 00-palette.css.
+ * Primary palette: 00-palette.css (light + dark via body/html host classes).
  *
- * Layout contracts (from production WorkBuddy polish):
- *   chips 36 + gap ≥24 + slot ~200 → composer height
- *   header / tabs / composer sizes via tokens (do not hardcode in partials)
- *   chat-container max width + centered
- *   workbuddy-topbar height via --theme-workbuddy-topbar
- *   polaroid hidden; corner badge only
+ * Layout contracts (production polish — incl. Red Bull WorkBuddy fixes):
+ *   - dual light/dark: host classes on body AND html (:has(body.light|dark))
+ *   - chips 36 + gap ≥24 + slot ~200 → composer height
+ *   - chat-container max width + centered
+ *   - workbuddy-topbar height via --theme-workbuddy-topbar (default 24px)
+ *   - host _mainArea_* rebinds to --theme-* (never host white + light text)
+ *   - user-menu-popover uses --theme-panel (portal under body)
+ *   - dark hero: glass scrim from bg/elevated (not milky white wash)
+ *   - polaroid hidden; corner badge only
  */
 
-:root.cdxtheme-host-workbuddy {
+:root.cdxtheme-host-workbuddy,
+html.cdxtheme-host-workbuddy {
   --theme-surface: color-mix(in srgb, var(--theme-panel) 96%, transparent);
   --theme-surface-strong: var(--theme-panel);
   --theme-sidebar: color-mix(in srgb, var(--theme-panel) 96%, var(--theme-panel-mid));
@@ -35,8 +39,7 @@
   --theme-home-pad-bottom: 14px;
   --theme-home-gap: 16px;
   --theme-home-max: 900px;
-  /* Host topbar strip under titlebar; set 0 to collapse */
-  --theme-workbuddy-topbar: 0px;
+  --theme-workbuddy-topbar: 24px;
 
   --theme-radius-lg: 18px;
   --theme-radius-md: 14px;

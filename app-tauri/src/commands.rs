@@ -1,8 +1,8 @@
 use crate::analytics;
-use crate::app_state::{AppState, CdpServerStatus};
+use crate::app_state::{AppState, DualCdpStatus};
 use crate::codex_launch;
 use crate::image_cache;
-use crate::injector::{self, InjectOptions, load_theme_package};
+use crate::injector::{self, APP_CODEX, APP_WORKBUDDY, InjectOptions, load_theme_package};
 use crate::settings_store;
 use crate::theme_catalog;
 use crate::theme_tool;
@@ -11,11 +11,35 @@ use serde_json::Value;
 use std::collections::HashMap;
 use tauri::{AppHandle, Emitter, Manager, State};
 
-fn inject_options(state: &AppState) -> InjectOptions {
+fn inject_options_for_port(port: u16) -> InjectOptions {
   InjectOptions {
-    port: state.cdp_port(),
+    port,
     // Themes with multi-MB hero/texture need headroom for CDP WS + atob→blob.
     timeout_ms: 120_000,
+  }
+}
+
+/// Normalize UI / IPC host app id (`codex` default, `workbuddy`).
+fn normalize_target_app(target_app: Option<&str>) -> Result<&'static str, String> {
+  match target_app
+    .unwrap_or(APP_CODEX)
+    .trim()
+    .to_ascii_lowercase()
+    .as_str()
+  {
+    "" | "codex" | "chatgpt" => Ok(APP_CODEX),
+    "workbuddy" | "work-buddy" | "wb" => Ok(APP_WORKBUDDY),
+    other => Err(format!(
+      "unsupported target app `{other}` (supported: codex, workbuddy)"
+    )),
+  }
+}
+
+fn port_for_app(state: &AppState, app_id: &str) -> u16 {
+  if app_id == APP_WORKBUDDY {
+    state.workbuddy_cdp_port()
+  } else {
+    state.cdp_port()
   }
 }
 
@@ -47,10 +71,59 @@ pub async fn resolve_cached_image(url: String, app: AppHandle) -> Result<String,
   image_cache::resolve_to_data_url(&app, &url).await
 }
 
-/// Current CDP server status (updated by background monitor).
+/// Current CDP server status for Codex + WorkBuddy (updated by background monitor).
 #[tauri::command]
-pub async fn cdp_status(state: State<'_, AppState>) -> Result<CdpServerStatus, String> {
-  Ok(state.cdp_status())
+pub async fn cdp_status(state: State<'_, AppState>) -> Result<DualCdpStatus, String> {
+  Ok(state.dual_cdp_status())
+}
+
+/// Lightweight install detection for Codex / ChatGPT and WorkBuddy (paths only, no CDP).
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HostAppsDetect {
+  pub codex_installed: bool,
+  pub workbuddy_installed: bool,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub codex_path: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub workbuddy_path: Option<String>,
+}
+
+/// Per-host applied theme ids for the UI.
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppliedThemesDto {
+  pub codex: Option<String>,
+  pub workbuddy: Option<String>,
+}
+
+/// Current applied theme id(s) per host app.
+#[tauri::command]
+pub async fn get_applied_themes(app: AppHandle) -> Result<AppliedThemesDto, String> {
+  let applied = settings_store::applied_themes(&app);
+  Ok(AppliedThemesDto {
+    codex: applied.codex,
+    workbuddy: applied.workbuddy,
+  })
+}
+
+/// Detect whether Codex / ChatGPT and WorkBuddy desktop apps are installed.
+#[tauri::command]
+pub async fn detect_host_apps() -> Result<HostAppsDetect, String> {
+  tokio::task::spawn_blocking(|| {
+    let codex = codex_launch::find_chatgpt_app();
+    let workbuddy = codex_launch::find_workbuddy_app();
+    HostAppsDetect {
+      codex_installed: codex.as_ref().is_some_and(|p| p.is_file() || p.exists()),
+      workbuddy_installed: workbuddy
+        .as_ref()
+        .is_some_and(|p| p.is_file() || p.exists()),
+      codex_path: codex.map(|p| p.to_string_lossy().into_owned()),
+      workbuddy_path: workbuddy.map(|p| p.to_string_lossy().into_owned()),
+    }
+  })
+  .await
+  .map_err(|e| format!("detect host apps task failed: {e}"))
 }
 
 /// Sync native window background with the UI theme (no transparent window / private API).
@@ -77,7 +150,7 @@ pub async fn get_cdp_port(state: State<'_, AppState>) -> Result<u16, String> {
   Ok(state.cdp_port())
 }
 
-/// Persist CDP port and relaunch Codex with the new `--remote-debugging-port` if needed.
+/// Persist Codex CDP port and relaunch ChatGPT with the new `--remote-debugging-port` if needed.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn set_cdp_port(
   port: u16,
@@ -102,7 +175,40 @@ pub async fn set_cdp_port(
   Ok(port)
 }
 
-/// Apply theme: write config → restart Codex only if appearance changed → CDP inject skin.
+#[tauri::command]
+pub async fn get_workbuddy_cdp_port(state: State<'_, AppState>) -> Result<u16, String> {
+  Ok(state.workbuddy_cdp_port())
+}
+
+/// Persist WorkBuddy CDP port and relaunch WorkBuddy with remote debugging if needed.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn set_workbuddy_cdp_port(
+  port: u16,
+  app: AppHandle,
+  state: State<'_, AppState>,
+) -> Result<u16, String> {
+  if !settings_store::is_valid_port(port) {
+    return Err(format!("invalid port {port} (use 1024–65535)"));
+  }
+
+  let mut settings = settings_store::load(&app);
+  settings.workbuddy_cdp_port = port;
+  settings_store::save(&app, &settings)?;
+  state.set_workbuddy_cdp_port(port);
+
+  match codex_launch::ensure_workbuddy_debugging(&app, port).await {
+    Ok(msg) => tracing::info!("{msg}"),
+    Err(e) => tracing::warn!("ensure WorkBuddy on port {port}: {e}"),
+  }
+
+  analytics::track_cdp_port_changed(port);
+  Ok(port)
+}
+
+/// Apply theme to a host app (`target_app`: `codex` default, or `workbuddy`).
+///
+/// Codex: write config → ensure CDP → inject skin.
+/// WorkBuddy: ensure CDP → inject skin only (no Codex config.toml).
 ///
 /// If the theme is not installed locally, pass `theme_url` so it can be downloaded into
 /// `{local_data}/themes` first (recommend catalog flow).
@@ -110,112 +216,141 @@ pub async fn set_cdp_port(
 pub async fn apply_theme(
   theme_id: String,
   theme_url: Option<String>,
+  target_app: Option<String>,
   app: AppHandle,
   state: State<'_, AppState>,
 ) -> Result<bool, String> {
+  let host = normalize_target_app(target_app.as_deref())?;
   let package =
     theme_catalog::ensure_theme_package_path(&app, &theme_id, theme_url.as_deref()).await?;
   let theme = load_theme_package(&package)?;
+  let port = port_for_app(&state, host);
 
-  // 1) Write baseTheme appearance into ~/.codex/config.toml
-  let apply_result = theme_tool::apply_loaded(
-    &theme,
-    &theme_tool::codex_config_path(),
-    &theme_tool::config_backup_path(&app)?,
-  )?;
-  tracing::info!(
-    "theme-tool apply ok theme={} applied={} config={} backup={} appearance_theme_changed={} config_changed={}",
-    apply_result.theme,
-    apply_result.applied,
-    apply_result.config,
-    apply_result.backup,
-    apply_result.appearance_changed,
-    apply_result.config_changed
-  );
+  if host == APP_CODEX {
+    // 1) Write baseTheme appearance into ~/.codex/config.toml
+    let apply_result = theme_tool::apply_loaded(
+      &theme,
+      &theme_tool::codex_config_path(),
+      &theme_tool::config_backup_path(&app)?,
+    )?;
+    tracing::info!(
+      "theme-tool apply ok theme={} applied={} config={} backup={} appearance_theme_changed={} config_changed={}",
+      apply_result.theme,
+      apply_result.applied,
+      apply_result.config,
+      apply_result.backup,
+      apply_result.appearance_changed,
+      apply_result.config_changed
+    );
 
-  let port = state.cdp_port();
+    match codex_launch::ensure_codex_debugging(&app, port).await {
+      Ok(msg) => tracing::info!("{msg}"),
+      Err(e) => {
+        return Err(format!(
+          "could not reach Codex CDP on port {port}: {e}. Open Codex/ChatGPT with remote debugging, then retry."
+        ));
+      }
+    }
 
-  // 2) Restart ChatGPT only when `appearanceTheme` (light/dark) changed.
-  //    Chrome / code theme updates do not require a restart; ensure CDP only.
-  // if apply_result.appearance_changed {
-  //   match codex_launch::restart_codex_debugging(&app, port).await {
-  //     Ok(msg) => tracing::info!("{msg}"),
-  //     Err(e) => {
-  //       return Err(format!(
-  //         "appearanceTheme updated for `{}`, but Codex restart failed (mode may not update until restart): {e}",
-  //         theme.id
-  //       ));
-  //     }
-  //   }
-  //   // Give the SPA a moment after relaunch before CDP inject.
-  //   tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
-  // } else {
-  match codex_launch::ensure_codex_debugging(&app, port).await {
-    Ok(msg) => tracing::info!("{msg}"),
-    Err(e) => {
+    let opts = inject_options_for_port(port);
+    if let Err(e) = injector::apply_loaded_theme_for_app(APP_CODEX, &theme, opts).await {
+      tracing::error!("CDP inject failed: {e}");
       return Err(format!(
-        "could not reach Codex CDP on port {port}: {e}. Open Codex/ChatGPT with remote debugging, then retry."
+        "config applied for `{}`, but Codex skin inject failed: {e}",
+        theme.id
+      ));
+    }
+  } else {
+    // WorkBuddy: CDP inject only (no Codex appearance config).
+    match codex_launch::ensure_workbuddy_debugging(&app, port).await {
+      Ok(msg) => tracing::info!("{msg}"),
+      Err(e) => {
+        return Err(format!(
+          "could not reach WorkBuddy CDP on port {port}: {e}. Open WorkBuddy with remote debugging, then retry."
+        ));
+      }
+    }
+
+    let opts = inject_options_for_port(port);
+    if let Err(e) = injector::apply_loaded_theme_for_app(APP_WORKBUDDY, &theme, opts).await {
+      tracing::error!("WorkBuddy CDP inject failed: {e}");
+      return Err(format!(
+        "WorkBuddy skin inject failed for `{}`: {e}",
+        theme.id
       ));
     }
   }
-  // }
 
-  // 3) Inject live CSS skin via CDP (use already-loaded theme).
-  let opts = inject_options(&state);
-  if let Err(e) = injector::apply_loaded_theme(&theme, opts).await {
-    tracing::error!("CDP inject failed: {e}");
-    return Err(format!(
-      "config applied for `{}`, but Codex skin inject failed: {e}",
-      theme.id
-    ));
-  }
-
-  // Record applied theme id for UI state
-  settings_store::set_applied_theme_id(&app, Some(theme.id.clone()))?;
-  tracing::info!("theme apply complete id={}", theme.id);
+  // Record applied theme for this host (used by UI + auto-reapply monitor).
+  settings_store::set_applied_theme(&app, host, Some(theme.id.clone()))?;
+  tracing::info!("theme apply complete id={} host={host}", theme.id);
   analytics::track_theme_applied(&theme.id, theme_url.is_some(), true);
 
   Ok(true)
 }
 
-/// Restore: restore config → restart Codex only if appearance changed → remove skin.
-#[tauri::command]
-pub async fn restore_theme(app: AppHandle, state: State<'_, AppState>) -> Result<bool, String> {
-  let restore_result = theme_tool::restore(&app)?;
-  tracing::info!(
-    "theme-tool restore ok config={} backup={} appearance_changed={}",
-    restore_result.config,
-    restore_result.backup,
-    restore_result.appearance_changed
-  );
+/// Restore default skin for a host app (`target_app`: `codex` default, or `workbuddy`).
+///
+/// Codex: restore `config.toml` appearance → ensure CDP → remove inject.
+/// WorkBuddy: ensure CDP → remove inject only (no Codex config).
+#[tauri::command(rename_all = "snake_case")]
+pub async fn restore_theme(
+  target_app: Option<String>,
+  app: AppHandle,
+  state: State<'_, AppState>,
+) -> Result<bool, String> {
+  let host = normalize_target_app(target_app.as_deref())?;
+  let port = port_for_app(&state, host);
 
-  let port = state.cdp_port();
+  if host == APP_CODEX {
+    let restore_result = theme_tool::restore(&app)?;
+    tracing::info!(
+      "theme-tool restore ok config={} backup={} appearance_changed={}",
+      restore_result.config,
+      restore_result.backup,
+      restore_result.appearance_changed
+    );
 
-  // Restart when restored managed appearance keys differ from current config.
-  if restore_result.appearance_changed {
-    match codex_launch::restart_codex_debugging(&app, port).await {
+    // Restart when restored managed appearance keys differ from current config.
+    if restore_result.appearance_changed {
+      match codex_launch::restart_codex_debugging(&app, port).await {
+        Ok(msg) => tracing::info!("{msg}"),
+        Err(e) => {
+          return Err(format!(
+            "config restored, but Codex restart failed (appearance may not update until restart): {e}"
+          ));
+        }
+      }
+    } else {
+      match codex_launch::ensure_codex_debugging(&app, port).await {
+        Ok(msg) => tracing::info!("{msg}"),
+        Err(e) => tracing::warn!("ensure Codex for restore remove: {e}"),
+      }
+    }
+
+    let opts = inject_options_for_port(port);
+    if let Err(e) = injector::restore_default_theme_for_app(APP_CODEX, opts).await {
+      tracing::warn!("Codex CDP remove after restore: {e}");
+    }
+  } else {
+    match codex_launch::ensure_workbuddy_debugging(&app, port).await {
       Ok(msg) => tracing::info!("{msg}"),
       Err(e) => {
         return Err(format!(
-          "config restored, but Codex restart failed (appearance may not update until restart): {e}"
+          "could not reach WorkBuddy CDP on port {port}: {e}. Open WorkBuddy with remote debugging, then retry."
         ));
       }
     }
-  } else {
-    match codex_launch::ensure_codex_debugging(&app, port).await {
-      Ok(msg) => tracing::info!("{msg}"),
-      Err(e) => tracing::warn!("ensure Codex for restore remove: {e}"),
+
+    let opts = inject_options_for_port(port);
+    if let Err(e) = injector::restore_default_theme_for_app(APP_WORKBUDDY, opts).await {
+      return Err(format!("WorkBuddy skin restore failed: {e}"));
     }
   }
 
-  // Best-effort: strip any leftover injected skin
-  let opts = inject_options(&state);
-  if let Err(e) = injector::restore_default_theme(opts).await {
-    tracing::warn!("CDP remove after restore: {e}");
-  }
-
-  // Clear applied theme marker
-  settings_store::set_applied_theme_id(&app, None)?;
+  // Clear applied marker for this host only (stops auto-reapply).
+  settings_store::set_applied_theme(&app, host, None)?;
+  tracing::info!("theme restore complete host={host}");
   analytics::track_theme_restored(true);
 
   Ok(true)
@@ -595,11 +730,12 @@ pub struct ApplyBuiltThemeResult {
 }
 
 /// Install the newest `.cdxtheme` from a Theme Builder workspace into the user
-/// themes library (`app_data_dir/themes`), then apply it to Codex.
+/// themes library (`app_data_dir/themes`), then apply it to the selected host app.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn apply_built_theme(
   workspace_path: String,
   package_path: Option<String>,
+  target_app: Option<String>,
   app: AppHandle,
   state: State<'_, AppState>,
 ) -> Result<ApplyBuiltThemeResult, String> {
@@ -635,14 +771,16 @@ pub async fn apply_built_theme(
     })?
   };
 
+  let host = normalize_target_app(target_app.as_deref())?;
   tracing::info!(
     package = %pkg.display(),
     workspace = %cwd.display(),
+    target_app = host,
     "theme builder apply_built_theme — install + apply"
   );
 
   let meta = theme_catalog::install_theme_package_file(&app, &pkg)?;
-  apply_theme(meta.id.clone(), None, app, state).await?;
+  apply_theme(meta.id.clone(), None, Some(host.to_string()), app, state).await?;
 
   Ok(ApplyBuiltThemeResult {
     theme_id: meta.id,

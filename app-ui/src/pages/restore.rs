@@ -3,6 +3,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 
 use crate::api;
+use crate::components::target_app_select::TargetAppSelect;
 use crate::components::ui::sonner::toast_error;
 use crate::i18n::I18n;
 use crate::state::AppCtx;
@@ -10,6 +11,7 @@ use crate::state::AppCtx;
 #[component]
 pub fn RestorePage() -> impl IntoView {
   let ctx = AppCtx::use_ctx();
+  let target_app = ctx.target_app;
   let loading = RwSignal::new(false);
   let success = RwSignal::new(false);
 
@@ -20,8 +22,9 @@ pub fn RestorePage() -> impl IntoView {
     loading.set(true);
     success.set(false);
     let locale = ctx.locale.get_untracked();
+    let host = target_app.get_untracked();
     spawn_local(async move {
-      match api::restore_theme().await {
+      match api::restore_theme(Some(host)).await {
         Ok(()) => {
           success.set(true);
           loading.set(false);
@@ -37,19 +40,22 @@ pub fn RestorePage() -> impl IntoView {
 
   view! {
     <div class="flex h-full flex-col">
-      <header class="mb-6">
-        <h1 class="bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-2xl font-semibold tracking-tight text-transparent sm:text-3xl">
-          {move || {
-            let i18n = I18n { locale: ctx.locale.get() };
-            i18n.t("restore.title")
-          }}
-        </h1>
-        <p class="mt-1.5 max-w-xl text-sm text-muted-foreground">
-          {move || {
-            let i18n = I18n { locale: ctx.locale.get() };
-            i18n.t("restore.subtitle")
-          }}
-        </p>
+      <header class="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0 flex-1">
+          <h1 class="bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-2xl font-semibold tracking-tight text-transparent sm:text-3xl">
+            {move || {
+              let i18n = I18n { locale: ctx.locale.get() };
+              i18n.t("restore.title")
+            }}
+          </h1>
+          <p class="mt-1.5 max-w-xl text-sm text-muted-foreground">
+            {move || {
+              let i18n = I18n { locale: ctx.locale.get() };
+              i18n.t("restore.subtitle")
+            }}
+          </p>
+        </div>
+        <TargetAppSelect target_app=target_app />
       </header>
 
       <div class="flex flex-1 items-start justify-center pt-6 sm:pt-12">
@@ -62,10 +68,20 @@ pub fn RestorePage() -> impl IntoView {
               <RotateCcw class="size-7 text-primary" />
             </div>
 
-            <p class="mb-6 max-w-sm text-sm leading-relaxed text-muted-foreground">
+            <p class="mb-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
               {move || {
                 let i18n = I18n { locale: ctx.locale.get() };
                 i18n.t("restore.hint")
+              }}
+            </p>
+            <p class="mb-6 text-xs font-medium text-foreground/80">
+              {move || {
+                let i18n = I18n { locale: ctx.locale.get() };
+                let host = match target_app.get().as_str() {
+                  "workbuddy" => i18n.t("recommend.apply.workbuddy"),
+                  _ => i18n.t("recommend.apply.codex"),
+                };
+                format!("{}: {host}", i18n.t("restore.target"))
               }}
             </p>
 

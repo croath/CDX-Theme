@@ -4,8 +4,10 @@
  *
  * Layout contracts:
  *   - html/body/#root/.teams-container fill viewport (height 100%)
- *   - .workbuddy-topbar height via --theme-workbuddy-topbar (default 0)
+ *   - .workbuddy-topbar height via --theme-workbuddy-topbar (default 24px)
  *   - sidebar full-height opaque panel + accent inset stripe
+ *   - dark shell wash pairs with dark hero glass
+ *   - .user-menu-popover (portal) uses --theme-panel light+dark
  *
  * Merge: 00-palette → 00-tokens → 01-shell → 02-home → 03-composer
  */
@@ -39,6 +41,42 @@ html.cdxtheme-host-workbuddy .teams-container {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif !important;
 }
 
+/* Dark shell: deeper surface field, muted accent glow (pairs with hero glass) */
+html.cdxtheme-host-workbuddy:has(body.dark),
+html.cdxtheme-host-workbuddy:has(body.cb-dark),
+html.cdxtheme-host-workbuddy:has(body.vscode-dark),
+html.cdxtheme-host-workbuddy.dark,
+html.cdxtheme-host-workbuddy.cb-dark,
+html.cdxtheme-host-workbuddy.vscode-dark,
+html.cdxtheme-host-workbuddy:has(body.dark) body,
+html.cdxtheme-host-workbuddy:has(body.cb-dark) body,
+html.cdxtheme-host-workbuddy:has(body.vscode-dark) body,
+html.cdxtheme-host-workbuddy.dark body,
+html.cdxtheme-host-workbuddy.cb-dark body,
+html.cdxtheme-host-workbuddy.vscode-dark body,
+html.cdxtheme-host-workbuddy:has(body.dark) #root,
+html.cdxtheme-host-workbuddy:has(body.dark) .teams-container,
+html.cdxtheme-host-workbuddy.dark #root,
+html.cdxtheme-host-workbuddy.dark .teams-container {
+  background-image:
+    radial-gradient(
+      ellipse 85% 50% at 100% -8%,
+      color-mix(in srgb, var(--theme-accent) 14%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 45% 35% at 0% 100%,
+      color-mix(in srgb, var(--theme-accent-2) 12%, transparent),
+      transparent 58%
+    ),
+    linear-gradient(
+      165deg,
+      var(--theme-bg-elevated) 0%,
+      var(--theme-bg) 46%,
+      color-mix(in srgb, var(--theme-panel) 40%, var(--theme-bg)) 100%
+    ) !important;
+}
+
 html.cdxtheme-host-workbuddy,
 html.cdxtheme-host-workbuddy body,
 html.cdxtheme-host-workbuddy #root {
@@ -57,17 +95,17 @@ html.cdxtheme-host-workbuddy .teams-container {
   overflow: hidden !important;
 }
 
-/* Collapse / size host topbar chrome (default 0 via token) */
+/* Host topbar chrome height via --theme-workbuddy-topbar (default 24px) */
 html.cdxtheme-host-workbuddy .workbuddy-topbar,
 html.cdxtheme-host-workbuddy .workbuddy-topbar--mac {
-  height: var(--theme-workbuddy-topbar, 0px) !important;
-  min-height: var(--theme-workbuddy-topbar, 0px) !important;
-  max-height: var(--theme-workbuddy-topbar, 0px) !important;
+  height: var(--theme-workbuddy-topbar, 24px) !important;
+  min-height: var(--theme-workbuddy-topbar, 24px) !important;
+  max-height: var(--theme-workbuddy-topbar, 24px) !important;
   padding: 0 !important;
   margin: 0 !important;
   overflow: hidden !important;
   border: 0 !important;
-  flex: 0 0 var(--theme-workbuddy-topbar, 0px) !important;
+  flex: 0 0 var(--theme-workbuddy-topbar, 24px) !important;
 }
 
 html.cdxtheme-host-workbuddy body::before {
@@ -238,5 +276,124 @@ html.cdxtheme-host-workbuddy :is(
   .conversation-agent-card[aria-selected="true"] *,
   .conversation-agent-card.active *
 ) {
+  color: var(--theme-text) !important;
+}
+
+/* —— User menu (sidebar account popover) — light + dark via --theme-* —— */
+html.cdxtheme-host-workbuddy .user-menu-trigger,
+html.cdxtheme-host-workbuddy .user-menu-trigger--workbuddy {
+  color: var(--theme-muted) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+html.cdxtheme-host-workbuddy .user-menu-trigger:hover,
+html.cdxtheme-host-workbuddy .user-menu-trigger--workbuddy:hover {
+  color: var(--theme-text) !important;
+  background: color-mix(in srgb, var(--theme-accent) 10%, transparent) !important;
+}
+
+/* Portal popover under body — high specificity vs host fixed white/gray */
+html.cdxtheme-host-workbuddy .user-menu-popover,
+html.cdxtheme-host-workbuddy .user-menu-popover--local,
+html.cdxtheme-host-workbuddy .user-menu-popover--portal,
+html.cdxtheme-host-workbuddy.cdxtheme-workbuddy-skin .user-menu-popover,
+html.cdxtheme-host-workbuddy.cdxtheme-workbuddy-skin .user-menu-popover--portal,
+html.cdxtheme-host-workbuddy body .user-menu-popover,
+html.cdxtheme-host-workbuddy body .user-menu-popover.user-menu-popover--local,
+html.cdxtheme-host-workbuddy body .user-menu-popover.user-menu-popover--portal,
+html.cdxtheme-host-workbuddy body.light .user-menu-popover,
+html.cdxtheme-host-workbuddy body.dark .user-menu-popover,
+body.light .user-menu-popover.user-menu-popover--portal,
+body.dark .user-menu-popover.user-menu-popover--portal,
+body.cb-light .user-menu-popover,
+body.cb-dark .user-menu-popover {
+  background: var(--theme-panel) !important;
+  background-color: var(--theme-panel) !important;
+  background-image:
+    radial-gradient(
+      ellipse 80% 40% at 100% 0%,
+      color-mix(in srgb, var(--theme-accent) 10%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--theme-panel-mid) 40%, var(--theme-panel)),
+      var(--theme-panel)
+    ) !important;
+  color: var(--theme-text) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 28%, transparent) !important;
+  border-radius: var(--theme-radius-md, 14px) !important;
+  box-shadow:
+    0 16px 40px color-mix(in srgb, var(--theme-black) 35%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--theme-accent) 10%, transparent),
+    0 0 28px color-mix(in srgb, var(--theme-accent) 12%, transparent) !important;
+  overflow: hidden !important;
+  z-index: 1300 !important;
+}
+
+html.cdxtheme-host-workbuddy .user-menu-header,
+html.cdxtheme-host-workbuddy .user-menu-items,
+html.cdxtheme-host-workbuddy .user-menu-footer {
+  background: transparent !important;
+  color: var(--theme-text) !important;
+  border-color: color-mix(in srgb, var(--theme-accent) 16%, transparent) !important;
+}
+
+html.cdxtheme-host-workbuddy .user-menu-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-accent) 16%, transparent) !important;
+}
+
+html.cdxtheme-host-workbuddy .user-menu-footer {
+  border-top: 1px solid color-mix(in srgb, var(--theme-accent) 16%, transparent) !important;
+}
+
+html.cdxtheme-host-workbuddy .user-menu-header-name,
+html.cdxtheme-host-workbuddy .user-menu-header-name-text,
+html.cdxtheme-host-workbuddy .user-menu-header-info,
+html.cdxtheme-host-workbuddy .user-menu-item,
+html.cdxtheme-host-workbuddy .user-menu-item-value,
+html.cdxtheme-host-workbuddy .user-menu-item :is(span, div, svg) {
+  color: var(--theme-text) !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+html.cdxtheme-host-workbuddy .user-menu-item--disabled,
+html.cdxtheme-host-workbuddy .user-menu-item--disabled :is(span, div) {
+  color: var(--theme-muted) !important;
+  opacity: .85 !important;
+}
+
+html.cdxtheme-host-workbuddy .user-menu-item:not(.user-menu-item--disabled):hover {
+  background: color-mix(in srgb, var(--theme-accent) 12%, transparent) !important;
+  color: var(--theme-text) !important;
+}
+
+html.cdxtheme-host-workbuddy .user-menu-item--logout:hover {
+  background: color-mix(in srgb, var(--theme-accent) 16%, transparent) !important;
+  color: var(--theme-accent-hot) !important;
+}
+
+/* Theme switcher pill inside popover */
+html.cdxtheme-host-workbuddy .user-menu-theme-switcher {
+  background: color-mix(in srgb, var(--theme-panel-mid) 70%, var(--theme-bg)) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 18%, transparent) !important;
+  border-radius: 999px !important;
+  color: var(--theme-text) !important;
+}
+
+html.cdxtheme-host-workbuddy .user-menu-theme-switcher-thumb {
+  background: color-mix(in srgb, var(--theme-accent) 22%, var(--theme-panel)) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-black) 20%, transparent) !important;
+}
+
+html.cdxtheme-host-workbuddy .user-menu-theme-option {
+  color: var(--theme-muted) !important;
+  background: transparent !important;
+}
+
+html.cdxtheme-host-workbuddy .user-menu-theme-option--active {
   color: var(--theme-text) !important;
 }

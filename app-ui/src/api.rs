@@ -217,6 +217,8 @@ pub struct CdpTargetInfo {
 #[derive(Clone, Debug, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CdpServerStatus {
+  #[serde(default)]
+  pub app: String,
   pub connected: bool,
   pub port: u16,
   pub target_count: usize,
@@ -227,6 +229,7 @@ pub struct CdpServerStatus {
 impl Default for CdpServerStatus {
   fn default() -> Self {
     Self {
+      app: String::new(),
       connected: false,
       port: 9335,
       target_count: 0,
@@ -236,8 +239,91 @@ impl Default for CdpServerStatus {
   }
 }
 
-pub async fn cdp_status() -> Result<CdpServerStatus, String> {
-  invoke_cmd_with_args::<CdpServerStatus>("cdp_status", empty_args()).await
+/// Combined CDP status for Codex + WorkBuddy.
+#[derive(Clone, Debug, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DualCdpStatus {
+  pub codex: CdpServerStatus,
+  pub workbuddy: CdpServerStatus,
+}
+
+impl Default for DualCdpStatus {
+  fn default() -> Self {
+    Self {
+      codex: CdpServerStatus {
+        app: "codex".into(),
+        port: 9335,
+        ..Default::default()
+      },
+      workbuddy: CdpServerStatus {
+        app: "workbuddy".into(),
+        port: 9336,
+        ..Default::default()
+      },
+    }
+  }
+}
+
+pub async fn cdp_status() -> Result<DualCdpStatus, String> {
+  invoke_cmd_with_args::<DualCdpStatus>("cdp_status", empty_args()).await
+}
+
+/// Whether Codex / ChatGPT and WorkBuddy desktop apps appear installed.
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct HostAppsDetect {
+  pub codex_installed: bool,
+  pub workbuddy_installed: bool,
+  #[serde(default)]
+  pub codex_path: Option<String>,
+  #[serde(default)]
+  pub workbuddy_path: Option<String>,
+}
+
+impl HostAppsDetect {
+  /// True when both hosts are available — show the target-app select.
+  pub fn both_installed(&self) -> bool {
+    self.codex_installed && self.workbuddy_installed
+  }
+
+  /// Preferred sole target when only one host is installed.
+  pub fn sole_target(&self) -> Option<&'static str> {
+    match (self.codex_installed, self.workbuddy_installed) {
+      (true, false) => Some("codex"),
+      (false, true) => Some("workbuddy"),
+      _ => None,
+    }
+  }
+}
+
+/// Detect install status of Codex / ChatGPT and WorkBuddy (filesystem only).
+pub async fn detect_host_apps() -> Result<HostAppsDetect, String> {
+  match invoke_cmd_with_args::<HostAppsDetect>("detect_host_apps", empty_args()).await {
+    Ok(v) => Ok(v),
+    // Browser / unit preview without Tauri: assume Codex only so select stays hidden.
+    Err(e) if e.contains("__TAURI__") || e.contains("undefined") => Ok(HostAppsDetect {
+      codex_installed: true,
+      workbuddy_installed: false,
+      ..Default::default()
+    }),
+    Err(e) => Err(e),
+  }
+}
+
+/// Per-host last applied theme ids.
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AppliedThemes {
+  #[serde(default)]
+  pub codex: Option<String>,
+  #[serde(default)]
+  pub workbuddy: Option<String>,
+}
+
+/// Fetch applied theme id for Codex and WorkBuddy.
+#[allow(dead_code)]
+pub async fn get_applied_themes() -> Result<AppliedThemes, String> {
+  invoke_cmd_with_args::<AppliedThemes>("get_applied_themes", empty_args()).await
 }
 
 #[derive(Serialize)]
@@ -269,23 +355,48 @@ pub async fn set_cdp_port(port: u16) -> Result<u16, String> {
   invoke_cmd_with_args::<u16>("set_cdp_port", args).await
 }
 
+pub async fn get_workbuddy_cdp_port() -> Result<u16, String> {
+  invoke_cmd_with_args::<u16>("get_workbuddy_cdp_port", empty_args()).await
+}
+
+pub async fn set_workbuddy_cdp_port(port: u16) -> Result<u16, String> {
+  let args = to_value(&SetCdpPortArgs { port }).map_err(|e| e.to_string())?;
+  invoke_cmd_with_args::<u16>("set_workbuddy_cdp_port", args).await
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
 struct ApplyThemeArgs {
   theme_id: String,
   #[serde(skip_serializing_if = "Option::is_none")]
   theme_url: Option<String>,
+  /// Host app: `codex` (default) or `workbuddy`.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  target_app: Option<String>,
 }
 
 /// Apply a theme by id. For remote catalog entries, pass `theme_url` so the package
 /// is downloaded into the library first.
+///
+/// `target_app`: `codex` (default) or `workbuddy`.
+#[allow(dead_code)]
 pub async fn apply_theme(
   theme_id: impl Into<String>,
   theme_url: Option<String>,
 ) -> Result<bool, String> {
+  apply_theme_to(theme_id, theme_url, None).await
+}
+
+/// Apply a theme to a specific host app (`codex` / `workbuddy`).
+pub async fn apply_theme_to(
+  theme_id: impl Into<String>,
+  theme_url: Option<String>,
+  target_app: Option<String>,
+) -> Result<bool, String> {
   let args = to_value(&ApplyThemeArgs {
     theme_id: theme_id.into(),
     theme_url,
+    target_app,
   })
   .map_err(|e| e.to_string())?;
   match invoke_cmd_with_args::<bool>("apply_theme", args).await {
@@ -339,8 +450,17 @@ pub async fn resolve_cached_image(url: impl Into<String>) -> Result<String, Stri
   }
 }
 
-pub async fn restore_theme() -> Result<(), String> {
-  match invoke_unit_with_args("restore_theme", empty_args()).await {
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+struct RestoreThemeArgs {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  target_app: Option<String>,
+}
+
+/// Restore default theme for a host (`codex` default, or `workbuddy`).
+pub async fn restore_theme(target_app: Option<String>) -> Result<(), String> {
+  let args = to_value(&RestoreThemeArgs { target_app }).map_err(|e| e.to_string())?;
+  match invoke_unit_with_args("restore_theme", args).await {
     Ok(()) => Ok(()),
     Err(e) if e.contains("__TAURI__") || e.contains("undefined") => Ok(()),
     Err(e) => Err(e),
@@ -613,16 +733,23 @@ struct ApplyBuiltThemeArgs {
   workspace_path: String,
   #[serde(skip_serializing_if = "Option::is_none")]
   package_path: Option<String>,
+  /// Host app: `codex` (default) or `workbuddy`.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  target_app: Option<String>,
 }
 
 /// Install the workspace `.cdxtheme` into `app_data_dir/themes` and apply it.
+///
+/// `target_app`: `codex` (default) or `workbuddy`.
 pub async fn apply_built_theme(
   workspace_path: impl Into<String>,
   package_path: Option<String>,
+  target_app: Option<String>,
 ) -> Result<ApplyBuiltThemeResult, String> {
   let args = to_value(&ApplyBuiltThemeArgs {
     workspace_path: workspace_path.into(),
     package_path,
+    target_app,
   })
   .map_err(|e| e.to_string())?;
   invoke_cmd_with_args::<ApplyBuiltThemeResult>("apply_built_theme", args).await
