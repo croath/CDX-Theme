@@ -11,6 +11,7 @@ pub mod theme_builder_store;
 pub mod theme_catalog;
 pub mod theme_lib;
 pub mod theme_package;
+pub mod theme_reapply;
 pub mod theme_tool;
 pub mod types;
 
@@ -411,12 +412,14 @@ pub fn run() {
         tracing::warn!("app menu setup failed: {e}");
       }
 
-      // Background: analytics init, then updates (hourly), then CDP monitor (do not auto-launch ChatGPT).
+      // Background: analytics init, then updates (hourly), CDP monitor, theme reapply.
+      // Do not auto-launch ChatGPT/WorkBuddy on status poll.
       let handle = app.handle().clone();
       tauri::async_runtime::spawn(async move {
         analytics::Analytics::init(&handle).await;
         start_updater_loop(handle.clone());
-        cdp_monitor::start(handle);
+        cdp_monitor::start(handle.clone());
+        theme_reapply::start(handle);
       });
 
       Ok(())
@@ -427,6 +430,7 @@ pub fn run() {
       commands::resolve_cached_image,
       commands::cdp_status,
       commands::detect_host_apps,
+      commands::get_applied_themes,
       commands::set_window_appearance,
       commands::get_cdp_port,
       commands::set_cdp_port,

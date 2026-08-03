@@ -122,11 +122,7 @@ pub fn ThemeCard(
                 .zip(t.version)
                 .is_some_and(|(rv, lv)| rv > lv);
             }
-            for t in list.iter_mut() {
-              if t.id != id {
-                t.is_applied = false;
-              }
-            }
+            // Other themes may still be applied on the other host — do not clear them.
           });
           applying.set(false);
           let i18n = I18n { locale };

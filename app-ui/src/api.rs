@@ -310,6 +310,22 @@ pub async fn detect_host_apps() -> Result<HostAppsDetect, String> {
   }
 }
 
+/// Per-host last applied theme ids.
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AppliedThemes {
+  #[serde(default)]
+  pub codex: Option<String>,
+  #[serde(default)]
+  pub workbuddy: Option<String>,
+}
+
+/// Fetch applied theme id for Codex and WorkBuddy.
+#[allow(dead_code)]
+pub async fn get_applied_themes() -> Result<AppliedThemes, String> {
+  invoke_cmd_with_args::<AppliedThemes>("get_applied_themes", empty_args()).await
+}
+
 #[derive(Serialize)]
 struct SetWindowAppearanceArgs {
   dark: bool,
@@ -434,8 +450,17 @@ pub async fn resolve_cached_image(url: impl Into<String>) -> Result<String, Stri
   }
 }
 
-pub async fn restore_theme() -> Result<(), String> {
-  match invoke_unit_with_args("restore_theme", empty_args()).await {
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+struct RestoreThemeArgs {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  target_app: Option<String>,
+}
+
+/// Restore default theme for a host (`codex` default, or `workbuddy`).
+pub async fn restore_theme(target_app: Option<String>) -> Result<(), String> {
+  let args = to_value(&RestoreThemeArgs { target_app }).map_err(|e| e.to_string())?;
+  match invoke_unit_with_args("restore_theme", args).await {
     Ok(()) => Ok(()),
     Err(e) if e.contains("__TAURI__") || e.contains("undefined") => Ok(()),
     Err(e) => Err(e),

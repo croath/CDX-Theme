@@ -621,17 +621,31 @@ pub fn translate(locale: Locale, key: &str) -> &'static str {
     (Locale::DeDe, "restore.title") => "Standard-Theme wiederherstellen",
     (Locale::EsEs, "restore.title") => "Restaurar tema predeterminado",
 
-    (Locale::EnUs, "restore.subtitle") => "Undo custom theme changes and bring Codex back to stock",
-    (Locale::ZhHans, "restore.subtitle") => "撤销自定义主题，将 Codex 恢复为原始外观",
-    (Locale::ZhHant, "restore.subtitle") => "撤銷自訂主題，將 Codex 還原為原始外觀",
-    (Locale::JaJp, "restore.subtitle") => "カスタムテーマを取り消し、Codex を標準に戻します",
-    (Locale::KoKr, "restore.subtitle") => "사용자 테마를 취소하고 Codex를 기본 상태로 되돌립니다",
+    (Locale::EnUs, "restore.subtitle") => {
+      "Undo custom theme changes and bring the selected app back to stock"
+    }
+    (Locale::ZhHans, "restore.subtitle") => "撤销自定义主题，将所选应用恢复为原始外观",
+    (Locale::ZhHant, "restore.subtitle") => "撤銷自訂主題，將所選應用還原為原始外觀",
+    (Locale::JaJp, "restore.subtitle") => {
+      "カスタムテーマを取り消し、選択したアプリを標準に戻します"
+    }
+    (Locale::KoKr, "restore.subtitle") => {
+      "사용자 테마를 취소하고 선택한 앱을 기본 상태로 되돌립니다"
+    }
     (Locale::DeDe, "restore.subtitle") => {
-      "Benutzerdefinierte Themes rückgängig machen und Codex zurücksetzen"
+      "Benutzerdefinierte Themes rückgängig machen und die gewählte App zurücksetzen"
     }
     (Locale::EsEs, "restore.subtitle") => {
-      "Deshacer temas personalizados y devolver Codex al estado original"
+      "Deshacer temas personalizados y devolver la app seleccionada al estado original"
     }
+
+    (Locale::EnUs, "restore.target") => "Target",
+    (Locale::ZhHans, "restore.target") => "目标应用",
+    (Locale::ZhHant, "restore.target") => "目標應用",
+    (Locale::JaJp, "restore.target") => "対象",
+    (Locale::KoKr, "restore.target") => "대상",
+    (Locale::DeDe, "restore.target") => "Ziel",
+    (Locale::EsEs, "restore.target") => "Destino",
 
     (Locale::EnUs, "restore.action") => "Restore now",
     (Locale::ZhHans, "restore.action") => "立即恢复",
