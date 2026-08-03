@@ -55,11 +55,7 @@ async fn probe(app_id: &str, port: u16, kind: TargetUrlKind) -> CdpServerStatus 
           url: t.url,
         })
         .collect(),
-      message: format!(
-        "{} CDP reachable ({})",
-        display_name(app_id),
-        kind.label()
-      ),
+      message: format!("{} CDP reachable ({})", display_name(app_id), kind.label()),
     },
     Err(e) => CdpServerStatus::disconnected(app_id, port, e),
   }
