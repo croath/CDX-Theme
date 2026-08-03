@@ -114,11 +114,11 @@ Starter CSS is **split by region/function** so agents edit only the relevant fil
 
 | File | Role | When to open |
 | --- | --- | --- |
-| `00-palette.css` | **Primary palette** (mirror codex light + dark) | Generating / recoloring |
+| `00-palette.css` | **Primary palette** light + dark via **body/html host classes** (`:has(body.light\|dark)`, `html.light\|dark`, …) | Generating / recoloring / dual-mode |
 | `00-tokens.css` | Semantic aliases + **layout knobs** (composer/header/tabs/topbar/home-max) + badge/title fallbacks | Layout sizes / copy vars |
-| `01-shell.css` | Full-bleed shell, top stripe, sidebar, **`.workbuddy-topbar` collapse** | Shell / sidebar / topbar |
-| `02-home.css` | Main fill, **centered `.chat-container`**, hero, **left scene tabs**, home flex stack | WorkBuddy home layout |
-| `03-composer.css` | Home composer + detail; chips gap; **overflow visible for menus**; polaroid hidden | Composer / footer / menus |
+| `01-shell.css` | Full-bleed shell, top stripe, sidebar, **topbar collapse**, **`.user-menu-popover`** | Shell / sidebar / account menu |
+| `02-home.css` | Main fill, **centered `.chat-container`**, hero (**dark glass scrim**), **left scene tabs** | WorkBuddy home / dark hero |
+| `03-composer.css` | Composer; **rebind host `_mainArea_*`**; opaque footer; menus; polaroid hidden | Composer contrast / dark input |
 
 ### Read budget (examples)
 
@@ -339,7 +339,7 @@ Body rules also use `color-mix(in srgb, var(--theme-accent) N%, transparent)` fo
 | `--theme-header-height` | `228px` | WorkBuddy hero height |
 | `--theme-tabs-height` | `52px` | WorkBuddy scene-tabs row |
 | `--theme-home-max` | `900px` | WorkBuddy centered `.chat-container` max width |
-| `--theme-workbuddy-topbar` | `0px` | WorkBuddy host topbar height (0 = collapsed) |
+| `--theme-workbuddy-topbar` | `24px` | WorkBuddy host topbar height |
 
 #### Decorative CSS copy tokens (theme-owned)
 

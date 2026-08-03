@@ -8,6 +8,8 @@
  *   - .wb-home-page fills chat-container; hero top · free mid · composer bottom
  *   - scene tabs: flush left, vertically centered in their row
  *   - do not overflow:hidden home column (clips menus / mid-elements)
+ *   - dark hero: bg/elevated glass scrim (never milky white wash)
+ *   - dark page field harmonized with hero
  *
  * Merge: … → 02-home → 03-composer
  */
@@ -25,7 +27,7 @@ html.cdxtheme-host-workbuddy .teams-content-wrapper {
   border-radius: 20px 0 0 0;
   box-shadow:
     -8px 0 28px var(--theme-shadow),
-    inset 0 1px 0 color-mix(in srgb, var(--theme-white) 70%, transparent);
+    inset 0 1px 0 color-mix(in srgb, var(--theme-white) 12%, transparent);
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--theme-accent) 14%, transparent) !important;
   border-right: 0 !important;
@@ -176,7 +178,10 @@ html.cdxtheme-host-workbuddy .wb-home-page {
   background: transparent !important;
 }
 
-/* ── Hero ── */
+/* ── Hero ──
+ * Light: soft white scrim for ink on photo.
+ * Dark: panel glass scrim so banner sits in the same page field as page bg (no milky wash).
+ */
 html.cdxtheme-host-workbuddy .wb-home-header {
   position: relative !important;
   isolation: isolate;
@@ -235,6 +240,106 @@ html.cdxtheme-host-workbuddy .wb-home-header::before {
       transparent 65%
     ),
     linear-gradient(90deg, color-mix(in srgb, var(--theme-white) 35%, transparent) 0%, transparent 55%);
+}
+
+/* Dark: hero = elevated panel glass over photo, tied to page wash */
+html.cdxtheme-host-workbuddy:has(body.dark) .wb-home-header,
+html.cdxtheme-host-workbuddy:has(body.cb-dark) .wb-home-header,
+html.cdxtheme-host-workbuddy:has(body.vscode-dark) .wb-home-header,
+html.cdxtheme-host-workbuddy.dark .wb-home-header,
+html.cdxtheme-host-workbuddy.cb-dark .wb-home-header,
+html.cdxtheme-host-workbuddy.vscode-dark .wb-home-header {
+  border-color: color-mix(in srgb, var(--theme-accent) 38%, transparent) !important;
+  background-color: var(--theme-bg-elevated) !important;
+  background-image:
+    linear-gradient(
+      105deg,
+      color-mix(in srgb, var(--theme-bg) 92%, transparent) 0%,
+      color-mix(in srgb, var(--theme-bg-elevated) 78%, transparent) 28%,
+      color-mix(in srgb, var(--theme-panel) 45%, transparent) 52%,
+      color-mix(in srgb, var(--theme-accent) 18%, transparent) 72%,
+      color-mix(in srgb, var(--theme-bg) 25%, transparent) 100%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--theme-bg) 20%, transparent) 0%,
+      transparent 40%,
+      color-mix(in srgb, var(--theme-bg) 55%, transparent) 100%
+    ),
+    var(--cdxtheme-image-hero, linear-gradient(135deg, var(--theme-panel-mid), var(--theme-bg))) !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100%, 100% 100%, cover !important;
+  background-position: center, center, right center !important;
+  box-shadow:
+    0 18px 48px color-mix(in srgb, var(--theme-black) 55%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--theme-accent) 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-white) 8%, transparent),
+    0 0 48px color-mix(in srgb, var(--theme-accent) 14%, transparent) !important;
+}
+
+html.cdxtheme-host-workbuddy:has(body.dark) .wb-home-header::before,
+html.cdxtheme-host-workbuddy:has(body.cb-dark) .wb-home-header::before,
+html.cdxtheme-host-workbuddy:has(body.vscode-dark) .wb-home-header::before,
+html.cdxtheme-host-workbuddy.dark .wb-home-header::before,
+html.cdxtheme-host-workbuddy.cb-dark .wb-home-header::before,
+html.cdxtheme-host-workbuddy.vscode-dark .wb-home-header::before {
+  background:
+    radial-gradient(
+      ellipse 55% 80% at 8% 45%,
+      color-mix(in srgb, var(--theme-accent) 22%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 35% 55% at 92% 18%,
+      color-mix(in srgb, var(--theme-accent-3) 12%, transparent),
+      transparent 65%
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-bg) 72%, transparent) 0%,
+      color-mix(in srgb, var(--theme-bg-elevated) 35%, transparent) 42%,
+      transparent 68%
+    );
+}
+
+/* Dark page field: cooler panel depth, softer accent — matches hero glass */
+html.cdxtheme-host-workbuddy:has(body.dark) .teams-content-wrapper,
+html.cdxtheme-host-workbuddy:has(body.cb-dark) .teams-content-wrapper,
+html.cdxtheme-host-workbuddy:has(body.vscode-dark) .teams-content-wrapper,
+html.cdxtheme-host-workbuddy.dark .teams-content-wrapper,
+html.cdxtheme-host-workbuddy.cb-dark .teams-content-wrapper,
+html.cdxtheme-host-workbuddy.vscode-dark .teams-content-wrapper,
+html.cdxtheme-host-workbuddy:has(body.dark) .main-content--welcome,
+html.cdxtheme-host-workbuddy:has(body.cb-dark) .main-content--welcome,
+html.cdxtheme-host-workbuddy:has(body.vscode-dark) .main-content--welcome,
+html.cdxtheme-host-workbuddy.dark .main-content--welcome,
+html.cdxtheme-host-workbuddy.cb-dark .main-content--welcome,
+html.cdxtheme-host-workbuddy.vscode-dark .main-content--welcome {
+  box-shadow:
+    -8px 0 32px color-mix(in srgb, var(--theme-black) 45%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-white) 6%, transparent) !important;
+  background-image:
+    radial-gradient(
+      ellipse 70% 42% at 88% -4%,
+      color-mix(in srgb, var(--theme-accent) 16%, transparent),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 50% 38% at 12% 100%,
+      color-mix(in srgb, var(--theme-accent-2) 10%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 40% 30% at 50% 40%,
+      color-mix(in srgb, var(--theme-bg-elevated) 80%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(
+      165deg,
+      var(--theme-bg-elevated) 0%,
+      var(--theme-bg) 52%,
+      color-mix(in srgb, var(--theme-panel) 55%, var(--theme-bg)) 100%
+    ) !important;
 }
 
 html.cdxtheme-host-workbuddy .wb-home-header::after {

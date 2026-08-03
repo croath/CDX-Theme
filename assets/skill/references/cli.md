@@ -20,7 +20,6 @@ Upstream CLI docs: monorepo `cdx-theme-app-open` → `cli/README.md` (binary nam
 /path/to/cdxthemex theme merge-css <SOURCE> [-t codex|workbuddy]
 /path/to/cdxthemex apply --app codex|workbuddy --theme <PACKAGE> [OPTIONS]
 /path/to/cdxthemex restore [--app codex|workbuddy] [OPTIONS]
-/path/to/cdxthemex detect [--json]
 /path/to/cdxthemex appearance <dark|light|system> [OPTIONS]
 /path/to/cdxthemex verify inject [-t PACKAGE]
 /path/to/cdxthemex verify layout [--contexts chat,work]
@@ -37,18 +36,9 @@ Upstream CLI docs: monorepo `cdx-theme-app-open` → `cli/README.md` (binary nam
 
 `apply` / `restore` select the host with **`--app`** (default `codex`). Port defaults follow the host; override with `--port`.
 
-`detect` reports install path, process state, and default-port CDP reachability for each host.
-
 `verify` / `probe` / `screenshot` are **Codex-oriented** (default port **9335**). For WorkBuddy inject checks, pass `--port 9336` where the subcommand accepts it (e.g. `verify inject --port 9336`). Layout probes and screenshots target Codex Chat/Work UI.
 
 ---
-
-### `detect`
-
-```bash
-/path/to/cdxthemex detect
-/path/to/cdxthemex detect --json
-```
 
 ### `theme pack`
 

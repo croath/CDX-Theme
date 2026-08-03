@@ -1,73 +1,68 @@
 /* workbuddy/00-palette.css
  *
- * PRIMARY PALETTE ONLY — mirror codex/00-palette.css.
+ * PRIMARY PALETTE ONLY — mirror codex/00-palette.css hex values.
  * Edit when recoloring; keep light + dark in sync with Codex.
+ *
+ * Host puts light/dark on <body> (and sometimes <html>).
+ * Drive tokens from BOTH so composer / hero / popovers switch correctly:
+ *   html:has(body.light|dark), html.light|dark, cb-*, vscode-*, electron-*, data-color-scheme
  *
  * Merge: 00-palette → 00-tokens → 01-shell …
  */
 
-/* —— Light (default) —— */
-:root.cdxtheme-host-workbuddy {
+/* —— Light (default brand + host light) —— */
+html.cdxtheme-host-workbuddy:has(body.light),
+html.cdxtheme-host-workbuddy:has(body.cb-light),
+html.cdxtheme-host-workbuddy:has(body.vscode-light),
+html.cdxtheme-host-workbuddy.light,
+html.cdxtheme-host-workbuddy.cb-light,
+html.cdxtheme-host-workbuddy.vscode-light,
+html.cdxtheme-host-workbuddy.electron-light,
+html.cdxtheme-host-workbuddy[data-color-scheme="light"],
+html.cdxtheme-host-workbuddy:not(:has(body.dark)):not(:has(body.cb-dark)):not(:has(body.vscode-dark)):not(.dark):not(.cb-dark):not(.vscode-dark):not(.electron-dark):not([data-color-scheme="dark"]) {
   color-scheme: light !important;
 
-  --theme-accent: #7867a8;
-  --theme-accent-hot: #9b8bc9;
-  --theme-accent-deep: #5c4d8a;
-  --theme-accent-2: #9a93a8;
-  --theme-accent-2-hot: #c8c2d4;
-  --theme-accent-3: #c45c8a;
-  --theme-text: #2f2b3a;
-  --theme-muted: #756f82;
-  --theme-bg: #f0eef6;
-  --theme-bg-elevated: #f8f7fc;
-  --theme-panel: #ffffff;
-  --theme-panel-mid: #f4f1fa;
-  --theme-on-accent: #ffffff;
-  --theme-white: #ffffff;
-  --theme-black: #2f2b3a;
+  --theme-accent: #7867a8 !important;
+  --theme-accent-hot: #9b8bc9 !important;
+  --theme-accent-deep: #5c4d8a !important;
+  --theme-accent-2: #9a93a8 !important;
+  --theme-accent-2-hot: #c8c2d4 !important;
+  --theme-accent-3: #c45c8a !important;
+  --theme-text: #2f2b3a !important;
+  --theme-muted: #756f82 !important;
+  --theme-bg: #f0eef6 !important;
+  --theme-bg-elevated: #f8f7fc !important;
+  --theme-panel: #ffffff !important;
+  --theme-panel-mid: #f4f1fa !important;
+  --theme-on-accent: #ffffff !important;
+  --theme-white: #ffffff !important;
+  --theme-black: #2f2b3a !important;
 }
 
-/* —— Dark (host class) —— */
-:root.cdxtheme-host-workbuddy.electron-dark,
-:root.cdxtheme-host-workbuddy[data-color-scheme="dark"] {
+/* —— Dark (host dark) —— */
+html.cdxtheme-host-workbuddy:has(body.dark),
+html.cdxtheme-host-workbuddy:has(body.cb-dark),
+html.cdxtheme-host-workbuddy:has(body.vscode-dark),
+html.cdxtheme-host-workbuddy.dark,
+html.cdxtheme-host-workbuddy.cb-dark,
+html.cdxtheme-host-workbuddy.vscode-dark,
+html.cdxtheme-host-workbuddy.electron-dark,
+html.cdxtheme-host-workbuddy[data-color-scheme="dark"] {
   color-scheme: dark !important;
 
-  --theme-accent: #9b8bc9;
-  --theme-accent-hot: #c4b5e8;
-  --theme-accent-deep: #7a6aad;
-  --theme-accent-2: #8a8498;
-  --theme-accent-2-hot: #c8c2d4;
-  --theme-accent-3: #d47a9e;
-  --theme-text: #f0eef6;
-  --theme-muted: #a8a2b5;
-  --theme-bg: #121018;
-  --theme-bg-elevated: #1a1722;
-  --theme-panel: #221e2c;
-  --theme-panel-mid: #2a2536;
-  --theme-on-accent: #121018;
-  --theme-white: #ffffff;
-  --theme-black: #000000;
-}
-
-/* —— Dark (OS preference; skip when host forces light) —— */
-@media (prefers-color-scheme: dark) {
-  :root.cdxtheme-host-workbuddy:not(.electron-light):not([data-color-scheme="light"]) {
-    color-scheme: dark !important;
-
-    --theme-accent: #9b8bc9;
-    --theme-accent-hot: #c4b5e8;
-    --theme-accent-deep: #7a6aad;
-    --theme-accent-2: #8a8498;
-    --theme-accent-2-hot: #c8c2d4;
-    --theme-accent-3: #d47a9e;
-    --theme-text: #f0eef6;
-    --theme-muted: #a8a2b5;
-    --theme-bg: #121018;
-    --theme-bg-elevated: #1a1722;
-    --theme-panel: #221e2c;
-    --theme-panel-mid: #2a2536;
-    --theme-on-accent: #121018;
-    --theme-white: #ffffff;
-    --theme-black: #000000;
-  }
+  --theme-accent: #9b8bc9 !important;
+  --theme-accent-hot: #c4b5e8 !important;
+  --theme-accent-deep: #7a6aad !important;
+  --theme-accent-2: #8a8498 !important;
+  --theme-accent-2-hot: #c8c2d4 !important;
+  --theme-accent-3: #d47a9e !important;
+  --theme-text: #f0eef6 !important;
+  --theme-muted: #a8a2b5 !important;
+  --theme-bg: #121018 !important;
+  --theme-bg-elevated: #1a1722 !important;
+  --theme-panel: #221e2c !important;
+  --theme-panel-mid: #2a2536 !important;
+  --theme-on-accent: #121018 !important;
+  --theme-white: #ffffff !important;
+  --theme-black: #000000 !important;
 }
